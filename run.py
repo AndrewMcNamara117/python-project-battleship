@@ -1,4 +1,4 @@
-#Legand
+# Legand
 # X for placing ship and hit battleship
 # ' ' for available space
 # '-' for missed shot
@@ -53,20 +53,17 @@ while turns > 0:
     if GUESS_BOARD[row][column] == '-':
         print('You already guessed that')
     elif HIDDEN_BOARD[row][column] == 'X':
-            print(' Congratulations, you have hit the battleship')
-            GUESS_BOARD[row][column] = 'X'
-            turns -= 1
-            else:
-            print('Sorry, you missed')
-            GUESS_BOARD[row][column] = '-'
-            turns -= 1
-            if count_hit_ships(GUESS_BOARD) == 5:
-                print('Congratulations, you have sunk all the battleships')
-                break
-            print('You have ' +str(turns) + ' turns remaining')
-            if turns == 0
+        print(' Congratulations, you have hit the battleship')
+        GUESS_BOARD[row][column] = 'X'
+        turns -= 1
+    else:
+        print('Sorry, you missed')
+        GUESS_BOARD[row][column] = '-'
+        turns -= 1
+        if count_hit_ships(GUESS_BOARD) == 5:
+            print('Congratulations, you have sunk all the battleships')
+            break
+        print('You have ' +str(turns) + ' turns remaining')
+        if turns == 0:
             print('Sorry you ran out of turns, the game is over')
             break
-            
-
-
