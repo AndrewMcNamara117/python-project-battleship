@@ -79,7 +79,7 @@ body{
   text-transform:uppercase;
   font-stretch:expanded;
 }
-.tw{display:inline-block;overflow:hidden}
+.tw{display:inline-block;overflow:hidden;flex:none}
 .ti{
   display:inline-block;padding-right:.34em; /* keep last tracked space clipped evenly */
   transform:translateX(-103%);

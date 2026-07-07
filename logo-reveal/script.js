@@ -21,6 +21,7 @@
   "use strict";
 
   var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var touch = matchMedia("(hover: none), (pointer: coarse)").matches;
   if (/[?&]export/.test(location.search)) document.body.classList.add("export");
 
   /* ---------- element handles ---------- */
@@ -66,7 +67,7 @@
   }
 
   /* ---------- canvas sizing ---------- */
-  var dpr = Math.min(devicePixelRatio || 1, 2), CW = 0, CH = 0;
+  var dpr = Math.min(devicePixelRatio || 1, touch ? 1.25 : 2), CW = 0, CH = 0;
   function resize() {
     var r = stage.getBoundingClientRect();
     CW = Math.round(r.width); CH = Math.round(r.height);
@@ -91,14 +92,23 @@
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round"; ctx.lineJoin = "round";
-    var steps = 46;
+    /* glow = one soft wide halo polyline + bright core segments —
+       shadowBlur is avoided entirely (it tanks mobile frame rates) */
+    var steps = touch ? 24 : 38;
+    ctx.strokeStyle = "rgba(16,215,174," + (alpha * 0.16) + ")";
+    ctx.lineWidth = width * 3.4;
+    ctx.beginPath();
+    for (var h = 0; h <= steps; h++) {
+      var uh = headU - span * h / steps;
+      if (h === 0) ctx.moveTo(uh * CW, trailY(uh)); else ctx.lineTo(uh * CW, trailY(uh));
+    }
+    ctx.stroke();
     for (var i = 0; i < steps; i++) {
       var u0 = headU - span * (i + 1) / steps, u1 = headU - span * i / steps;
       if (u1 < -0.08 || u0 > 1.08) continue;
       var fade = 1 - i / steps;                       // brighter at the head
       ctx.strokeStyle = "rgba(120,255,222," + (alpha * fade * fade) + ")";
       ctx.lineWidth = width * (0.35 + 0.65 * fade);
-      ctx.shadowColor = MINT; ctx.shadowBlur = 16 * fade;
       ctx.beginPath();
       ctx.moveTo(u0 * CW, trailY(u0));
       ctx.lineTo(u1 * CW, trailY(u1));
@@ -131,10 +141,11 @@
       var dist = (22 + hash(i * 3 + sy) * 46) * scale * p;
       var x = o[0] + Math.cos(a) * dist, y = o[1] + Math.sin(a) * dist * 0.85;
       var al = (1 - life) * (white ? 0.85 : 0.9);
+      var r = Math.max((white ? 1.6 : 1.9) * (1 - life) * scale * 3, .4);
+      ctx.fillStyle = white ? "rgba(255,255,255," + al * .3 + ")" : "rgba(16,215,174," + al * .3 + ")";
+      ctx.beginPath(); ctx.arc(x, y, r * 2.4, 0, 7); ctx.fill();  /* halo, no shadowBlur */
       ctx.fillStyle = white ? "rgba(255,255,255," + al + ")" : "rgba(120,255,222," + al + ")";
-      ctx.shadowColor = white ? "#fff" : MINT; ctx.shadowBlur = 8;
-      var r = (white ? 1.6 : 1.9) * (1 - life) * scale * 3;
-      ctx.beginPath(); ctx.arc(x, y, Math.max(r, .4), 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
     }
     ctx.restore();
   }
@@ -158,8 +169,10 @@
       ox += pc.from.x * 0.22 * out; oy += pc.from.y * 0.22 * out; or_ += pc.from.r * 0.3 * out;
       pc.el.style.transform = "translate(" + ox + "px," + oy + "px) rotate(" + or_ + "deg)";
       pc.el.style.opacity = (clamp(p * 2.2, 0, 1) * (1 - out)).toFixed(3);
-      var blur = 7 * (1 - clamp(p * 1.35, 0, 1)) + 6 * out; // motion blur in, dissolve blur out
-      pc.el.style.filter = blur > 0.15 ? "blur(" + blur.toFixed(2) + "px)" : "";
+      if (!touch) { // blur filters are too costly on mobile GPUs
+        var blur = 7 * (1 - clamp(p * 1.35, 0, 1)) + 6 * out; // motion blur in, dissolve blur out
+        pc.el.style.filter = blur > 0.15 ? "blur(" + blur.toFixed(2) + "px)" : "";
+      }
     }
 
     /* ---- seam killers: solid letters appear on completion ---- */
