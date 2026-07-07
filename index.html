@@ -290,6 +290,28 @@ html:not(.js-motion) .htrack{overflow-x:auto;padding-right:22px}
 #ultra h2{font-size:clamp(2.6rem,9vw,6.4rem)}
 #ultra .cta-row{display:flex;justify-content:center;gap:14px;margin-top:38px;flex-wrap:wrap}
 
+/* ---- forged (scroll-scrubbed logo assembly) ---- */
+#forged{padding:0;height:380vh;position:relative}
+#forged .pin{position:sticky;top:0;height:100svh;overflow:hidden;
+  display:flex;align-items:center;justify-content:center}
+#forged canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#forged .fglow{position:absolute;inset:0;opacity:0;pointer-events:none;
+  background:radial-gradient(44% 38% at 50% 46%,rgba(45,255,138,.32),transparent 68%);will-change:opacity,transform}
+#forged .fhead{position:absolute;top:clamp(76px,11vh,120px);left:0;right:0;text-align:center;z-index:2}
+#forged .fwrap{position:relative;width:min(52vh,74vw);text-align:center;will-change:transform;z-index:1}
+#forged svg{width:100%;height:auto;overflow:visible;display:block}
+.fpiece{opacity:0;will-change:transform,opacity,filter;transform-box:fill-box;transform-origin:center}
+#forged .ftag{display:flex;justify-content:center;gap:.55em;margin-top:7%;
+  font-weight:800;font-style:italic;letter-spacing:.34em;text-transform:uppercase;
+  font-size:clamp(13px,3.4vh,30px);color:var(--white);white-space:nowrap}
+#forged .ftag .fw{display:inline-block;overflow:hidden}
+#forged .ftag .fi{display:inline-block;padding-right:.34em;transform:translateX(-103%);will-change:transform}
+#forged .ftag .fi.green{color:var(--green)}
+html:not(.js-motion) #forged{height:auto}
+html:not(.js-motion) #forged .pin{position:relative;height:auto;padding:clamp(58px,9vw,118px) 0}
+html:not(.js-motion) .fpiece{opacity:1}
+html:not(.js-motion) #forged .ftag .fi{transform:none}
+
 /* ---- connect ---- */
 #connect .callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--green);border-radius:3px;
   padding:clamp(34px,5vw,58px);display:grid;grid-template-columns:1.4fr 1fr;gap:30px;align-items:center}
@@ -525,6 +547,56 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
     </div>
   </section>
 
+  <!-- ============ FORGED (scroll-scrubbed logo assembly) ============ -->
+  <section id="forged">
+    <div class="pin">
+      <canvas id="fx-forged" aria-hidden="true"></canvas>
+      <div class="fglow" data-fglow></div>
+      <div class="fhead">
+        <span class="eyebrow mute">05 — The mark</span>
+      </div>
+      <div class="fwrap" data-fwrap>
+        <svg viewBox="-40 -40 860 740" aria-label="Iron Miles logo, forged piece by piece as you scroll">
+          <defs>
+            <linearGradient id="fg-pulse" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#eafff3" stop-opacity="0"/>
+              <stop offset=".5" stop-color="#eafff3" stop-opacity=".9"/>
+              <stop offset="1" stop-color="#eafff3" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="fg-sweep" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+              <stop offset=".5" stop-color="#fff" stop-opacity=".8"/>
+              <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+            </linearGradient>
+            <clipPath id="fg-clip-logo">
+              <polygon points="9,17 131,130 131,628 9,628"/>
+              <polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337"/>
+            </clipPath>
+            <clipPath id="fg-clip-m">
+              <polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337"/>
+            </clipPath>
+          </defs>
+          <g data-fback-i opacity="0"><polygon points="9,17 131,130 131,628 9,628" fill="#eeeeee"/></g>
+          <g data-fback-m opacity="0"><polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337" fill="#2dff8a"/></g>
+          <g class="fpiece"><polygon points="9,17 131,130 131,240 9,240" fill="#eeeeee"/></g>
+          <g class="fpiece"><polygon points="9,240 131,240 131,450 9,450" fill="#eeeeee"/></g>
+          <g class="fpiece"><polygon points="9,450 131,450 131,628 9,628" fill="#eeeeee"/></g>
+          <g class="fpiece"><polygon points="172,162 381,365 376,541 172,337" fill="#2dff8a"/></g>
+          <g class="fpiece"><polygon points="381,365 607,139 607,311 376,541" fill="#2dff8a"/></g>
+          <g class="fpiece"><polygon points="607,260 729,260 729,628 607,628" fill="#2dff8a"/></g>
+          <g class="fpiece"><polygon points="607,139 729,17 729,260 607,260" fill="#2dff8a"/></g>
+          <g clip-path="url(#fg-clip-m)"><rect data-fpulse x="-400" y="-40" width="240" height="740" fill="url(#fg-pulse)" opacity="0" transform="skewX(-18)"/></g>
+          <g clip-path="url(#fg-clip-logo)"><rect data-fsweep x="-460" y="-40" width="210" height="740" fill="url(#fg-sweep)" opacity="0" transform="skewX(-18)"/></g>
+        </svg>
+        <div class="ftag" aria-label="Forge one more">
+          <span class="fw"><span class="fi">FORGE</span></span>
+          <span class="fw"><span class="fi green">ONE</span></span>
+          <span class="fw"><span class="fi">MORE</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ CONNECT ============ -->
   <section id="connect">
     <div class="wrap">
@@ -724,6 +796,125 @@ var mani=document.getElementById('manifesto'),
     maniBg=document.querySelector('[data-mani-bg]'),
     klines=Array.prototype.slice.call(document.querySelectorAll('[data-kline]')),
     kcite=document.querySelector('[data-kcite]');
+/* ---------- forged section: scroll-scrubbed logo assembly ---------- */
+var forged=document.getElementById('forged'),
+    fwrap=document.querySelector('[data-fwrap]'),
+    fglowEl=document.querySelector('[data-fglow]'),
+    fbackI=document.querySelector('[data-fback-i]'),
+    fbackM=document.querySelector('[data-fback-m]'),
+    fpulse=document.querySelector('[data-fpulse]'),
+    fsweep=document.querySelector('[data-fsweep]'),
+    fpieces=Array.prototype.slice.call(document.querySelectorAll('.fpiece')),
+    fis=Array.prototype.slice.call(document.querySelectorAll('#forged .fi')),
+    fsvg=forged?forged.querySelector('svg'):null,
+    fcv=document.getElementById('fx-forged'),
+    fctx=fcv?fcv.getContext('2d'):null;
+var FCFG=[
+  {t0:1.20,d:.72,x:-26,y:92,r:-2,seam:[70,130],w:1},
+  {t0:1.44,d:.72,x:20,y:116,r:2,seam:[70,240],w:1},
+  {t0:1.68,d:.74,x:0,y:138,r:0,seam:[70,450],w:1},
+  {t0:2.50,d:.80,x:-175,y:145,r:-5,seam:[277,451]},
+  {t0:2.96,d:.80,x:22,y:-195,r:4,seam:[381,365]},
+  {t0:3.42,d:.76,x:205,y:42,r:0,seam:[668,470]},
+  {t0:3.86,d:.70,x:150,y:-150,r:6,seam:[668,260]}
+];
+function outBack(p){var s=1.25;p-=1;return p*p*((s+1)*p+s)+1;}
+function outCubic(p){return 1-Math.pow(1-p,3);}
+function outExpo(p){return p===1?1:1-Math.pow(2,-10*p);}
+function inOutC(p){return p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;}
+function bell(p){return Math.sin(Math.PI*clamp(p,0,1));}
+function fseg(T,t0,d){return clamp((T-t0)/d,0,1);}
+function fhash(n){return Math.abs(Math.sin(n*127.1+311.7)*43758.5453)%1;}
+var fpr=Math.min(devicePixelRatio||1,2);
+function fResize(){
+  if(!fcv)return;
+  var pin=fcv.parentElement,r=pin.getBoundingClientRect();
+  fcv.width=Math.round(r.width*fpr);fcv.height=Math.round(r.height*fpr);
+  fctx.setTransform(fpr,0,0,fpr,0,0);
+}
+if(fcv){fResize();addEventListener('resize',fResize);}
+function fSvgPt(sx,sy){
+  var lr=fsvg.getBoundingClientRect(),pr2=fcv.parentElement.getBoundingClientRect();
+  return [(sx+40)/860*lr.width+lr.left-pr2.left,(sy+40)/740*lr.height+lr.top-pr2.top];
+}
+function fTrailY(u,H){return H*(.635+.045*Math.sin(u*5.3+1.15)+.024*Math.sin(u*9.6+4.2));}
+function fDrawTrail(headU,span,width,alpha,W,H){
+  if(alpha<=.004)return;
+  fctx.save();fctx.globalCompositeOperation='lighter';fctx.lineCap='round';
+  var steps=40;
+  for(var i=0;i<steps;i++){
+    var u0=headU-span*(i+1)/steps,u1=headU-span*i/steps;
+    if(u1<-.08||u0>1.08)continue;
+    var fade=1-i/steps;
+    fctx.strokeStyle='rgba(140,255,196,'+(alpha*fade*fade)+')';
+    fctx.lineWidth=width*(.35+.65*fade);
+    fctx.shadowColor='#2dff8a';fctx.shadowBlur=14*fade;
+    fctx.beginPath();fctx.moveTo(u0*W,fTrailY(u0,H));fctx.lineTo(u1*W,fTrailY(u1,H));fctx.stroke();
+  }
+  var hx=headU*W,hy=fTrailY(headU,H);
+  if(headU>-.05&&headU<1.05){
+    var g=fctx.createRadialGradient(hx,hy,0,hx,hy,22);
+    g.addColorStop(0,'rgba(230,255,242,'+alpha+')');
+    g.addColorStop(.35,'rgba(45,255,138,'+alpha*.8+')');
+    g.addColorStop(1,'rgba(45,255,138,0)');
+    fctx.fillStyle=g;fctx.beginPath();fctx.arc(hx,hy,22,0,7);fctx.fill();
+  }
+  fctx.restore();
+}
+function fDrawBurst(T,lockT,sx,sy,white){
+  var life=(T-lockT)/.5;
+  if(life<=0||life>=1)return;
+  var p=outCubic(life),o=fSvgPt(sx,sy),scale=fsvg.getBoundingClientRect().width/860;
+  fctx.save();fctx.globalCompositeOperation='lighter';
+  for(var i=0;i<12;i++){
+    var a=(i/12)*Math.PI*2+fhash(i+sx)*.9;
+    var dist=(22+fhash(i*3+sy)*44)*scale*p;
+    var x=o[0]+Math.cos(a)*dist,y=o[1]+Math.sin(a)*dist*.85;
+    var al=(1-life)*.85;
+    fctx.fillStyle=white?'rgba(255,255,255,'+al+')':'rgba(140,255,196,'+al+')';
+    fctx.shadowColor=white?'#fff':'#2dff8a';fctx.shadowBlur=7;
+    fctx.beginPath();fctx.arc(x,y,Math.max((1.8)*(1-life)*scale*3,.4),0,7);fctx.fill();
+  }
+  fctx.restore();
+}
+function forgedFX(){
+  if(!forged||!fctx)return;
+  var r=forged.getBoundingClientRect();
+  if(r.bottom<-60||r.top>innerHeight+60)return;
+  var p=clamp(-r.top/(r.height-innerHeight),0,1);
+  var T=p*8.0;
+  for(var i=0;i<FCFG.length;i++){
+    var c=FCFG[i],pp=outBack(fseg(T,c.t0,c.d));
+    fpieces[i].style.transform='translate('+(c.x*(1-pp))+'px,'+(c.y*(1-pp))+'px) rotate('+(c.r*(1-pp))+'deg)';
+    fpieces[i].style.opacity=clamp(pp*2.2,0,1).toFixed(3);
+    var bl=7*(1-clamp(pp*1.35,0,1));
+    fpieces[i].style.filter=bl>.15?'blur('+bl.toFixed(2)+'px)':'';
+  }
+  fbackI.setAttribute('opacity',outCubic(fseg(T,2.42,.2)).toFixed(3));
+  fbackM.setAttribute('opacity',outCubic(fseg(T,4.56,.2)).toFixed(3));
+  var pu=fseg(T,4.6,.42);
+  fpulse.setAttribute('opacity',(bell(pu)*.6).toFixed(3));
+  fpulse.setAttribute('x',(-400+inOutC(pu)*1300).toFixed(1));
+  var imp=outBack(fseg(T,4.9,.3));
+  fwrap.style.transform='scale('+(0.97+0.03*imp).toFixed(4)+')';
+  fglowEl.style.opacity=(bell(fseg(T,4.9,.7))*.75+outCubic(fseg(T,6.4,1))*.22).toFixed(3);
+  for(var w2=0;w2<3;w2++){
+    var tp=outExpo(fseg(T,5.5+w2*.22,.55));
+    fis[w2].style.transform='translateX('+(-103*(1-tp))+'%)';
+  }
+  var sw=fseg(T,6.6,.9);
+  fsweep.setAttribute('opacity',(bell(sw)*.8).toFixed(3));
+  fsweep.setAttribute('x',(-460+inOutC(sw)*1400).toFixed(1));
+  var W=fcv.width/fpr,H=fcv.height/fpr;
+  fctx.clearRect(0,0,W,H);
+  var tf=clamp(1-(T-2.9)/.8,0,1);
+  fDrawTrail(-.06+fseg(T,.3,1.9)*1.18,.34,H*.011,.8*tf,W,H);
+  fDrawTrail(-.06+fseg(T,.85,2.1)*1.18,.26,H*.007,.3*clamp(1-(T-3.3)/.8,0,1),W,H);
+  var amb=outCubic(fseg(T,6.2,1));
+  if(amb>.01)fDrawTrail(.5+.42*Math.sin(T*.8),.5,H*.006,.15*amb,W,H);
+  for(var b2=0;b2<FCFG.length;b2++)fDrawBurst(T,FCFG[b2].t0+FCFG[b2].d*.82,FCFG[b2].seam[0],FCFG[b2].seam[1],FCFG[b2].w);
+}
+
 var camp=document.getElementById('campaign'),
     htrack=document.querySelector('[data-htrack]'),
     hidx=document.querySelector('[data-hidx]'),
@@ -765,6 +956,7 @@ function scrollFX(){
       });
       if(kcite){ kcite.style.opacity=clamp((p-.72)/.14,0,1)-clamp((p-.9)/.1,0,1)*.0; }
     }
+    forgedFX();
     if(camp&&htrack&&!campStatic){
       var cr=camp.getBoundingClientRect();
       var ctotal=cr.height-innerHeight;
