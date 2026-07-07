@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Iron Miles — Logo Reveal</title>
+<meta name="description" content="Forged from motion — the Iron Miles cinematic logo reveal.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 132 116'%3E%3Crect width='132' height='116' fill='%23050505'/%3E%3Cpolygon points='14,26 32,18 32,98 14,98' fill='%23eeeeee'/%3E%3Cpolygon points='40,18 58,18 66,50 74,18 92,18 66,82' fill='%2310d7ae'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ======================================================
+     STAGE — square 1:1 composition, centred in any viewport
+     (1080×1080 / 1080×1350 / 1920×1080 all letterbox to a
+     centred square with true-black negative space around it)
+     ====================================================== -->
+<div class="frame">
+  <div class="stage" id="stage">
+
+    <!-- ambient centre glow (phase 1) -->
+    <div class="centerglow" id="centerglow"></div>
+
+    <!-- energy trails + sparks (phases 2–4, 7) -->
+    <canvas id="fx" aria-hidden="true"></canvas>
+
+    <!-- impact glow behind the logo (phase 5) -->
+    <div class="impactglow" id="impactglow"></div>
+
+    <!-- ============ THE MARK ============
+         Traced from the reference PNG (1536px master):
+         both strokes are 122u wide, all diagonals 45°,
+         baselines aligned. viewBox normalised to 0 0 780 660.
+         The I is split into 3 forged pieces, the M into 4 —
+         every piece is the true final geometry, never redrawn. -->
+    <div class="logo-wrap" id="logoWrap">
+      <svg id="logo" viewBox="-40 -40 860 740" aria-label="Iron Miles logo">
+        <defs>
+          <!-- forged-metal texture: understated fractal noise -->
+          <filter id="forge-noise" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+            <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .35 .35 .35 0 0" result="na"/>
+            <feComposite in="na" in2="SourceGraphic" operator="in"/>
+          </filter>
+          <!-- light-sweep band (phases 3 and 7) -->
+          <linearGradient id="sweep-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0"   stop-color="#fff" stop-opacity="0"/>
+            <stop offset=".45" stop-color="#fff" stop-opacity=".55"/>
+            <stop offset=".5"  stop-color="#fff" stop-opacity=".85"/>
+            <stop offset=".55" stop-color="#fff" stop-opacity=".55"/>
+            <stop offset="1"   stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <!-- energy pulse band for the green M (phase 4) -->
+          <linearGradient id="pulse-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0"   stop-color="#eafffa" stop-opacity="0"/>
+            <stop offset=".5"  stop-color="#eafffa" stop-opacity=".9"/>
+            <stop offset="1"   stop-color="#eafffa" stop-opacity="0"/>
+          </linearGradient>
+
+          <!-- silhouettes used to clip texture + sweeps -->
+          <clipPath id="clip-logo">
+            <polygon points="9,17 131,130 131,628 9,628"/>
+            <polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337"/>
+          </clipPath>
+          <clipPath id="clip-m">
+            <polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337"/>
+          </clipPath>
+        </defs>
+
+        <!-- soft green under-glow duplicate of the M (breathing, phase 7) -->
+        <g id="mglow" opacity="0" style="filter:blur(18px)">
+          <polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337" fill="#10d7ae"/>
+        </g>
+
+        <!-- seam killers: exact full-letter silhouettes that fade in
+             the moment each letter finishes assembling, hiding the
+             anti-aliased joins between pieces -->
+        <g id="backI" opacity="0"><polygon points="9,17 131,130 131,628 9,628" fill="#f2f4f3"/></g>
+        <g id="backM" opacity="0"><polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337" fill="#10d7ae"/></g>
+
+        <!-- ==== the seven forged pieces ==== -->
+        <!-- WHITE I — three angular slabs, 45° cut lines -->
+        <g class="piece" id="pI1"><polygon points="9,17 131,130 131,240 9,240"   fill="#f2f4f3"/></g>
+        <g class="piece" id="pI2"><polygon points="9,240 131,240 131,450 9,450"  fill="#f2f4f3"/></g>
+        <g class="piece" id="pI3"><polygon points="9,450 131,450 131,628 9,628"  fill="#f2f4f3"/></g>
+
+        <!-- GREEN M — four pieces following the letterform geometry -->
+        <!-- A: left descending diagonal (arrives from lower-left) -->
+        <g class="piece" id="pM1"><polygon points="172,162 381,365 376,541 172,337" fill="#10d7ae"/></g>
+        <!-- B: central point / ascending stroke (drops into position) -->
+        <g class="piece" id="pM2"><polygon points="381,365 607,139 607,311 376,541" fill="#10d7ae"/></g>
+        <!-- C: right vertical (arrives from the right) -->
+        <g class="piece" id="pM3"><polygon points="607,260 729,260 729,628 607,628" fill="#10d7ae"/></g>
+        <!-- D: upper-right apex wedge (arrives from upper-right) -->
+        <g class="piece" id="pM4"><polygon points="607,139 729,17 729,260 607,260" fill="#10d7ae"/></g>
+
+        <!-- forged texture overlay, clipped to the assembled mark -->
+        <g id="texture" clip-path="url(#clip-logo)" opacity="0">
+          <rect x="-40" y="-40" width="860" height="740" fill="#fff" filter="url(#forge-noise)"/>
+        </g>
+
+        <!-- energy pulse across the green section (end of phase 4) -->
+        <g clip-path="url(#clip-m)">
+          <rect id="pulseband" x="-400" y="-40" width="260" height="740"
+                fill="url(#pulse-grad)" opacity="0" transform="skewX(-18)"/>
+        </g>
+
+        <!-- narrow finishing light-sweep across the whole mark (phase 7) -->
+        <g clip-path="url(#clip-logo)">
+          <rect id="sweepband" x="-460" y="-40" width="220" height="740"
+                fill="url(#sweep-grad)" opacity="0" transform="skewX(-18)"/>
+        </g>
+      </svg>
+
+      <!-- ============ TAGLINE ============ -->
+      <div class="tagline" id="tagline" aria-label="Forge one more">
+        <span class="tw" id="tw1"><span class="ti">FORGE</span></span>
+        <span class="tw" id="tw2"><span class="ti green">ONE</span></span>
+        <span class="tw" id="tw3"><span class="ti">MORE</span></span>
+      </div>
+    </div>
+
+    <!-- cinematic vignette + grain, always on top of the scene -->
+    <div class="vignette" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+  </div>
+</div>
+
+<!-- replay control lives OUTSIDE the composition; hidden with ?export -->
+<div class="ui" id="ui">
+  <button id="replay" type="button" title="Replay (R)">↻ Replay</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
