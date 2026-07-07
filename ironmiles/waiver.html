@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Health Disclaimer &amp; Waiver — Iron Miles</title>
+<meta name="robots" content="noindex">
+<style>/* ============================================================
+   IRON MILES — locked design system
+   Iron Black #080808 · Miles Green #2dff8a · Forge White #eeeeee
+   Zero external dependencies. System fonts only.
+   ============================================================ */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --iron:#080808;
+  --iron-2:#0d0e0e;
+  --panel:#111312;
+  --green:#2dff8a;
+  --green-dim:#1f9e5a;
+  --white:#eeeeee;
+  --muted:#8b918d;
+  --muted-2:#5d625f;
+  --line:rgba(238,238,238,.10);
+  --line-2:rgba(238,238,238,.18);
+  --maxw:1180px;
+  --disp: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --cond:"Arial Narrow","Helvetica Neue",Arial,sans-serif;
+}
+
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--iron);
+  color:var(--white);
+  font-family:var(--disp);
+  line-height:1.6;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+
+/* ---- type primitives ---- */
+.eyebrow{
+  font-size:12px;font-weight:700;letter-spacing:.42em;text-transform:uppercase;
+  color:var(--green);display:inline-block;
+}
+.eyebrow.mute{color:var(--muted)}
+h1,h2,h3{font-weight:800;text-transform:uppercase;line-height:.96;letter-spacing:.02em}
+h1{font-size:clamp(2.6rem,9vw,5.4rem)}
+h2{font-size:clamp(2rem,6vw,3.6rem)}
+h3{font-size:clamp(1.2rem,3.4vw,1.7rem)}
+.green{color:var(--green)}
+p{color:var(--muted);font-size:clamp(1rem,1.15vw,1.12rem)}
+.lead{color:var(--white);font-size:clamp(1.1rem,1.7vw,1.4rem);line-height:1.5;font-weight:400}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+
+/* ---- the mark: white bar + green chevron + green bar = M ---- */
+.mark{display:inline-block;vertical-align:middle}
+
+/* ---- header ---- */
+header{
+  position:sticky;top:0;z-index:60;
+  background:rgba(8,8,8,.72);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.bar{
+  max-width:var(--maxw);margin:0 auto;padding:13px 22px;
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+}
+.brand{display:flex;align-items:center;gap:11px}
+.brand .mark{width:26px;height:auto}
+.wordmark{font-weight:800;letter-spacing:.22em;font-size:14px;text-transform:uppercase}
+.wordmark .green{color:var(--green)}
+nav.links{display:flex;gap:26px}
+nav.links a{
+  font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--muted);transition:color .2s;
+}
+nav.links a:hover,nav.links a.active{color:var(--white)}
+.navtoggle{display:none;background:none;border:1px solid var(--line-2);color:var(--white);
+  width:42px;height:38px;border-radius:2px;font-size:18px;cursor:pointer}
+
+@media(max-width:760px){
+  nav.links{
+    position:fixed;inset:60px 0 auto 0;flex-direction:column;gap:0;
+    background:var(--iron-2);border-bottom:1px solid var(--line);
+    transform:translateY(-130%);transition:transform .32s ease;padding:6px 0;
+  }
+  nav.links.open{transform:translateY(0)}
+  nav.links a{padding:16px 24px;border-top:1px solid var(--line);font-size:13px}
+  .navtoggle{display:block}
+}
+
+/* ---- buttons ---- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-weight:800;letter-spacing:.18em;text-transform:uppercase;font-size:13px;
+  padding:16px 26px;border-radius:2px;transition:.2s;cursor:pointer;border:1px solid transparent;
+}
+.btn-green{background:var(--green);color:#04130a}
+.btn-green:hover{background:#5fffa8}
+.btn-ghost{border-color:var(--line-2);color:var(--white);background:transparent}
+.btn-ghost:hover{border-color:var(--green);color:var(--green)}
+
+/* ---- hero (full-bleed photo) ---- */
+.hero{position:relative;min-height:88vh;display:flex;align-items:flex-end;overflow:hidden}
+.hero.tall{min-height:96vh}
+.hero img.bg{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;
+  z-index:0;
+}
+.hero::after{
+  content:"";position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(8,8,8,.30) 0%,rgba(8,8,8,0) 30%,rgba(8,8,8,.55) 72%,var(--iron) 100%);
+}
+.hero .inner{position:relative;z-index:2;width:100%;padding:0 22px 54px;max-width:var(--maxw);margin:0 auto}
+.hero h1{margin:.2em 0 .35em;max-width:14ch}
+.hero p.lead{max-width:46ch}
+.hero .cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+
+/* ---- sections ---- */
+section{padding:clamp(58px,9vw,118px) 0;position:relative}
+.section-head{max-width:64ch;margin-bottom:clamp(34px,5vw,60px)}
+.section-head h2{margin:.18em 0 .4em}
+
+/* divider mark */
+.rule{display:flex;align-items:center;gap:16px;margin:0 0 22px}
+.rule .mark{width:30px;flex:none}
+.rule .ln{height:1px;background:var(--line-2);flex:1}
+
+/* ---- link hub (index) ---- */
+.hub{display:grid;gap:13px;max-width:560px;margin:0 auto}
+.hublink{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:20px 22px;background:var(--panel);border:1px solid var(--line);
+  border-radius:3px;transition:.22s;
+}
+.hublink:hover{border-color:var(--green);transform:translateX(4px);background:#141716}
+.hublink .lbl{font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-size:15px}
+.hublink .sub{display:block;font-size:11px;letter-spacing:.16em;color:var(--muted);font-weight:600;margin-top:5px}
+.hublink .arrow{color:var(--green);font-size:20px;flex:none;transition:transform .22s}
+.hublink:hover .arrow{transform:translateX(5px)}
+.hublink.primary{background:var(--green)}
+.hublink.primary .lbl,.hublink.primary .arrow{color:#04130a}
+.hublink.primary .sub{color:rgba(4,19,10,.7)}
+.hublink.primary:hover{background:#5fffa8;border-color:transparent}
+
+/* ---- feature rows ---- */
+.feature{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,72px);align-items:center}
+.feature.flip .media{order:2}
+.feature .media{position:relative;border-radius:3px;overflow:hidden;aspect-ratio:1/1}
+.feature .media img{width:100%;height:100%;object-fit:cover}
+.feature .media.tall{aspect-ratio:4/5}
+.feature h3{margin-bottom:.5em}
+.feature .copy p+p{margin-top:1em}
+@media(max-width:780px){
+  .feature{grid-template-columns:1fr;gap:26px}
+  .feature.flip .media{order:0}
+}
+
+/* ---- stat / no-barrier strip ---- */
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.facts .cell{background:var(--iron-2);padding:30px 22px}
+.facts .num{font-weight:800;font-size:clamp(1.6rem,4vw,2.4rem);color:var(--green);letter-spacing:.02em}
+.facts .cap{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:8px;font-weight:600}
+@media(max-width:620px){.facts{grid-template-columns:1fr}.facts .cell{padding:22px}}
+
+/* ---- gallery grid ---- */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid figure{position:relative;overflow:hidden;border-radius:3px;aspect-ratio:1/1}
+.grid img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease;filter:grayscale(.15)}
+.grid figure:hover img{transform:scale(1.06);filter:grayscale(0)}
+.grid figcaption{
+  position:absolute;left:0;bottom:0;right:0;padding:14px;font-size:11px;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--white);z-index:2;
+  background:linear-gradient(transparent,rgba(8,8,8,.85))
+}
+@media(max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---- banner (full-bleed quote / cta over photo) ---- */
+.banner{position:relative;padding:0;overflow:hidden}
+.banner img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.banner::after{content:"";position:absolute;inset:0;background:rgba(8,8,8,.62);z-index:1}
+.banner .inner{position:relative;z-index:2;max-width:var(--maxw);margin:0 auto;padding:clamp(70px,12vw,150px) 22px;text-align:center}
+.banner blockquote{font-weight:800;text-transform:uppercase;font-size:clamp(1.8rem,5.5vw,3.4rem);line-height:1.02;max-width:18ch;margin:0 auto}
+.banner cite{display:block;margin-top:22px;font-style:normal;font-size:12px;letter-spacing:.26em;color:var(--green);text-transform:uppercase;font-weight:700}
+
+/* ---- timeline (origins) — numbered: this IS a sequence ---- */
+.timeline{display:grid;gap:0;border-top:1px solid var(--line)}
+.tl{display:grid;grid-template-columns:88px 1fr 1fr;gap:clamp(20px,4vw,48px);
+  padding:clamp(34px,5vw,56px) 0;border-bottom:1px solid var(--line);align-items:center}
+.tl .no{font-weight:800;font-size:clamp(2rem,5vw,3rem);color:var(--green-dim);line-height:1}
+.tl h3{margin-bottom:.55em}
+.tl .media{border-radius:3px;overflow:hidden;aspect-ratio:1/1}
+.tl .media img{width:100%;height:100%;object-fit:cover}
+@media(max-width:820px){
+  .tl{grid-template-columns:54px 1fr;gap:18px}
+  .tl .media{grid-column:1/-1;aspect-ratio:16/10;order:3}
+  .tl .no{font-size:1.7rem}
+}
+
+/* ---- callout ---- */
+.callout{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--green);
+  border-radius:3px;padding:clamp(28px,4vw,44px)}
+.callout p{color:var(--white);font-size:clamp(1.05rem,1.6vw,1.3rem);line-height:1.55}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--line);padding:54px 0 40px;background:var(--iron-2)}
+.foot{display:flex;flex-wrap:wrap;gap:30px;justify-content:space-between;align-items:flex-start}
+.foot .mark{width:34px}
+.foot .lock{font-weight:800;letter-spacing:.34em;text-transform:uppercase;font-size:13px;margin-top:14px}
+.foot .lock .green{color:var(--green)}
+.foot nav{display:flex;flex-direction:column;gap:11px}
+.foot nav a{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.foot nav a:hover{color:var(--white)}
+.foot .social{display:flex;gap:14px;flex-wrap:wrap}
+.copy-line{margin-top:38px;border-top:1px solid var(--line);padding-top:22px;font-size:11px;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase}
+
+/* ---- scroll reveal ---- */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+  .grid img,.hublink,.hero{transition:none}
+}
+
+:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+
+/* ---- pricing tiers (coaching) ---- */
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
+.tier{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:34px 28px;display:flex;flex-direction:column;position:relative}
+.tier.feat{border-color:var(--green)}
+.tier .flag{position:absolute;top:0;right:20px;transform:translateY(-50%);background:var(--green);color:#04130a;font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;padding:5px 12px;border-radius:2px}
+.tier .tname{font-weight:800;text-transform:uppercase;letter-spacing:.14em;font-size:15px}
+.tier .price{font-weight:800;font-size:clamp(2rem,5vw,2.7rem);margin:16px 0 2px;line-height:1}
+.tier .price span{font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.tier .tfor{font-size:11px;letter-spacing:.16em;color:var(--green);text-transform:uppercase;font-weight:700;margin-bottom:22px}
+.tier ul{list-style:none;display:flex;flex-direction:column;gap:13px;margin:0 0 28px;flex:1}
+.tier li{position:relative;padding-left:24px;font-size:14px;color:var(--muted);line-height:1.45}
+.tier li::before{content:"";position:absolute;left:0;top:8px;width:11px;height:2px;background:var(--green)}
+.tier .btn{width:100%}
+@media(max-width:820px){.tiers{grid-template-columns:1fr}}
+
+/* ---- portrait gallery (coach band) ---- */
+.pgrid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.pgrid figure{flex:0 1 calc(33.333% - 7px);position:relative;overflow:hidden;border-radius:3px;aspect-ratio:4/5}
+.pgrid img{width:100%;height:100%;object-fit:cover;object-position:top center;transition:transform .5s ease}
+.pgrid figure:hover img{transform:scale(1.05)}
+@media(max-width:760px){.pgrid figure{flex-basis:calc(50% - 5px)}}
+
+/* ---- legal / document pages ---- */
+.legal{max-width:760px}
+.legal .updated{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:12px;display:block}
+.legal h2{font-size:clamp(1.25rem,3vw,1.7rem);text-transform:uppercase;font-weight:800;letter-spacing:.01em;margin:2.4em 0 .7em;line-height:1.12}
+.legal h2:first-of-type{margin-top:.3em}
+.legal h3{font-size:1.02rem;text-transform:uppercase;letter-spacing:.05em;color:var(--white);margin:1.7em 0 .5em;font-weight:700}
+.legal p,.legal li{color:#b9beba;font-size:1rem;line-height:1.72}
+.legal p{margin-bottom:1.05em}
+.legal ul,.legal ol{margin:0 0 1.2em 1.25em}
+.legal li{margin-bottom:.5em;padding-left:.25em}
+.legal strong{color:var(--white);font-weight:600}
+.legal a{color:var(--green);text-decoration:underline;text-underline-offset:2px}
+.legal .ph{color:var(--green);font-style:italic}
+.legal hr{border:none;border-top:1px solid var(--line);margin:2.4em 0}
+.legal-links{margin-top:30px;display:flex;gap:18px;flex-wrap:wrap}
+.legal-links a{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.legal-links a:hover{color:var(--white)}
+</style>
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 132 116'%3E%3Crect width='132' height='116' fill='%23080808'/%3E%3Cpolygon points='14,26 32,18 32,98 14,98' fill='%23eeeeee'/%3E%3Cpolygon points='40,18 58,18 66,50 74,18 92,18 66,82' fill='%232dff8a'/%3E%3Cpolygon points='100,18 118,26 118,98 100,98' fill='%232dff8a'/%3E%3C/svg%3E">
+<style id="im-motion-css">
+/* ============================================================
+   IRON MILES — site-wide motion engine (injected, zero deps)
+   ============================================================ */
+#im-progress{position:fixed;top:0;left:0;height:2px;width:100%;z-index:150;transform-origin:0 50%;
+  transform:scaleX(0);background:linear-gradient(90deg,#2dff8a,#5fffa8);pointer-events:none}
+#im-cursor{position:fixed;top:0;left:0;z-index:160;pointer-events:none;mix-blend-mode:difference;display:none}
+#im-cursor .dot{position:absolute;width:8px;height:8px;border-radius:50%;background:#2dff8a;transform:translate(-50%,-50%)}
+#im-cursor .ring{position:absolute;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(45,255,138,.75);
+  transform:translate(-50%,-50%);transition:width .3s cubic-bezier(.19,1,.22,1),height .3s cubic-bezier(.19,1,.22,1)}
+#im-cursor.hover .ring{width:64px;height:64px}
+#im-cursor.press .ring{width:26px;height:26px}
+@media(hover:hover)and(pointer:fine){
+  html.im-motion #im-cursor{display:block}
+  html.im-motion,html.im-motion a,html.im-motion button{cursor:none}
+}
+.im-chw{display:inline-block;white-space:nowrap}
+.im-ch{display:inline-block;will-change:transform,opacity}
+html.im-motion .im-split .im-ch{opacity:0;transform:translateY(1.05em) rotate(3deg)}
+html.im-motion .im-split.im-in .im-ch{opacity:1;transform:none;
+  transition:opacity .7s cubic-bezier(.19,1,.22,1),transform .9s cubic-bezier(.19,1,.22,1)}
+html.im-motion .im-clip img{clip-path:inset(0 0 100% 0);
+  transition:clip-path 1.1s cubic-bezier(.19,1,.22,1),transform .5s ease}
+html.im-motion .im-clip.im-in img{clip-path:inset(0 0 0% 0)}
+html.im-motion .hero img.bg,html.im-motion .banner>img{will-change:transform;transform:scale(1.12)}
+html.im-motion .facts .cell{position:relative;overflow:hidden}
+html.im-motion .facts .cell::after{content:"";position:absolute;left:0;top:0;width:3px;height:0;background:#2dff8a;
+  transition:height .8s cubic-bezier(.19,1,.22,1) .2s}
+html.im-motion .facts .cell.im-in::after{height:100%}
+html.im-motion .btn{will-change:transform}
+@media(prefers-reduced-motion:reduce){
+  html.im-motion .im-split .im-ch{opacity:1;transform:none}
+  html.im-motion .im-clip img{clip-path:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <a class="brand" href="index.html" aria-label="Iron Miles home">
+      <svg class="mark" viewBox="0 0 132 116" aria-hidden="true"><polygon points="14,26 32,18 32,98 14,98" fill="#eeeeee"/><polygon points="40,18 58,18 66,50 74,18 92,18 66,82" fill="#2dff8a"/><polygon points="100,18 118,26 118,98 100,98" fill="#2dff8a"/></svg>
+      <span class="wordmark">Iron <span class="green">Miles</span></span>
+    </a>
+    <button class="navtoggle" aria-label="Menu" aria-expanded="false">☰</button>
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <a href="club.html">The Club</a>
+      <a href="coaching.html">Coaching</a>
+      <a href="origins.html">Origins</a>
+      <a href="terms.html">Terms</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section style="padding-top:clamp(40px,7vw,70px)">
+    <div class="wrap legal">
+      <span class="eyebrow mute">Legal</span>
+      <h1 style="margin:.2em 0">Health Disclaimer<br>&amp; Waiver</h1>
+      <span class="updated">Last updated: <span class="ph">[DATE]</span></span>
+
+      <div class="callout reveal" style="margin:30px 0 10px">
+        <p style="margin:0;color:var(--white)"><strong>Template — not legal or medical advice.</strong> Under Irish law you generally cannot exclude liability for death or personal injury caused by negligence, so the wording of any waiver must be finalised by a solicitor. Replace every <span class="ph">[bracketed]</span> field.</p>
+      </div>
+
+      <h2>1. Important notice</h2>
+      <p>Iron Miles provides fitness coaching, training programmes and group sessions. We are not doctors, and nothing we provide is medical advice, diagnosis or treatment. Always consult a qualified medical professional before starting any new exercise programme, and stop and seek help if you feel unwell.</p>
+
+      <h2>2. Pre-participation questionnaire (PAR-Q)</h2>
+      <p>Before your first session, please answer the following. If you answer <strong>yes</strong> to any, talk to your doctor and get clearance before taking part.</p>
+      <ol>
+        <li>Has a doctor ever said you have a heart condition, or that you should only do physical activity recommended by a doctor?</li>
+        <li>Do you feel pain in your chest when you do physical activity?</li>
+        <li>In the past month, have you had chest pain when you were not doing physical activity?</li>
+        <li>Do you lose your balance from dizziness, or do you ever lose consciousness?</li>
+        <li>Do you have a bone or joint problem that could be made worse by exercise?</li>
+        <li>Is a doctor currently prescribing medication for blood pressure or a heart condition?</li>
+        <li>Are you pregnant, recently post-partum, or aware of any other reason you should not do physical activity?</li>
+      </ol>
+
+      <h2>3. Medical clearance</h2>
+      <p>By taking part, you confirm that you are in good general health, have answered the questions above honestly, and have obtained medical clearance where needed. You agree to tell us promptly about any change to your health, injuries, pregnancy, or medication.</p>
+
+      <h2>4. Assumption of risk</h2>
+      <p>You understand that physical training — including running, strength and conditioning, open-water swimming and group sessions — involves inherent risks, including muscle strains, sprains, falls, and in rare cases more serious injury. You take part voluntarily and accept these inherent risks.</p>
+
+      <h2>5. Your acknowledgement</h2>
+      <ul>
+        <li>You are participating of your own free will and at a level you choose.</li>
+        <li>You will follow safety instructions and work within your own limits.</li>
+        <li>You will stop and seek medical help if you experience pain, dizziness, or distress.</li>
+        <li>You are responsible for your own suitable clothing, footwear and hydration.</li>
+      </ul>
+
+      <h2>6. Waiver and release</h2>
+      <p>To the fullest extent permitted by Irish law, you agree that <span class="ph">[Iron Miles legal/business name]</span>, its coaches and volunteers are not liable for injury, loss or damage arising from the ordinary risks of participation that you have accepted above. <strong>This does not exclude or limit liability for death or personal injury caused by negligence, or anything else that cannot lawfully be excluded.</strong> <span class="ph">[Final wording and enforceability to be confirmed by a solicitor.]</span></p>
+
+      <h2>7. Emergency contact &amp; consent to treatment</h2>
+      <p>Please provide an emergency contact before your first session. In a medical emergency where you cannot consent, you authorise us to seek appropriate medical assistance on your behalf.</p>
+      <ul>
+        <li>Emergency contact name: <span class="ph">[ ]</span></li>
+        <li>Emergency contact number: <span class="ph">[ ]</span></li>
+        <li>Anything we should know (conditions, allergies, medication): <span class="ph">[ ]</span></li>
+      </ul>
+
+      <h2>8. Confirmation</h2>
+      <p>By booking a session or coaching plan, or by signing below, you confirm that you have read, understood and agree to this disclaimer and waiver.</p>
+      <p style="margin-top:1.6em">Name: <span class="ph">[ ]</span> &nbsp;·&nbsp; Signature: <span class="ph">[ ]</span> &nbsp;·&nbsp; Date: <span class="ph">[ ]</span></p>
+
+      <hr>
+      <p style="font-size:.92rem;color:var(--muted)">For under-18s where permitted, a parent or guardian must read and sign on the participant's behalf.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <svg class="mark" viewBox="0 0 132 116" aria-hidden="true"><polygon points="14,26 32,18 32,98 14,98" fill="#eeeeee"/><polygon points="40,18 58,18 66,50 74,18 92,18 66,82" fill="#2dff8a"/><polygon points="100,18 118,26 118,98 100,98" fill="#2dff8a"/></svg>
+        <div class="lock">Forge <span class="green">One</span> More</div>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="club.html">The Club</a>
+        <a href="coaching.html">Coaching</a>
+        <a href="mailto:ironmilesclub@outlook.com">Contact</a>
+      </nav>
+    </div>
+    <div class="legal-links">
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="waiver.html">Health Waiver</a>
+    </div>
+    <div class="copy-line">Iron Miles · Limerick, Ireland · ironmilesclub@outlook.com</div>
+  </div>
+</footer>
+
+<script>
+(function(){var t=document.querySelector('.navtoggle'),n=document.querySelector('nav.links');
+if(t&&n){t.addEventListener('click',function(){var o=n.classList.toggle('open');t.setAttribute('aria-expanded',o)});
+n.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){n.classList.remove('open')})});}})();
+</script>
+
+<script id="im-motion-js">
+/* ============================================================
+   IRON MILES — site-wide motion engine (injected, zero deps)
+   char reveals · parallax · clip reveals · cursor · magnetic
+   ============================================================ */
+(function(){
+"use strict";
+var reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var touch=matchMedia('(hover: none), (pointer: coarse)').matches;
+if(reduced)return;
+document.documentElement.classList.add('im-motion');
+var lerp=function(a,b,t){return a+(b-a)*t;};
+var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
+
+/* ---- progress bar ---- */
+var prog=document.createElement('div');prog.id='im-progress';prog.setAttribute('aria-hidden','true');
+document.body.appendChild(prog);
+
+/* ---- cursor ---- */
+var cursor=null,mx=innerWidth/2,my=innerHeight/2,cx=mx,cy=my,rx=mx,ry=my;
+if(!touch){
+  cursor=document.createElement('div');cursor.id='im-cursor';cursor.setAttribute('aria-hidden','true');
+  cursor.innerHTML='<div class="ring"></div><div class="dot"></div>';
+  document.body.appendChild(cursor);
+  addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;},{passive:true});
+  addEventListener('mousedown',function(){cursor.classList.add('press')});
+  addEventListener('mouseup',function(){cursor.classList.remove('press')});
+  document.querySelectorAll('a,button').forEach(function(el){
+    el.addEventListener('mouseenter',function(){cursor.classList.add('hover')});
+    el.addEventListener('mouseleave',function(){cursor.classList.remove('hover')});
+  });
+}
+
+/* ---- magnetic buttons ---- */
+var magnets=[];
+if(!touch){
+  document.querySelectorAll('.btn').forEach(function(el){
+    var st={el:el,tx:0,ty:0,x:0,y:0};
+    el.addEventListener('mousemove',function(e){
+      var r=el.getBoundingClientRect();
+      st.tx=(e.clientX-r.left-r.width/2)*.26;st.ty=(e.clientY-r.top-r.height/2)*.32;
+    });
+    el.addEventListener('mouseleave',function(){st.tx=0;st.ty=0;});
+    magnets.push(st);
+  });
+}
+
+/* ---- char splitting ---- */
+function split(el){
+  function walk(node){
+    Array.prototype.slice.call(node.childNodes).forEach(function(ch){
+      if(ch.nodeType===3){
+        var frag=document.createDocumentFragment();
+        ch.textContent.split(/(\s+)/).forEach(function(tok){
+          if(!tok)return;
+          if(/^\s+$/.test(tok)){frag.appendChild(document.createTextNode(' '));return;}
+          var w=document.createElement('span');w.className='im-chw';
+          tok.split('').forEach(function(c){
+            var s=document.createElement('span');s.className='im-ch';s.textContent=c;w.appendChild(s);
+          });
+          frag.appendChild(w);
+        });
+        node.replaceChild(frag,ch);
+      } else if(ch.nodeType===1&&ch.tagName!=='BR') walk(ch);
+    });
+  }
+  walk(el);el.classList.add('im-split');
+}
+function play(el){
+  if(el.classList.contains('im-in'))return;
+  el.querySelectorAll('.im-ch').forEach(function(s,i){s.style.transitionDelay=(i*30)+'ms';});
+  el.classList.add('im-in');
+}
+var splitTargets=document.querySelectorAll('.hero h1,.section-head h2,.banner blockquote,main .legal h1');
+splitTargets.forEach(function(el){ if(el.textContent.trim().length<90) split(el); });
+
+/* ---- observers: splits, clip reveals, counters, fact cells ---- */
+var clips=document.querySelectorAll('.feature .media,.grid figure,.tl .media,.pgrid figure');
+clips.forEach(function(el){el.classList.add('im-clip')});
+var io=new IntersectionObserver(function(es){
+  es.forEach(function(e){
+    if(!e.isIntersecting)return;
+    var el=e.target;
+    if(el.classList.contains('im-split'))play(el);
+    else el.classList.add('im-in');
+    if(el.classList.contains('cell')){
+      var num=el.querySelector('.num');
+      if(num&&!num._imDone){num._imDone=true;counter(num);}
+    }
+    io.unobserve(el);
+  });
+},{threshold:.15,rootMargin:'0px 0px -5% 0px'});
+splitTargets.forEach(function(el){io.observe(el)});
+clips.forEach(function(el){io.observe(el)});
+document.querySelectorAll('.facts .cell').forEach(function(el){io.observe(el)});
+
+function counter(el){
+  var txt=el.textContent,m=txt.match(/^([^0-9]*)(\d+)(.*)$/);
+  if(!m)return;
+  var target=parseInt(m[2],10);if(!target)return;
+  var t0=null,dur=1300;
+  function frame(t){
+    if(!t0)t0=t;
+    var p=clamp((t-t0)/dur,0,1);p=1-Math.pow(1-p,4);
+    el.textContent=m[1]+Math.round(target*p)+m[3];
+    if(p<1)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---- scroll FX: progress + parallax ---- */
+var heroBg=document.querySelector('.hero img.bg');
+var banners=Array.prototype.slice.call(document.querySelectorAll('.banner>img'));
+var scheduled=false;
+function fx(){
+  var y=scrollY,max=document.documentElement.scrollHeight-innerHeight;
+  prog.style.transform='scaleX('+(max>0?y/max:0)+')';
+  if(heroBg){
+    var h=heroBg.parentElement.offsetHeight||innerHeight;
+    if(y<h*1.2) heroBg.style.transform='scale(1.12) translateY('+(y*.18)+'px)';
+  }
+  banners.forEach(function(img){
+    var r=img.parentElement.getBoundingClientRect();
+    if(r.bottom<-60||r.top>innerHeight+60)return;
+    var p=(r.top+r.height/2-innerHeight/2)/innerHeight;
+    img.style.transform='scale(1.12) translateY('+(p*-38)+'px)';
+  });
+}
+addEventListener('scroll',function(){
+  if(scheduled)return;scheduled=true;
+  requestAnimationFrame(function(){scheduled=false;fx();});
+},{passive:true});
+fx();
+
+/* ---- rAF loop: cursor + magnets ---- */
+if(!touch){
+  (function loop(){
+    cx=lerp(cx,mx,.6);cy=lerp(cy,my,.6);
+    rx=lerp(rx,mx,.16);ry=lerp(ry,my,.16);
+    if(cursor){
+      cursor.children[1].style.transform='translate('+cx+'px,'+cy+'px)';
+      cursor.children[0].style.transform='translate('+rx+'px,'+ry+'px)';
+    }
+    magnets.forEach(function(st){
+      st.x=lerp(st.x,st.tx,.18);st.y=lerp(st.y,st.ty,.18);
+      st.el.style.transform=(Math.abs(st.x)>.05||Math.abs(st.y)>.05)?'translate('+st.x+'px,'+st.y+'px)':'';
+    });
+    requestAnimationFrame(loop);
+  })();
+}
+})();
+</script>
+</body>
+</html>
