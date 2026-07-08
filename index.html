@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
 <title>Iron Miles | Forge One More</title>
 <meta name="description" content="Iron Miles is a Limerick-based endurance and fitness community for runners, lifters, swimmers, triathletes, and anyone ready to Forge One More.">
 <!-- TODO: swap andrewmcnamara117.github.io URLs for the real domain when it goes live -->
@@ -18,7 +19,8 @@
 <meta name="twitter:description" content="Iron Miles is a Limerick-based endurance and fitness community for runners, lifters, swimmers, triathletes, and anyone ready to Forge One More.">
 <meta name="twitter:image" content="https://andrewmcnamara117.github.io/python-project-battleship/assets/images/iron-miles-preview.jpg">
 <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
-<!-- TODO: add a PNG fallback (assets/images/favicon.png, 512x512) + apple-touch-icon for older devices -->
+<link rel="icon" href="assets/images/favicon.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
 <style>
 /* ============================================================
    IRON MILES — locked design system · immersive edition
@@ -121,6 +123,10 @@ nav.links a:hover::after{transform:scaleX(1);transform-origin:0 50%}
 nav.links a.nav-cta{background:var(--green);color:#04130a;padding:9px 16px;border-radius:2px}
 nav.links a.nav-cta::after{display:none}
 nav.links a.nav-cta:hover{background:#5fffa8;color:#04130a}
+.skip{position:fixed;top:-100px;left:16px;z-index:200;background:var(--green);color:#04130a;
+  font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:12px;padding:12px 18px;
+  border-radius:2px;transition:top .2s}
+.skip:focus{top:12px}
 .navtoggle{display:none;background:none;border:1px solid var(--line-2);color:var(--white);width:42px;height:38px;border-radius:2px;font-size:18px;cursor:pointer}
 @media(max-width:760px){
   nav.links{position:fixed;inset:64px 0 auto 0;flex-direction:column;gap:0;background:var(--iron-2);
@@ -349,7 +355,7 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
 .legal-links{margin-top:44px;display:flex;gap:18px;flex-wrap:wrap}
 .legal-links a{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .legal-links a:hover{color:var(--white)}
-.copy-line{margin-top:22px;border-top:1px solid var(--line);padding-top:22px;font-size:11px;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.copy-line{margin-top:22px;border-top:1px solid var(--line);padding-top:22px;font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 
 /* ---- reduced motion ---- */
 @media(prefers-reduced-motion:reduce){
@@ -392,7 +398,7 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
   </div>
 </header>
 
-<main>
+<main id="main">
 
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero" style="padding:0">
@@ -646,8 +652,8 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
         <a href="mailto:ironmilesclub@outlook.com">Contact</a>
       </nav>
       <nav class="social">
-        <a href="https://instagram.com/ironmilesclub">Instagram</a>
-        <a href="https://tiktok.com/@ironmilesclub">TikTok</a>
+        <a href="https://instagram.com/ironmilesclub" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://tiktok.com/@ironmilesclub" target="_blank" rel="noopener">TikTok</a>
       </nav>
     </div>
     <div class="giant" aria-hidden="true">Iron Miles</div>

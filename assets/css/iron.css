@@ -210,7 +210,7 @@ footer{border-top:1px solid var(--line);padding:54px 0 40px;background:var(--iro
 .foot nav a{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .foot nav a:hover{color:var(--white)}
 .foot .social{display:flex;gap:14px;flex-wrap:wrap}
-.copy-line{margin-top:38px;border-top:1px solid var(--line);padding-top:22px;font-size:11px;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase}
+.copy-line{margin-top:38px;border-top:1px solid var(--line);padding-top:22px;font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
 
 /* ---- scroll reveal ---- */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
@@ -268,6 +268,12 @@ footer{border-top:1px solid var(--line);padding:54px 0 40px;background:var(--iro
 nav.links a.nav-cta{background:var(--green);color:#04130a;padding:9px 16px;border-radius:2px}
 nav.links a.nav-cta:hover,nav.links a.nav-cta.active{background:#5fffa8;color:#04130a}
 @media(max-width:760px){nav.links a.nav-cta{margin:12px 24px 16px;text-align:center;padding:14px;border-top:none}}
+
+/* ---- skip link ---- */
+.skip{position:fixed;top:-100px;left:16px;z-index:200;background:var(--green);color:#04130a;
+  font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:12px;padding:12px 18px;
+  border-radius:2px;transition:top .2s}
+.skip:focus{top:12px}
 
 /* ---- checklist ---- */
 ul.checks{list-style:none;display:grid;grid-template-columns:repeat(2,1fr);gap:14px 36px;margin:0;padding:0}
