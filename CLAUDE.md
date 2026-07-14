@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository actually is
 
-Despite the repo name, this repository contains **two unrelated projects**:
+Despite the repo name, this repository contains **several unrelated projects**:
 
 1. **Iron Miles marketing site** (the active project) — an immersive static website for the Iron Miles endurance community (Limerick, Ireland), served from the repo root. Documented in `IRONMILES.md`. All recent work happens here.
 2. **Brazen Headz barber site** (`brazenheadz.html`) — a single-page immersive site for Brazen Headz Barber Studio (Limerick), still fully self-contained (data-URI photos, WebGL particle hero, scroll choreography) with its own black-and-brass design system (Gold `#c6a45c`, serif display type).
-3. **Legacy battleship game** (the original project, dormant) — a Code Institute Python terminal game (`run.py`) plus the template's Node "mock terminal" that runs it in a browser for Heroku (`index.js`, `package.json`, `Procfile`, `controllers/`, `views/`, `.vscode/`, `.gitpod.*`). Leave these files alone unless explicitly asked; the `package.json` belongs to this legacy layer, not the website.
+3. **Thomond Works agency site** (`thomondworks/`) — a self-contained Next.js + TypeScript + Tailwind 4 + GSAP/Lenis website for the Thomond Works digital studio brand. It has its own `package.json` and README; run `npm install && npm run dev` inside `thomondworks/`. It is not deployed by the GitHub Pages workflow (which only watches root `*.html` and `assets/**`).
+4. **Legacy battleship game** (the original project, dormant) — a Code Institute Python terminal game (`run.py`) plus the template's Node "mock terminal" that runs it in a browser for Heroku (`index.js`, `package.json`, `Procfile`, `controllers/`, `views/`, `.vscode/`, `.gitpod.*`). Leave these files alone unless explicitly asked; the `package.json` belongs to this legacy layer, not the website.
 
 ## Commands
 
