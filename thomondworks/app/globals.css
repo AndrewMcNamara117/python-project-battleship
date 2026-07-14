@@ -1,0 +1,383 @@
+@import "tailwindcss";
+
+/* ================================================================
+   THOMOND WORKS — design tokens
+   Architecture meets digital craft.
+   ================================================================ */
+
+@theme {
+  --color-bg: #0d0f10;
+  --color-surface: #131416;
+  --color-surface-2: #1a1c1d;
+  --color-bone: #f2f0ed;
+  --color-emerald: #0f8a5b;
+  --color-emerald-bright: #25b57e;
+  --color-bronze: #a8895e;
+  --color-bronze-bright: #c3a67c;
+  --color-muted: #858986;
+  --color-line: rgb(242 240 237 / 0.12);
+  --color-line-soft: rgb(242 240 237 / 0.07);
+
+  --breakpoint-3xl: 120rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-serif: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+}
+
+:root {
+  /* motion */
+  --ease-premium: cubic-bezier(0.65, 0.05, 0, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 0.3s;
+  --duration-medium: 0.6s;
+  --duration-slow: 1.1s;
+
+  /* fluid type scale */
+  --text-display: clamp(2.9rem, 1rem + 8vw, 8.25rem);
+  --text-h1: clamp(2.6rem, 1rem + 6.5vw, 6.5rem);
+  --text-h2: clamp(2.1rem, 1rem + 4.2vw, 4.6rem);
+  --text-h3: clamp(1.45rem, 1rem + 1.8vw, 2.4rem);
+  --text-lede: clamp(1.05rem, 1rem + 0.45vw, 1.35rem);
+
+  /* z-index scale */
+  --z-header: 50;
+  --z-menu: 60;
+  --z-cursor: 80;
+  --z-intro: 90;
+}
+
+/* ================================================================
+   Base
+   ================================================================ */
+
+html {
+  background: var(--color-bg);
+  color-scheme: dark;
+  scrollbar-color: rgb(242 240 237 / 0.22) var(--color-bg);
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-emerald);
+  color: var(--color-bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-emerald-bright);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(242 240 237 / 0.18);
+  border-radius: 5px;
+  border: 2px solid var(--color-bg);
+}
+
+/* film grain — sits above content, below overlays */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ================================================================
+   Layout + typography utilities
+   ================================================================ */
+
+.container-tw {
+  width: min(100% - clamp(2.5rem, 7vw, 9rem), 90rem);
+  margin-inline: auto;
+}
+
+.label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.label--bronze {
+  color: var(--color-bronze);
+}
+.label--emerald {
+  color: var(--color-emerald-bright);
+}
+
+.display {
+  font-family: var(--font-serif);
+  font-weight: 380;
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.grotesk-display {
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.lede {
+  font-size: var(--text-lede);
+  line-height: 1.65;
+  color: var(--color-muted);
+  max-width: 38em;
+  text-wrap: pretty;
+}
+
+.hairline-t {
+  border-top: 1px solid var(--color-line-soft);
+}
+
+/* skip link */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  background: var(--color-bone);
+  color: var(--color-bg);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transform: translateY(-200%);
+  transition: transform 0.25s var(--ease-smooth);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ================================================================
+   Buttons
+   ================================================================ */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.05rem 1.9rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color var(--duration-fast) var(--ease-smooth);
+}
+.btn .btn-arrow {
+  transition: transform var(--duration-fast) var(--ease-smooth);
+}
+.btn:hover .btn-arrow,
+.btn:focus-visible .btn-arrow {
+  transform: translateX(5px);
+}
+
+.btn--primary {
+  background: var(--color-bone);
+  color: var(--color-bg);
+}
+.btn--primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-emerald);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform var(--duration-fast) var(--ease-premium);
+}
+.btn--primary:hover::before,
+.btn--primary:focus-visible::before {
+  transform: scaleY(1);
+}
+.btn--primary:hover,
+.btn--primary:focus-visible {
+  color: var(--color-bone);
+}
+
+.btn--ghost {
+  border: 1px solid rgb(242 240 237 / 0.25);
+  color: var(--color-bone);
+}
+.btn--ghost::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--color-bronze);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-medium) var(--ease-premium);
+}
+.btn--ghost:hover,
+.btn--ghost:focus-visible {
+  border-color: rgb(242 240 237 / 0.5);
+}
+.btn--ghost:hover::before,
+.btn--ghost:focus-visible::before {
+  transform: scaleX(1);
+}
+
+/* text link with growing underline */
+.link-line {
+  position: relative;
+  display: inline-block;
+}
+.link-line::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.2em;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform var(--duration-fast) var(--ease-premium);
+}
+.link-line:hover::after,
+.link-line:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ================================================================
+   Motion engine hooks (populated by JS; static without it)
+   ================================================================ */
+
+.tw-line {
+  display: block;
+  overflow: clip;
+  padding-block: 0.06em; /* keep descenders inside the mask */
+  margin-block: -0.06em;
+}
+.tw-line-inner {
+  display: block;
+  will-change: transform;
+}
+.tw-char {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* custom cursor */
+.tw-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: var(--z-cursor);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-bone);
+  mix-blend-mode: difference;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+}
+.tw-cursor span {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-bg);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.tw-cursor.is-label span {
+  opacity: 1;
+}
+@media (hover: none), (pointer: coarse) {
+  .tw-cursor {
+    display: none;
+  }
+}
+
+/* page entrance (motion-gated) */
+@keyframes tw-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+html.tw-motion .tw-page {
+  animation: tw-page-in 0.55s var(--ease-smooth) both;
+}
+
+/* river drift — deliberately slow and quiet */
+@keyframes tw-river-drift {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -260;
+  }
+}
+html.tw-motion .tw-river path {
+  animation: tw-river-drift 26s linear infinite;
+}
+
+/* intro overlay: hidden when already seen / reduced motion / no JS */
+html[data-intro="done"] #tw-intro {
+  display: none;
+}
+html[data-intro="pending"] body {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
