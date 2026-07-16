@@ -275,6 +275,13 @@ html:not(.js-motion) #manifesto cite{opacity:1}
   padding:14px;font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--white);
   background:linear-gradient(transparent,rgba(8,8,8,.92));z-index:2}
 .pcard .cap .n{color:var(--green)}
+/* featured campaign cards: single cinematic light sweep on reveal */
+.pcard--feat::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.20) 50%,transparent 58%);
+  transform:translateX(-130%)}
+html.js-motion .pcard--feat.in::after{animation:pcard-sweep 1.5s cubic-bezier(.19,1,.22,1) .25s both}
+@keyframes pcard-sweep{to{transform:translateX(130%)}}
+@media(prefers-reduced-motion:reduce){.pcard--feat::after{display:none}}
 .hprog{display:flex;align-items:center;gap:18px;max-width:var(--maxw);margin:0 auto;width:100%;padding:0 22px}
 .hidx{font-size:11px;font-weight:800;letter-spacing:.3em;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .hbar{flex:1;height:1px;background:var(--line-2);position:relative}
@@ -520,8 +527,8 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
         <h2 data-split-scroll style="margin-bottom:0">Run. Ride. Lift. <span class="green">Endure.</span></h2>
       </div>
       <div class="htrack" data-htrack>
-        <figure class="pcard reveal" data-tilt><span class="glow"></span><div class="p3d"><img src="assets/images/this-is-iron-miles-runner-on-a-glowing-fores.webp" alt="This is Iron Miles — runner on a glowing forest trail" width="880" height="880" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">01</span><span>This is Iron Miles</span></figcaption></figure>
-        <figure class="pcard reveal" data-tilt style="transition-delay:.06s"><span class="glow"></span><div class="p3d"><img src="assets/images/built-in-the-dark-headtorch-runner-in-the-wo.webp" alt="Built in the dark — headtorch runner in the woods" width="880" height="880" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">02</span><span>Built in the dark</span></figcaption></figure>
+        <figure class="pcard pcard--feat reveal" data-tilt><span class="glow"></span><div class="p3d"><img src="assets/images/night-runner-light-trail.webp" alt="Night runner with a headtorch trailing turquoise light across the Iron Miles mark" width="1200" height="1200" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">01</span><span>This is Iron Miles</span></figcaption></figure>
+        <figure class="pcard pcard--feat reveal" data-tilt style="transition-delay:.06s"><span class="glow"></span><div class="p3d"><img src="assets/images/night-runner-forest-trail.webp" alt="Runner on a night forest trail leaving a turquoise light trail beneath the Iron Miles mark" width="1200" height="1200" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">02</span><span>Built in the dark</span></figcaption></figure>
         <figure class="pcard reveal" data-tilt style="transition-delay:.12s"><span class="glow"></span><div class="p3d"><img src="assets/images/find-your-edge-figure-on-a-cliff-over-the-se.webp" alt="Find your edge — figure on a cliff over the sea" width="880" height="880" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">03</span><span>Find your edge</span></figcaption></figure>
         <figure class="pcard reveal" data-tilt style="transition-delay:.18s"><span class="glow"></span><div class="p3d"><img src="assets/images/forge-one-more-iron-miles-finisher-medal.webp" alt="Forge one more — Iron Miles finisher medal" width="880" height="880" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">04</span><span>Forge one more</span></figcaption></figure>
         <figure class="pcard reveal" data-tilt style="transition-delay:.24s"><span class="glow"></span><div class="p3d"><img src="assets/images/who-it-s-for-runners-cyclists-lifters-hybrid.webp" alt="Who it's for — runners, cyclists, lifters, hybrid athletes" width="880" height="880" loading="lazy" decoding="async"></div><figcaption class="cap"><span class="n">05</span><span>Who it's for</span></figcaption></figure>
