@@ -275,13 +275,18 @@ html:not(.js-motion) #manifesto cite{opacity:1}
   padding:14px;font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--white);
   background:linear-gradient(transparent,rgba(8,8,8,.92));z-index:2}
 .pcard .cap .n{color:var(--green)}
-/* featured campaign cards: single cinematic light sweep on reveal */
-.pcard--feat::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
-  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.20) 50%,transparent 58%);
-  transform:translateX(-130%)}
-html.js-motion .pcard--feat.in::after{animation:pcard-sweep 1.5s cubic-bezier(.19,1,.22,1) .25s both}
-@keyframes pcard-sweep{to{transform:translateX(130%)}}
-@media(prefers-reduced-motion:reduce){.pcard--feat::after{display:none}}
+/* featured campaign cards: continuous turquoise energy pulse along the light trail */
+.pcard--feat .p3d{position:relative}
+.pcard--feat .p3d::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(100deg,transparent 22%,rgba(45,255,138,.24) 40%,rgba(198,255,224,.60) 50%,rgba(45,255,138,.24) 60%,transparent 78%);
+  mix-blend-mode:screen;transform:translateX(-140%);opacity:0}
+html.js-motion .pcard--feat.anim .p3d::after{animation:trail-pulse 5.6s ease-in-out infinite}
+@keyframes trail-pulse{
+  0%{transform:translateX(-140%);opacity:0}
+  14%{opacity:1} 48%{opacity:1}
+  60%,100%{transform:translateX(140%);opacity:0}
+}
+@media(prefers-reduced-motion:reduce){.pcard--feat .p3d::after{display:none;animation:none}}
 .hprog{display:flex;align-items:center;gap:18px;max-width:var(--maxw);margin:0 auto;width:100%;padding:0 22px}
 .hidx{font-size:11px;font-weight:800;letter-spacing:.3em;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .hbar{flex:1;height:1px;background:var(--line-2);position:relative}
@@ -754,6 +759,14 @@ var io=new IntersectionObserver(function(es){
   });
 },{threshold:.15,rootMargin:'0px 0px -5% 0px'});
 document.querySelectorAll('.reveal,.reveal-img,[data-rule],[data-split],.facts .cell').forEach(function(el){io.observe(el)});
+
+/* featured campaign cards: run the light pulse only while on screen */
+if(!reduced){
+  var pulseIO=new IntersectionObserver(function(es){
+    es.forEach(function(e){ e.target.classList.toggle('anim', e.isIntersecting); });
+  },{threshold:.2});
+  document.querySelectorAll('.pcard--feat').forEach(function(el){ pulseIO.observe(el); });
+}
 
 function runCounter(el){
   if(reduced)return;
