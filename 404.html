@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Page Not Found | Iron Miles</title>
+<meta name="description" content="That page doesn't exist — but the miles do. Head back to Iron Miles.">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/css/iron.css">
+
+<link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/images/favicon.png" type="image/png" sizes="512x512">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header>
+  <div class="bar">
+    <a class="brand" href="index.html" aria-label="Iron Miles home">
+      <svg class="mark" viewBox="0 0 780 660" aria-hidden="true"><polygon points="9,17 131,130 131,628 9,628" fill="#eeeeee"/><polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337" fill="#2dff8a"/></svg>
+      <span class="wordmark">Iron <span class="green">Miles</span></span>
+    </a>
+    <button class="navtoggle" aria-label="Menu" aria-expanded="false">☰</button>
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <a href="club.html">The Club</a>
+      <a href="coaching.html">Coaching</a>
+      <a href="origins.html">Origins</a>
+      <a href="services.html">Services</a>
+      <a class="nav-cta" href="club.html#join">Join the Club</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section style="min-height:70vh;display:flex;align-items:center">
+    <div class="wrap" style="text-align:center">
+      <span class="eyebrow mute">Off route</span>
+      <h1 style="margin:.2em 0">Wrong <span class="green">turn</span></h1>
+      <p class="lead" style="max-width:44ch;margin:18px auto 0">This page doesn't exist. The miles still do — pick the route back.</p>
+      <div class="cta-row" style="justify-content:center;margin-top:30px">
+        <a class="btn btn-green" href="index.html">Back to the start</a>
+        <a class="btn btn-ghost" href="club.html">The Club</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <svg class="mark" viewBox="0 0 780 660" aria-hidden="true"><polygon points="9,17 131,130 131,628 9,628" fill="#eeeeee"/><polygon points="172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337" fill="#2dff8a"/></svg>
+        <div class="lock">Forge <span class="green">One</span> More</div>
+      </div>
+      <nav aria-label="Footer">
+        <a href="index.html">Home</a>
+        <a href="club.html">The Club</a>
+        <a href="coaching.html">Coaching</a>
+        <a href="origins.html">Origins</a>
+        <a href="services.html">Services</a>
+        <a href="mailto:ironmilesclub@outlook.com">Contact</a>
+      </nav>
+    </div>
+    <div class="legal-links">
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="waiver.html">Health Waiver</a>
+    </div>
+    <div class="copy-line">Iron Miles · Limerick, Ireland · ironmilesclub@outlook.com</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var t=document.querySelector('.navtoggle'),n=document.querySelector('nav.links');
+  if(t&&n){t.addEventListener('click',function(){var o=n.classList.toggle('open');t.setAttribute('aria-expanded',o)});
+    n.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){n.classList.remove('open')})});}
+})();
+</script>
+
+<script src="assets/js/im-motion.js"></script>
+</body>
+</html>

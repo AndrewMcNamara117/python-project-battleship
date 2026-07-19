@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /controllers/
+Disallow: /views/
+Disallow: /logo-reveal/
+
+Sitemap: https://ironmiles.ie/sitemap.xml
