@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#080808">
 <title>Admin | The Forge — Iron Miles</title>
 <meta name="robots" content="noindex">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 </head>
@@ -127,8 +128,9 @@
 
 <script type="module">
   import {
-    initForgePage, db, collection, doc, addDoc, updateDoc, deleteDoc, getDocs,
-    serverTimestamp, isAdminUser, toast, withLoading, escapeHtml, fmtWhen,
+    initForgePage, auth, db, collection, doc, addDoc, updateDoc, deleteDoc, getDocs,
+    serverTimestamp, isAdminUser, sendEmailVerification, toast, withLoading,
+    escapeHtml, fmtWhen,
   } from "./assets/js/forge-core.js";
 
   const user = await initForgePage();
@@ -141,6 +143,21 @@
         ? "This account isn't on the admin list. If it's your hub, add your email to ADMIN_EMAILS in assets/js/firebase-config.js and to firestore.rules."
         : `You need to <a class="green" href="login.html?next=admin.html">log in</a> with an admin account.`}</p>`;
     throw new Error("not admin");
+  }
+  if (!user.emailVerified) {
+    // firestore.rules requires a verified admin email
+    gate.innerHTML = `
+      <h3>Verify your email first</h3>
+      <p>Admin access needs a verified email. Check your inbox for the verification
+      link, click it, then reload this page.</p>
+      <button class="btn btn-ghost sm" id="resendVerify" style="margin-top:14px">Resend verification email</button>`;
+    document.getElementById("resendVerify").addEventListener("click", (e) => {
+      withLoading(e.target, async () => {
+        try { await sendEmailVerification(auth.currentUser); toast("Sent. Check your inbox."); }
+        catch { toast("Couldn't send it. Wait a minute and go again.", true); }
+      }, "Sending…");
+    });
+    throw new Error("email not verified");
   }
   gate.hidden = true;
   document.getElementById("adminApp").hidden = false;

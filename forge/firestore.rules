@@ -9,6 +9,11 @@ rules_version = '2';
 // forge/assets/js/firebase-config.js. The JS array only hides
 // the admin UI; THIS list is what actually protects the data.
 //
+// Admin requires a VERIFIED email. Without this check, anyone
+// who registered your address before you (and set their own
+// password on it) would get admin. The app sends the
+// verification email on registration — click the link, reload.
+//
 // TODO (hardening): replace the email list with Firebase custom
 // claims (request.auth.token.admin == true), set via the Admin
 // SDK or a Cloud Function. See README "Hardening before launch".
@@ -23,15 +28,31 @@ service cloud.firestore {
 
     function isAdmin() {
       return signedIn() &&
+        request.auth.token.email_verified == true &&
         request.auth.token.email in [
           'your-email@example.com'   // <<< your admin email(s), lowercase
         ];
     }
 
+    // string field present and within a sane size (anti-spam/abuse)
+    function okStr(v, max) {
+      return v is string && v.size() <= max;
+    }
+
     // Members — public join form may create; signed-in members own
     // the doc whose id == their uid; only admin reads the list.
     match /members/{memberId} {
-      allow create: if request.resource.data.waiverAccepted == true;
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'fullName','email','phone','instagram','location','fitnessLevel',
+          'mainInterest','mainGoal','emergencyContactName','emergencyContactPhone',
+          'medicalNotes','waiverAccepted','marketingConsent','createdAt','uid'
+        ]) &&
+        request.resource.data.waiverAccepted == true &&
+        okStr(request.resource.data.fullName, 120) &&
+        okStr(request.resource.data.email, 200) &&
+        okStr(request.resource.data.mainGoal, 2000) &&
+        okStr(request.resource.data.medicalNotes, 2000);
       allow read, update: if isAdmin() ||
         (signedIn() && request.auth.uid == memberId);
       allow delete: if isAdmin();
@@ -46,7 +67,14 @@ service cloud.firestore {
     // Event RSVPs — public create ("I'm Showing Up" works without an
     // account); members read their own; admin reads/manages all.
     match /eventSignups/{signupId} {
-      allow create: if request.resource.data.status == 'going' &&
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'eventId','eventTitle','uid','name','email','instagram','status','createdAt'
+        ]) &&
+        request.resource.data.status == 'going' &&
+        okStr(request.resource.data.name, 120) &&
+        okStr(request.resource.data.email, 200) &&
+        okStr(request.resource.data.eventTitle, 200) &&
         (!('uid' in request.resource.data) ||
           (signedIn() && request.resource.data.uid == request.auth.uid));
       allow read: if isAdmin() ||
@@ -58,8 +86,16 @@ service cloud.firestore {
     // if a uid is attached it must be the caller's. Members read
     // their own; admin reads/manages all.
     match /forgeCheckins/{checkinId} {
-      allow create: if !('uid' in request.resource.data) ||
-        (signedIn() && request.resource.data.uid == request.auth.uid);
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'uid','name','email','actionType','duration','distance',
+          'feeling','note','dateKey','createdAt'
+        ]) &&
+        okStr(request.resource.data.actionType, 60) &&
+        okStr(request.resource.data.note, 1000) &&
+        okStr(request.resource.data.dateKey, 10) &&
+        (!('uid' in request.resource.data) ||
+          (signedIn() && request.resource.data.uid == request.auth.uid));
       allow read: if isAdmin() ||
         (signedIn() && resource.data.uid == request.auth.uid);
       allow update, delete: if isAdmin();
@@ -67,7 +103,19 @@ service cloud.firestore {
 
     // Coaching applications — public create, admin-only read/manage.
     match /coachingApplications/{appId} {
-      allow create: if request.resource.data.status == 'new';
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'name','email','phone','instagram','mainGoal','currentTraining',
+          'biggestStruggle','injuries','eventGoal','packageInterest',
+          'message','status','createdAt'
+        ]) &&
+        request.resource.data.status == 'new' &&
+        okStr(request.resource.data.name, 120) &&
+        okStr(request.resource.data.email, 200) &&
+        okStr(request.resource.data.mainGoal, 3000) &&
+        okStr(request.resource.data.currentTraining, 3000) &&
+        okStr(request.resource.data.biggestStruggle, 3000) &&
+        okStr(request.resource.data.message, 3000);
       allow read, update, delete: if isAdmin();
     }
 

@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#080808">
 <title>Register | The Forge — Iron Miles</title>
 <meta name="description" content="Create your Forge account. Then complete your Iron Miles member profile.">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 </head>
@@ -39,7 +40,8 @@
 
 <script type="module">
   import {
-    initForgePage, auth, createUserWithEmailAndPassword, toast, withLoading,
+    initForgePage, auth, createUserWithEmailAndPassword, sendEmailVerification,
+    toast, withLoading,
   } from "./assets/js/forge-core.js";
 
   const user = await initForgePage();
@@ -57,9 +59,11 @@
     if (bad) return;
     withLoading(e.submitter, async () => {
       try {
-        await createUserWithEmailAndPassword(auth,
+        const cred = await createUserWithEmailAndPassword(auth,
           form.querySelector("#email").value.trim(),
           form.querySelector("#password").value);
+        // verification is required for admin access (see firestore.rules)
+        sendEmailVerification(cred.user).catch(() => {});
         // account created — now complete the member profile
         location.href = "join.html";
       } catch (err) {

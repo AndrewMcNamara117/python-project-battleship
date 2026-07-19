@@ -108,7 +108,10 @@ DNS steps.
 ## Admin dashboard
 
 Register an account at `/register` **using an email in `ADMIN_EMAILS`** (and in
-`firestore.rules`). The Admin link then appears in the nav. From `/admin` you
+`firestore.rules`), then **click the verification link** the app emails you —
+the rules require a verified admin email, so nobody can claim your address by
+registering it first. The `/admin` page offers a resend button if needed.
+The Admin link then appears in the nav. From `/admin` you
 can view members, RSVPs, Forge Logs and coaching applications, create/edit/
 delete sessions, and publish announcements.
 
@@ -134,8 +137,9 @@ session are stored with `eventId: "sample-first-run-club"`.
   `request.auth.token.admin == true` and no email list lives in code.
 - **Public create endpoints** (`members`, `eventSignups`, `forgeCheckins`,
   `coachingApplications`) are open by design so people can act without an
-  account. Before launch, enable **App Check** (reCAPTCHA v3) to keep bots out,
-  and consider size limits in rules.
+  account. The rules already enforce field allow-lists and size limits per
+  document; before launch, also enable **App Check** (reCAPTCHA v3) to keep
+  bots out.
 - **Medical notes / emergency contacts** are personal data — keep the privacy
   notice accurate (GDPR), and delete member docs on request.
 - **Email notifications** (e.g. new coaching application → your inbox) need a

@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#080808">
 <title>Join The Forge | Iron Miles</title>
 <meta name="description" content="Join the Iron Miles community. One form, you're in. No tiers, no fees. Built in Limerick.">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 </head>
@@ -126,16 +127,24 @@
 <script type="module">
   import {
     initForgePage, auth, db, collection, doc, addDoc, setDoc, serverTimestamp,
-    toast, withLoading,
+    toast, withLoading, getMemberProfile,
   } from "./assets/js/forge-core.js";
 
   const user = await initForgePage();
+  const form = document.getElementById("joinForm");
   if (user) {
     document.querySelector("[data-auth-hint]").hidden = false;
-    if (user.email) document.getElementById("email").value = user.email;
+    if (user.email) form.email.value = user.email;
+    // returning member: pre-fill so this acts as "update my profile"
+    const p = await getMemberProfile(user.uid);
+    if (p) {
+      ["fullName", "email", "phone", "instagram", "location", "fitnessLevel",
+       "mainInterest", "mainGoal", "emergencyContactName", "emergencyContactPhone",
+       "medicalNotes"].forEach((k) => { if (p[k]) form[k].value = p[k]; });
+      form.waiverAccepted.checked = !!p.waiverAccepted;
+      form.marketingConsent.checked = !!p.marketingConsent;
+    }
   }
-
-  const form = document.getElementById("joinForm");
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();

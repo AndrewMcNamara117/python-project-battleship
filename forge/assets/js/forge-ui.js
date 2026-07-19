@@ -82,6 +82,12 @@
     toggle.setAttribute("aria-expanded", String(open));
   });
 
+  /* form error states clear as soon as the field is corrected */
+  document.addEventListener("input", (e) => {
+    const field = e.target.closest?.(".field.error");
+    if (field && e.target.checkValidity()) field.classList.remove("error");
+  });
+
   /* ================= motion ================= */
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;

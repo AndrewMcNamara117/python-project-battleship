@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#080808">
 <title>The Forge | Iron Miles Member Hub — Limerick</title>
 <meta name="description" content="The Forge is the Iron Miles hub for the ones who keep going. Join the community, RSVP to run club sessions, log your Forge One More moments. Built in Limerick.">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 </head>
@@ -160,7 +161,7 @@
   try {
     const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
     const sessions = snap.docs.map((d) => d.data())
-      .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, 3);
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)).slice(0, 3);
     box.innerHTML = sessions.length ? sessions.map((s) => `
       <div class="card session-card fx" data-tilt>
         <div class="meta">

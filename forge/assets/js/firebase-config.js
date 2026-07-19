@@ -32,6 +32,8 @@ export const firebaseConfig = {
    /admin dashboard. You MUST also add the same email(s) to the
    isAdmin() list in firestore.rules — the array below only hides
    the UI; the rules are what actually protect the data.
+   The rules also require the admin email to be VERIFIED — click
+   the verification link the app sends after you register.
    TODO: replace this email allow-list with Firebase custom
    claims for proper role security (see README, "Hardening").
    ============================================================ */

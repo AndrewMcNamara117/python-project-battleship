@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#080808">
 <title>Sessions | The Forge — Iron Miles</title>
 <meta name="description" content="Upcoming Iron Miles sessions in Limerick — run club, strength, swims and events. All levels welcome. RSVP: I'm Showing Up.">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 <style>
@@ -90,8 +91,9 @@
   try {
     const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
     if (!snap.empty) {
+      // dates are freeform text ("Saturday 26 July"), so keep admin creation order
       sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
     }
   } catch (err) {
     console.error("sessions load failed — showing sample", err);
@@ -166,6 +168,13 @@
   });
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) { overlay.classList.remove("open"); pending = null; }
+  });
+  addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && overlay.classList.contains("open")) {
+      overlay.classList.remove("open");
+      pending?.btn?.focus();
+      pending = null;
+    }
   });
 
   form.addEventListener("submit", (e) => {

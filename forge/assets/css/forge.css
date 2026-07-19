@@ -236,8 +236,8 @@ section.tight{padding:clamp(34px,5vw,64px) 0}
   padding:20px 18px;text-align:left;
 }
 .stat .num{font-size:clamp(1.9rem,4.5vw,2.8rem);font-weight:800;line-height:1;color:var(--green)}
-.stat .cap{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  color:var(--muted);margin-top:8px}
+.stat .cap{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin-top:8px;line-height:1.5}
 
 /* ---- forms ---- */
 form.forge-form{display:grid;gap:16px}
@@ -378,6 +378,7 @@ table.data tr:last-child td{border-bottom:none}
 
 /* ---- footer ---- */
 footer.forge-footer{border-top:1px solid var(--line);padding:52px 0 40px;margin-top:20px}
+.foot .mark{width:34px}
 .foot{max-width:var(--maxw);margin:0 auto;padding:0 20px;
   display:flex;flex-wrap:wrap;gap:36px;justify-content:space-between}
 .foot .id .wordmark{font-size:15px}
