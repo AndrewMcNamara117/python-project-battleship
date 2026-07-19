@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Admin | The Forge — Iron Miles</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow">Admin</span>
+        <h2 class="fx-line">The <span class="green">Forge floor</span></h2>
+        <p class="lead">Members, RSVPs, check-ins, applications. The whole record.</p>
+      </div>
+
+      <div id="gate" class="panel fx">
+        <div class="loader"><div class="txt">Checking access…</div><div class="ln"></div></div>
+      </div>
+
+      <div id="adminApp" hidden>
+        <div class="stats fx" style="margin-bottom:30px">
+          <div class="stat"><div class="num" data-count="0" data-n-members>0</div><div class="cap">Members</div></div>
+          <div class="stat"><div class="num" data-count="0" data-n-rsvps>0</div><div class="cap">Event sign-ups</div></div>
+          <div class="stat"><div class="num" data-count="0" data-n-checkins>0</div><div class="cap">Forge check-ins</div></div>
+          <div class="stat"><div class="num" data-count="0" data-n-coaching>0</div><div class="cap">Coaching apps</div></div>
+          <div class="stat"><div class="num" data-count="0" data-n-sessions>0</div><div class="cap">Active sessions</div></div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Admin sections">
+          <button class="tab" role="tab" aria-selected="true" data-tab="members">Members</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="rsvps">RSVPs</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="checkins">Forge Logs</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="coaching">Coaching</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="sessions">Sessions</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="announcements">Announcements</button>
+        </div>
+
+        <div class="tabpane active" data-pane="members">
+          <div class="panel"><h3>All members <span class="count" data-c-members></span></h3>
+            <div class="table-scroll"><table class="data"><thead><tr>
+              <th>Name</th><th>Email</th><th>Phone</th><th>Level</th><th>Interest</th><th>Location</th><th>Joined</th>
+            </tr></thead><tbody data-t-members></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="tabpane" data-pane="rsvps">
+          <div class="panel"><h3>All event sign-ups <span class="count" data-c-rsvps></span></h3>
+            <div class="table-scroll"><table class="data"><thead><tr>
+              <th>Name</th><th>Event</th><th>Email</th><th>Instagram</th><th>Status</th><th>When</th>
+            </tr></thead><tbody data-t-rsvps></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="tabpane" data-pane="checkins">
+          <div class="panel"><h3>Forge check-ins <span class="count" data-c-checkins></span></h3>
+            <div class="table-scroll"><table class="data"><thead><tr>
+              <th>Who</th><th>Action</th><th>Feeling</th><th>Detail</th><th>Note</th><th>Date</th>
+            </tr></thead><tbody data-t-checkins></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="tabpane" data-pane="coaching">
+          <div class="panel"><h3>Coaching applications <span class="count" data-c-coaching></span></h3>
+            <div class="rowlist" data-t-coaching></div>
+          </div>
+        </div>
+
+        <div class="tabpane" data-pane="sessions">
+          <div class="grid-cards" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start">
+            <div class="panel">
+              <h3 data-session-form-title>Create a session</h3>
+              <form class="forge-form" id="sessionForm">
+                <input type="hidden" id="sEditId">
+                <div class="field"><label for="sTitle">Title</label><input id="sTitle" required></div>
+                <div class="f-row">
+                  <div class="field"><label for="sDate">Date</label><input id="sDate" placeholder="Saturday 26 July" required></div>
+                  <div class="field"><label for="sTime">Time</label><input id="sTime" placeholder="10:00am" required></div>
+                </div>
+                <div class="field"><label for="sLocation">Location</label><input id="sLocation" required></div>
+                <div class="f-row">
+                  <div class="field"><label for="sType">Type</label><input id="sType" placeholder="5k social run"></div>
+                  <div class="field"><label for="sDistance">Distance / detail</label><input id="sDistance" placeholder="5k"></div>
+                </div>
+                <div class="f-row">
+                  <div class="field"><label for="sDifficulty">Difficulty</label><input id="sDifficulty" placeholder="All levels welcome"></div>
+                  <div class="field"><label for="sCapacity">Capacity <span class="opt">(optional)</span></label><input id="sCapacity" type="number" min="1"></div>
+                </div>
+                <div class="field"><label for="sDescription">Description</label><textarea id="sDescription"></textarea></div>
+                <label class="check"><input type="checkbox" id="sActive" checked><span>Active (visible on the Sessions page)</span></label>
+                <button class="btn btn-green block" type="submit" data-session-submit>Create Session</button>
+                <button class="btn btn-ghost block" type="button" id="sessionCancel" hidden>Cancel edit</button>
+              </form>
+            </div>
+            <div class="panel"><h3>All sessions <span class="count" data-c-sessions></span></h3>
+              <div class="rowlist" data-t-sessions></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpane" data-pane="announcements">
+          <div class="grid-cards" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start">
+            <div class="panel">
+              <h3>Create an announcement</h3>
+              <form class="forge-form" id="annForm">
+                <div class="field"><label for="aTitle">Title</label><input id="aTitle" required></div>
+                <div class="field"><label for="aMessage">Message</label><textarea id="aMessage" required></textarea></div>
+                <label class="check"><input type="checkbox" id="aVisible" checked><span>Visible on the hub</span></label>
+                <button class="btn btn-green block" type="submit">Publish</button>
+              </form>
+            </div>
+            <div class="panel"><h3>All announcements</h3>
+              <div class="rowlist" data-t-announcements></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, db, collection, doc, addDoc, updateDoc, deleteDoc, getDocs,
+    serverTimestamp, isAdminUser, toast, withLoading, escapeHtml, fmtWhen,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  const gate = document.getElementById("gate");
+
+  if (!isAdminUser(user)) {
+    gate.innerHTML = `
+      <h3>Admin only</h3>
+      <p>${user
+        ? "This account isn't on the admin list. If it's your hub, add your email to ADMIN_EMAILS in assets/js/firebase-config.js and to firestore.rules."
+        : `You need to <a class="green" href="login.html?next=admin.html">log in</a> with an admin account.`}</p>`;
+    throw new Error("not admin");
+  }
+  gate.hidden = true;
+  document.getElementById("adminApp").hidden = false;
+
+  /* ---------- tabs ---------- */
+  document.querySelector(".tabs").addEventListener("click", (e) => {
+    const tab = e.target.closest(".tab");
+    if (!tab) return;
+    document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+    document.querySelectorAll(".tabpane").forEach((p) =>
+      p.classList.toggle("active", p.dataset.pane === tab.dataset.tab));
+  });
+
+  /* ---------- data load ---------- */
+  const byNewest = (a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+  const load = async (name) => {
+    const snap = await getDocs(collection(db, name));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byNewest);
+  };
+  const setCount = (sel, n) => {
+    const el = document.querySelector(sel);
+    if (el?.dataset.count !== undefined) window.forgeCount?.(el, n);
+    else if (el) el.textContent = `(${n})`;
+  };
+  const td = (v) => `<td>${escapeHtml(v || "—")}</td>`;
+
+  async function refreshAll() {
+    try {
+      const [members, rsvps, checkins, coaching, sessions, announcements] = await Promise.all([
+        load("members"), load("eventSignups"), load("forgeCheckins"),
+        load("coachingApplications"), load("sessions"), load("announcements"),
+      ]);
+
+      setCount("[data-n-members]", members.length);
+      setCount("[data-n-rsvps]", rsvps.length);
+      setCount("[data-n-checkins]", checkins.length);
+      setCount("[data-n-coaching]", coaching.length);
+      setCount("[data-n-sessions]", sessions.filter((s) => s.isActive).length);
+      setCount("[data-c-members]", members.length);
+      setCount("[data-c-rsvps]", rsvps.length);
+      setCount("[data-c-checkins]", checkins.length);
+      setCount("[data-c-coaching]", coaching.length);
+      setCount("[data-c-sessions]", sessions.length);
+
+      document.querySelector("[data-t-members]").innerHTML = members.map((m) =>
+        `<tr>${td(m.fullName)}${td(m.email)}${td(m.phone)}${td(m.fitnessLevel)}${td(m.mainInterest)}${td(m.location)}${td(fmtWhen(m.createdAt))}</tr>`
+      ).join("") || `<tr><td colspan="7">No members yet.</td></tr>`;
+
+      document.querySelector("[data-t-rsvps]").innerHTML = rsvps.map((r) =>
+        `<tr>${td(r.name)}${td(r.eventTitle)}${td(r.email)}${td(r.instagram)}${td(r.status)}${td(fmtWhen(r.createdAt))}</tr>`
+      ).join("") || `<tr><td colspan="6">No sign-ups yet.</td></tr>`;
+
+      document.querySelector("[data-t-checkins]").innerHTML = checkins.map((c) =>
+        `<tr>${td(c.name || c.email || (c.uid ? "member" : "guest"))}${td(c.actionType)}${td(c.feeling)}${td([c.distance, c.duration].filter(Boolean).join(" · "))}${td(c.note)}${td(c.dateKey)}</tr>`
+      ).join("") || `<tr><td colspan="6">No check-ins yet.</td></tr>`;
+
+      document.querySelector("[data-t-coaching]").innerHTML = coaching.map((a) => `
+        <div class="rowitem"><div class="main">
+          <strong>${escapeHtml(a.name)} <span class="tag ${a.status === "new" ? "green" : ""}" style="margin-left:6px">${escapeHtml(a.status || "new")}</span></strong>
+          <span>${escapeHtml(a.email)} · ${escapeHtml(a.phone || "—")} · ${escapeHtml(a.packageInterest || "—")}</span><br>
+          <span><b style="color:var(--white)">Goal:</b> ${escapeHtml(a.mainGoal)}</span><br>
+          <span><b style="color:var(--white)">Training:</b> ${escapeHtml(a.currentTraining)}</span><br>
+          <span><b style="color:var(--white)">Struggle:</b> ${escapeHtml(a.biggestStruggle)}</span>
+          ${a.injuries ? `<br><span><b style="color:var(--white)">Injuries:</b> ${escapeHtml(a.injuries)}</span>` : ""}
+          ${a.eventGoal ? `<br><span><b style="color:var(--white)">Event:</b> ${escapeHtml(a.eventGoal)}</span>` : ""}
+          ${a.message ? `<br><span>${escapeHtml(a.message)}</span>` : ""}
+          <br><span class="small">${fmtWhen(a.createdAt)}</span>
+        </div>
+        <div class="acts">${a.status === "new"
+          ? `<button class="btn btn-ghost sm" data-app-seen="${a.id}">Mark read</button>` : ""}</div>
+        </div>`).join("") || `<div class="rowitem"><div class="main"><span>No applications yet.</span></div></div>`;
+
+      document.querySelector("[data-t-sessions]").innerHTML = sessions.map((s) => `
+        <div class="rowitem"><div class="main">
+          <strong>${escapeHtml(s.title)} ${s.isActive ? `<span class="tag green" style="margin-left:6px">active</span>` : `<span class="tag" style="margin-left:6px">hidden</span>`}</strong>
+          <span>${escapeHtml(s.date)} · ${escapeHtml(s.time)} — ${escapeHtml(s.location)}</span>
+          <span>${rsvps.filter((r) => r.eventId === s.id).length} going${s.capacity ? ` / ${escapeHtml(s.capacity)}` : ""}</span>
+        </div>
+        <div class="acts">
+          <button class="btn btn-ghost sm" data-sess-edit="${s.id}">Edit</button>
+          <button class="btn sm danger" data-sess-del="${s.id}">Delete</button>
+        </div></div>`).join("") || `<div class="rowitem"><div class="main"><span>No sessions yet — create the first one.</span></div></div>`;
+      window._sessions = sessions;
+
+      document.querySelector("[data-t-announcements]").innerHTML = announcements.map((a) => `
+        <div class="rowitem"><div class="main">
+          <strong>${escapeHtml(a.title)} ${a.visible ? `<span class="tag green" style="margin-left:6px">visible</span>` : `<span class="tag" style="margin-left:6px">hidden</span>`}</strong>
+          <span>${escapeHtml(a.message)}</span>
+        </div>
+        <div class="acts">
+          <button class="btn btn-ghost sm" data-ann-toggle="${a.id}" data-vis="${a.visible ? 1 : 0}">${a.visible ? "Hide" : "Show"}</button>
+          <button class="btn sm danger" data-ann-del="${a.id}">Delete</button>
+        </div></div>`).join("") || `<div class="rowitem"><div class="main"><span>No announcements yet.</span></div></div>`;
+    } catch (err) {
+      console.error(err);
+      toast("Couldn't load admin data. Check firestore.rules has your admin email.", true);
+    }
+  }
+  await refreshAll();
+  window.forgeMotionRefresh?.();
+
+  /* ---------- sessions CRUD ---------- */
+  const sForm = document.getElementById("sessionForm");
+  const readSession = () => ({
+    title: sForm.querySelector("#sTitle").value.trim(),
+    date: sForm.querySelector("#sDate").value.trim(),
+    time: sForm.querySelector("#sTime").value.trim(),
+    location: sForm.querySelector("#sLocation").value.trim(),
+    type: sForm.querySelector("#sType").value.trim(),
+    distance: sForm.querySelector("#sDistance").value.trim(),
+    difficulty: sForm.querySelector("#sDifficulty").value.trim(),
+    description: sForm.querySelector("#sDescription").value.trim(),
+    capacity: sForm.querySelector("#sCapacity").value ? Number(sForm.querySelector("#sCapacity").value) : null,
+    isActive: sForm.querySelector("#sActive").checked,
+  });
+  const resetSessionForm = () => {
+    sForm.reset();
+    sForm.querySelector("#sEditId").value = "";
+    sForm.querySelector("#sActive").checked = true;
+    document.querySelector("[data-session-form-title]").textContent = "Create a session";
+    document.querySelector("[data-session-submit]").textContent = "Create Session";
+    document.getElementById("sessionCancel").hidden = true;
+  };
+
+  sForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    withLoading(e.submitter, async () => {
+      const id = sForm.querySelector("#sEditId").value;
+      try {
+        if (id) {
+          await updateDoc(doc(db, "sessions", id), readSession());
+          toast("Session updated.");
+        } else {
+          await addDoc(collection(db, "sessions"), { ...readSession(), createdAt: serverTimestamp() });
+          toast("Session created. It's live.");
+        }
+        resetSessionForm();
+        await refreshAll();
+      } catch (err) { console.error(err); toast("Save failed.", true); }
+    });
+  });
+  document.getElementById("sessionCancel").addEventListener("click", resetSessionForm);
+
+  document.addEventListener("click", async (e) => {
+    const edit = e.target.closest("[data-sess-edit]");
+    if (edit) {
+      const s = (window._sessions || []).find((x) => x.id === edit.dataset.sessEdit);
+      if (!s) return;
+      sForm.querySelector("#sEditId").value = s.id;
+      sForm.querySelector("#sTitle").value = s.title || "";
+      sForm.querySelector("#sDate").value = s.date || "";
+      sForm.querySelector("#sTime").value = s.time || "";
+      sForm.querySelector("#sLocation").value = s.location || "";
+      sForm.querySelector("#sType").value = s.type || "";
+      sForm.querySelector("#sDistance").value = s.distance || "";
+      sForm.querySelector("#sDifficulty").value = s.difficulty || "";
+      sForm.querySelector("#sDescription").value = s.description || "";
+      sForm.querySelector("#sCapacity").value = s.capacity ?? "";
+      sForm.querySelector("#sActive").checked = !!s.isActive;
+      document.querySelector("[data-session-form-title]").textContent = "Edit session";
+      document.querySelector("[data-session-submit]").textContent = "Save Changes";
+      document.getElementById("sessionCancel").hidden = false;
+      sForm.scrollIntoView({ block: "start" });
+      return;
+    }
+    const del = e.target.closest("[data-sess-del]");
+    if (del) {
+      if (!confirm("Delete this session? RSVPs stay in the record.")) return;
+      try { await deleteDoc(doc(db, "sessions", del.dataset.sessDel)); toast("Session deleted."); await refreshAll(); }
+      catch (err) { console.error(err); toast("Delete failed.", true); }
+      return;
+    }
+    const seen = e.target.closest("[data-app-seen]");
+    if (seen) {
+      try { await updateDoc(doc(db, "coachingApplications", seen.dataset.appSeen), { status: "read" }); await refreshAll(); }
+      catch (err) { console.error(err); toast("Update failed.", true); }
+      return;
+    }
+    const tog = e.target.closest("[data-ann-toggle]");
+    if (tog) {
+      try { await updateDoc(doc(db, "announcements", tog.dataset.annToggle), { visible: tog.dataset.vis !== "1" }); await refreshAll(); }
+      catch (err) { console.error(err); toast("Update failed.", true); }
+      return;
+    }
+    const adel = e.target.closest("[data-ann-del]");
+    if (adel) {
+      if (!confirm("Delete this announcement?")) return;
+      try { await deleteDoc(doc(db, "announcements", adel.dataset.annDel)); await refreshAll(); }
+      catch (err) { console.error(err); toast("Delete failed.", true); }
+    }
+  });
+
+  /* ---------- announcements ---------- */
+  const annForm = document.getElementById("annForm");
+  annForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    withLoading(e.submitter, async () => {
+      try {
+        await addDoc(collection(db, "announcements"), {
+          title: annForm.querySelector("#aTitle").value.trim(),
+          message: annForm.querySelector("#aMessage").value.trim(),
+          visible: annForm.querySelector("#aVisible").checked,
+          createdAt: serverTimestamp(),
+        });
+        annForm.reset();
+        annForm.querySelector("#aVisible").checked = true;
+        toast("Announcement published.");
+        await refreshAll();
+      } catch (err) { console.error(err); toast("Publish failed.", true); }
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Dashboard | The Forge — Iron Miles</title>
+<meta name="description" content="Your Forge dashboard. This is where the work gets tracked.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow">Dashboard</span>
+        <h2 class="fx-line" data-welcome>Back to <span class="green">work</span></h2>
+        <p class="lead">This is where the work gets tracked.</p>
+      </div>
+
+      <div class="stats fx" style="margin-bottom:26px">
+        <div class="stat"><div class="num" data-count="0" data-stat-total>0</div><div class="cap">Total Forge Logs</div></div>
+        <div class="stat"><div class="num" data-count="0" data-stat-week>0</div><div class="cap">This week</div></div>
+        <div class="stat"><div class="num" data-count="0" data-stat-rsvps>0</div><div class="cap">My RSVPs</div></div>
+      </div>
+
+      <div class="cta-row fx" style="margin:0 0 34px">
+        <a class="btn btn-green" href="check-in.html">Log Today's Action</a>
+        <a class="btn btn-ghost" href="sessions.html">View Sessions</a>
+      </div>
+
+      <div class="grid-cards" data-stagger style="grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))">
+        <div class="panel fx" data-tilt>
+          <h3>Upcoming sessions</h3>
+          <div class="rowlist" data-upcoming>
+            <div class="loader"><div class="txt">Loading…</div><div class="ln"></div></div>
+          </div>
+        </div>
+        <div class="panel fx" data-tilt>
+          <h3>My RSVPs</h3>
+          <div class="rowlist" data-rsvps>
+            <div class="loader"><div class="txt">Loading…</div><div class="ln"></div></div>
+          </div>
+        </div>
+        <div class="panel fx" data-tilt>
+          <h3>Recent Forge Logs</h3>
+          <div class="rowlist" data-logs>
+            <div class="loader"><div class="txt">Loading…</div><div class="ln"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, db, collection, getDocs, query, where, requireAuth,
+    escapeHtml, fmtWhen, getMemberProfile, todayKey,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  if (!requireAuth(user, "dashboard.html")) throw new Error("redirecting");
+
+  const profile = await getMemberProfile(user.uid);
+  const first = (profile?.fullName || user.email || "").split(/[@ ]/)[0];
+  if (first) {
+    document.querySelector("[data-welcome]").innerHTML =
+      `Show up, <span class="green">${escapeHtml(first)}</span>`;
+  }
+
+  const empty = (msg, href, label) =>
+    `<div class="rowitem"><div class="main"><span>${msg}</span></div>
+     ${href ? `<a class="btn btn-ghost sm" href="${href}">${label}</a>` : ""}</div>`;
+
+  /* upcoming sessions */
+  const upcomingBox = document.querySelector("[data-upcoming]");
+  try {
+    const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
+    const sessions = snap.docs.map((d) => d.data())
+      .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, 5);
+    upcomingBox.innerHTML = sessions.length ? sessions.map((s) => `
+      <div class="rowitem"><div class="main">
+        <strong>${escapeHtml(s.title)}</strong>
+        <span>${escapeHtml(s.date)} · ${escapeHtml(s.time)} — ${escapeHtml(s.location)}</span>
+      </div></div>`).join("")
+      : empty("Nothing scheduled yet. First Iron Miles Run Club is coming.", "sessions.html", "Sessions");
+  } catch { upcomingBox.innerHTML = empty("Couldn't load sessions.", "sessions.html", "Sessions"); }
+
+  /* my RSVPs */
+  const rsvpBox = document.querySelector("[data-rsvps]");
+  try {
+    const snap = await getDocs(query(collection(db, "eventSignups"), where("uid", "==", user.uid)));
+    const rsvps = snap.docs.map((d) => d.data())
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    window.forgeCount?.(document.querySelector("[data-stat-rsvps]"), rsvps.length);
+    rsvpBox.innerHTML = rsvps.length ? rsvps.slice(0, 5).map((r) => `
+      <div class="rowitem"><div class="main">
+        <strong>${escapeHtml(r.eventTitle)}</strong>
+        <span>Status: ${escapeHtml(r.status)} · ${fmtWhen(r.createdAt)}</span>
+      </div></div>`).join("")
+      : empty("No RSVPs yet. Say you're showing up.", "sessions.html", "Sessions");
+  } catch { rsvpBox.innerHTML = empty("Couldn't load RSVPs.", null, ""); }
+
+  /* recent forge logs + stats */
+  const logsBox = document.querySelector("[data-logs]");
+  try {
+    const snap = await getDocs(query(collection(db, "forgeCheckins"), where("uid", "==", user.uid)));
+    const logs = snap.docs.map((d) => d.data())
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    window.forgeCount?.(document.querySelector("[data-stat-total]"), logs.length);
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const mondayKey = todayKey(monday);
+    window.forgeCount?.(document.querySelector("[data-stat-week]"),
+      logs.filter((l) => (l.dateKey || "") >= mondayKey).length);
+
+    logsBox.innerHTML = logs.length ? logs.slice(0, 6).map((l) => `
+      <div class="rowitem"><div class="main">
+        <strong>${escapeHtml(l.actionType)}${l.feeling ? ` · ${escapeHtml(l.feeling)}` : ""}</strong>
+        <span>${escapeHtml(l.dateKey)}${l.distance ? ` · ${escapeHtml(l.distance)}` : ""}${l.duration ? ` · ${escapeHtml(l.duration)}` : ""}${l.note ? ` — ${escapeHtml(l.note)}` : ""}</span>
+      </div></div>`).join("")
+      : empty("Nothing logged yet. One more starts today.", "check-in.html", "Log it");
+  } catch { logsBox.innerHTML = empty("Couldn't load logs.", null, ""); }
+
+  window.forgeMotionRefresh?.();
+</script>
+
+</body>
+</html>

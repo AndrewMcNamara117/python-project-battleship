@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Register | The Forge — Iron Miles</title>
+<meta name="description" content="Create your Forge account. Then complete your Iron Miles member profile.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap" style="max-width:460px">
+      <div class="section-head fx">
+        <span class="eyebrow">Register</span>
+        <h2 class="fx-line">Start <span class="green">here</span></h2>
+        <p class="lead">Create your account, then complete your member profile. Two minutes, once.</p>
+      </div>
+      <form class="forge-form panel fx" id="regForm" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" required>
+          <span class="err">Enter a valid email.</span>
+        </div>
+        <div class="field">
+          <label for="password">Password <span class="opt">(8+ characters)</span></label>
+          <input id="password" type="password" autocomplete="new-password" minlength="8" required>
+          <span class="err">At least 8 characters.</span>
+        </div>
+        <button class="btn btn-green block" type="submit">Create Account</button>
+        <p class="small">Already registered? <a class="green" href="login.html">Log in</a>.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, auth, createUserWithEmailAndPassword, toast, withLoading,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  if (user) location.replace("dashboard.html");
+
+  const form = document.getElementById("regForm");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    let bad = false;
+    form.querySelectorAll("input[required]").forEach((el) => {
+      const ok = el.checkValidity();
+      el.closest(".field").classList.toggle("error", !ok);
+      if (!ok) bad = true;
+    });
+    if (bad) return;
+    withLoading(e.submitter, async () => {
+      try {
+        await createUserWithEmailAndPassword(auth,
+          form.querySelector("#email").value.trim(),
+          form.querySelector("#password").value);
+        // account created — now complete the member profile
+        location.href = "join.html";
+      } catch (err) {
+        console.error(err.code);
+        toast(err.code === "auth/email-already-in-use"
+          ? "That email already has an account. Log in instead."
+          : "Couldn't create the account. Go again.", true);
+      }
+    }, "Forging…");
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Forge Log | The Forge — Iron Miles</title>
+<meta name="description" content="Today's Forge Moment. You don't need a perfect week. You need one more choice. Log it.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap narrow">
+      <div class="section-head fx">
+        <span class="eyebrow">Forge Log</span>
+        <h2 class="fx-line">Today's <span class="green">Forge Moment</span></h2>
+        <p class="lead">You don't need a perfect week. You need one more choice.</p>
+      </div>
+
+      <div class="stats fx" style="margin-bottom:26px" data-stats hidden>
+        <div class="stat"><div class="num" data-count="0" data-stat-total>0</div><div class="cap">Total check-ins</div></div>
+        <div class="stat"><div class="num" data-count="0" data-stat-week>0</div><div class="cap">This week</div></div>
+        <div class="stat"><div class="num" data-count="0" data-stat-streak>0</div><div class="cap">Day streak</div></div>
+      </div>
+
+      <form class="forge-form panel fx" id="logForm" novalidate>
+        <div class="field">
+          <label id="actionLabel">What did you do?</label>
+          <div class="chips" role="group" aria-labelledby="actionLabel" data-actions>
+            <button type="button" class="chip" aria-pressed="false">Ran</button>
+            <button type="button" class="chip" aria-pressed="false">Lifted</button>
+            <button type="button" class="chip" aria-pressed="false">Swam</button>
+            <button type="button" class="chip" aria-pressed="false">Walked</button>
+            <button type="button" class="chip" aria-pressed="false">Rested</button>
+            <button type="button" class="chip" aria-pressed="false">Showed up mentally</button>
+            <button type="button" class="chip" aria-pressed="false">Helped someone else show up</button>
+            <button type="button" class="chip" aria-pressed="false">Other</button>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="field">
+            <label for="duration">Duration <span class="opt">(optional, e.g. 40 min)</span></label>
+            <input id="duration" name="duration">
+          </div>
+          <div class="field">
+            <label for="distance">Distance <span class="opt">(optional, e.g. 5k)</span></label>
+            <input id="distance" name="distance">
+          </div>
+        </div>
+        <div class="field">
+          <label id="feelLabel">How did it feel?</label>
+          <div class="chips" role="group" aria-labelledby="feelLabel" data-feelings>
+            <button type="button" class="chip" aria-pressed="false">Easy</button>
+            <button type="button" class="chip" aria-pressed="false">Solid</button>
+            <button type="button" class="chip" aria-pressed="false">Hard</button>
+            <button type="button" class="chip" aria-pressed="false">Dark Middle</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="note">Note <span class="opt">(optional — one honest line)</span></label>
+          <textarea id="note" name="note" placeholder="Didn't want to. Went anyway."></textarea>
+        </div>
+        <div class="f-row" data-guest-fields hidden>
+          <div class="field">
+            <label for="guestName">Name <span class="opt">(optional)</span></label>
+            <input id="guestName">
+          </div>
+          <div class="field">
+            <label for="guestEmail">Email <span class="opt">(optional)</span></label>
+            <input id="guestEmail" type="email">
+          </div>
+        </div>
+        <p class="small" data-guest-hint hidden>
+          Not signed in — you can still log it. <a class="green" href="register.html">Create an account</a> to track your streak properly.</p>
+        <button class="btn btn-green block" type="submit">Log My Forge Moment</button>
+      </form>
+
+      <div class="success-panel" id="logSuccess" tabindex="-1">
+        <span class="eyebrow">Logged</span>
+        <h2>Logged. <span class="green">One more in the bank.</span></h2>
+        <p class="lead">The next mile. The next rep. The next hard day.</p>
+        <div class="cta-row" style="justify-content:center">
+          <button class="btn btn-ghost" type="button" id="logAgain">Log Another</button>
+          <a class="btn btn-green" href="dashboard.html">My Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, auth, db, collection, addDoc, getDocs, query, where,
+    serverTimestamp, toast, withLoading, todayKey,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  const form = document.getElementById("logForm");
+  if (!user) {
+    document.querySelector("[data-guest-fields]").hidden = false;
+    document.querySelector("[data-guest-hint]").hidden = false;
+  }
+
+  /* chip groups: single-select */
+  const pick = (groupSel) => {
+    const group = document.querySelector(groupSel);
+    group.addEventListener("click", (e) => {
+      const chip = e.target.closest(".chip");
+      if (!chip) return;
+      group.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", "false"));
+      chip.setAttribute("aria-pressed", "true");
+    });
+    return () => group.querySelector('.chip[aria-pressed="true"]')?.textContent || "";
+  };
+  const getAction = pick("[data-actions]");
+  const getFeeling = pick("[data-feelings]");
+
+  /* ---------- streak stats ---------- */
+  function computeStats(dateKeys) {
+    const unique = [...new Set(dateKeys)].sort().reverse(); // newest first
+    const total = dateKeys.length;
+    // this week: Monday..now
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const mondayKey = todayKey(monday);
+    const week = dateKeys.filter((k) => k >= mondayKey).length;
+    // streak of consecutive days ending today or yesterday
+    let streak = 0;
+    const d = new Date();
+    if (!unique.includes(todayKey(d))) d.setDate(d.getDate() - 1); // grace: yesterday keeps it alive
+    while (unique.includes(todayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
+    return { total, week, streak };
+  }
+
+  const LS_KEY = "forge-guest-checkins"; // guests: local-only stats
+  async function loadStats() {
+    let keys = [];
+    try {
+      if (user) {
+        const snap = await getDocs(query(collection(db, "forgeCheckins"), where("uid", "==", user.uid)));
+        keys = snap.docs.map((d) => d.data().dateKey).filter(Boolean);
+      } else {
+        keys = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+      }
+    } catch { return; }
+    const { total, week, streak } = computeStats(keys);
+    const box = document.querySelector("[data-stats]");
+    box.hidden = false;
+    window.forgeCount?.(box.querySelector("[data-stat-total]"), total);
+    window.forgeCount?.(box.querySelector("[data-stat-week]"), week);
+    window.forgeCount?.(box.querySelector("[data-stat-streak]"), streak);
+  }
+  loadStats();
+
+  /* ---------- submit ---------- */
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const actionType = getAction();
+    if (!actionType) { toast("Pick what you did — resting counts.", true); return; }
+    withLoading(e.submitter, async () => {
+      const data = {
+        ...(user ? { uid: user.uid, email: user.email || "" }
+                 : {
+                     name: document.getElementById("guestName").value.trim(),
+                     email: document.getElementById("guestEmail").value.trim().toLowerCase(),
+                   }),
+        actionType,
+        duration: document.getElementById("duration").value.trim(),
+        distance: document.getElementById("distance").value.trim(),
+        feeling: getFeeling(),
+        note: document.getElementById("note").value.trim(),
+        dateKey: todayKey(),
+        createdAt: serverTimestamp(),
+      };
+      try {
+        await addDoc(collection(db, "forgeCheckins"), data);
+        if (!user) {
+          const keys = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+          keys.push(data.dateKey);
+          localStorage.setItem(LS_KEY, JSON.stringify(keys));
+        }
+        form.hidden = true;
+        const ok = document.getElementById("logSuccess");
+        ok.classList.add("show");
+        ok.focus();
+        ok.scrollIntoView({ block: "center" });
+        loadStats();
+      } catch (err) {
+        console.error(err);
+        toast("That didn't save. Go again.", true);
+      }
+    });
+  });
+
+  document.getElementById("logAgain").addEventListener("click", () => {
+    document.getElementById("logSuccess").classList.remove("show");
+    form.hidden = false;
+    form.reset();
+    document.querySelectorAll('.chip[aria-pressed="true"]').forEach((c) => c.setAttribute("aria-pressed", "false"));
+    form.scrollIntoView({ block: "start" });
+  });
+</script>
+
+</body>
+</html>

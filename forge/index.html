@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>The Forge | Iron Miles Member Hub — Limerick</title>
+<meta name="description" content="The Forge is the Iron Miles hub for the ones who keep going. Join the community, RSVP to run club sessions, log your Forge One More moments. Built in Limerick.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+
+  <!-- ============ HERO ============ -->
+  <section class="forge-hero" style="padding:0">
+    <div class="bg-forge" aria-hidden="true">
+      <div class="glow"></div>
+      <div class="glow two"></div>
+      <div class="grid"></div>
+      <div class="ghost">Forge</div>
+    </div>
+    <div class="inner">
+      <span class="eyebrow hero-lines"><span style="--i:0">The Iron Miles member hub</span></span>
+      <h1 class="hero-lines" aria-label="Enter The Forge. Run. Lift. Swim. Show Up.">
+        <span style="--i:1">Enter</span>
+        <span style="--i:2">The <span class="green">Forge.</span></span>
+      </h1>
+      <p class="lead hero-lines">
+        <span style="--i:3">Run. Lift. Swim. Show Up.</span>
+        <span style="--i:4">The Iron Miles hub for the ones who keep going.</span>
+      </p>
+      <p class="hero-lines" style="margin-top:18px">
+        <span class="mantra-line green" style="--i:5;font-weight:800;letter-spacing:.34em;text-transform:uppercase;font-size:13px">Forge One More</span>
+      </p>
+      <div class="cta-row hero-lines">
+        <span style="--i:6;display:flex;flex-wrap:wrap;gap:12px">
+          <a class="btn btn-green" href="join.html">Join The Forge</a>
+          <a class="btn btn-ghost" href="sessions.html">View Sessions</a>
+          <a class="btn btn-ghost" href="coaching-apply.html">Apply for Coaching</a>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- announcements (admin-created, visible only) -->
+  <section class="tight" id="announcements" hidden>
+    <div class="wrap" data-announcements></div>
+  </section>
+
+  <!-- ============ WHAT IS THE FORGE ============ -->
+  <section>
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow mute">What is The Forge?</span>
+        <h2 class="fx-line">Not an app. <span class="green">A record.</span></h2>
+        <p class="lead">The Forge is where Iron Miles lives between sessions. It's where you join, where you say you're showing up, and where the work gets logged. No ego. No pressure. Just show up.</p>
+      </div>
+      <div class="grid-cards" data-stagger>
+        <div class="card fx fx-scale" data-tilt>
+          <div class="k">01</div>
+          <h3>Join</h3>
+          <p>One form. You're in. No tiers, no fees, no fitness test. Made for the ones who keep going — and the ones just starting.</p>
+        </div>
+        <div class="card fx fx-scale" data-tilt>
+          <div class="k">02</div>
+          <h3>Show up</h3>
+          <p>RSVP to run club and sessions so we know to look for you. You do not need to be fast. You just need to show up.</p>
+        </div>
+        <div class="card fx fx-scale" data-tilt>
+          <div class="k">03</div>
+          <h3>Log it</h3>
+          <p>One check-in a day. Ran, lifted, swam, walked, rested — or just held the line mentally. Logged. That's one more.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section style="border-top:1px solid var(--line)">
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow mute">How it works</span>
+        <h2 class="fx-line">The next mile. The next rep. <span class="green">The next hard day.</span></h2>
+      </div>
+      <div class="grid-cards" data-stagger>
+        <div class="card fx" data-tilt>
+          <h3>Free to join</h3>
+          <p>Sign up once at <a class="green" href="join.html">Join</a>. Create an account if you want your logs and RSVPs tracked in one place.</p>
+        </div>
+        <div class="card fx" data-tilt>
+          <h3>Sessions in Limerick</h3>
+          <p>Run club, strength, swims and events. Every session says exactly where, when and what — hit "I'm Showing Up" and that's it.</p>
+        </div>
+        <div class="card fx" data-tilt>
+          <h3>Coaching when you're ready</h3>
+          <p>Structured coaching for runners, lifters, triathletes and first-timers. Apply and I'll read it properly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ UPCOMING SESSIONS PREVIEW ============ -->
+  <section style="border-top:1px solid var(--line)">
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow mute">Upcoming</span>
+        <h2 class="fx-line">Next <span class="green">sessions</span></h2>
+      </div>
+      <div class="grid-cards" data-sessions-preview>
+        <div class="loader"><div class="txt">Loading The Forge…</div><div class="ln"></div></div>
+      </div>
+      <div class="cta-row fx"><a class="btn btn-ghost" href="sessions.html">All sessions</a></div>
+    </div>
+  </section>
+
+  <!-- ============ FORGE ONE MORE PREVIEW ============ -->
+  <section style="border-top:1px solid var(--line)">
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow mute">Daily check-in</span>
+        <h2 class="fx-line">Forge <span class="green">One More</span></h2>
+        <p class="lead">You don't need a perfect week. You need one more choice. Log today's Forge Moment — a run, a lift, a swim, a rest day taken on purpose.</p>
+      </div>
+      <div class="cta-row fx">
+        <a class="btn btn-green" href="check-in.html">Log Today's Action</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BACK TO IRONMILES.IE ============ -->
+  <section class="tight" style="border-top:1px solid var(--line)">
+    <div class="wrap fx">
+      <p>The Forge is the member hub. The full Iron Miles site — the club, coaching, the story — lives at
+        <a class="green" href="https://ironmiles.ie" rel="noopener">ironmiles.ie</a>. Built in Limerick.</p>
+    </div>
+  </section>
+
+</main>
+
+<script type="module">
+  import {
+    initForgePage, db, collection, query, where, getDocs, escapeHtml,
+  } from "./assets/js/forge-core.js";
+
+  initForgePage();
+
+  const FALLBACK_SESSION = `
+    <div class="card session-card fx" data-tilt>
+      <div class="meta"><span class="tag green">5k social run</span><span class="tag">All levels welcome</span></div>
+      <h3>First Iron Miles Run Club</h3>
+      <p class="when">Saturday · 10:00am</p>
+      <p>University of Limerick — Living Bridge</p>
+      <p>No ego. No pressure. Just show up and move together.</p>
+      <a class="btn btn-green" href="sessions.html">I'm Showing Up</a>
+    </div>`;
+
+  const box = document.querySelector("[data-sessions-preview]");
+  try {
+    const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
+    const sessions = snap.docs.map((d) => d.data())
+      .sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(0, 3);
+    box.innerHTML = sessions.length ? sessions.map((s) => `
+      <div class="card session-card fx" data-tilt>
+        <div class="meta">
+          ${s.type ? `<span class="tag green">${escapeHtml(s.type)}</span>` : ""}
+          ${s.difficulty ? `<span class="tag">${escapeHtml(s.difficulty)}</span>` : ""}
+        </div>
+        <h3>${escapeHtml(s.title)}</h3>
+        <p class="when">${escapeHtml(s.date)} · ${escapeHtml(s.time)}</p>
+        <p>${escapeHtml(s.location)}</p>
+        ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
+        <a class="btn btn-green" href="sessions.html">I'm Showing Up</a>
+      </div>`).join("") : FALLBACK_SESSION;
+  } catch {
+    box.innerHTML = FALLBACK_SESSION;
+  }
+  window.forgeMotionRefresh?.(box.parentElement);
+
+  // visible announcements
+  try {
+    const snap = await getDocs(query(collection(db, "announcements"), where("visible", "==", true)));
+    if (!snap.empty) {
+      const sec = document.getElementById("announcements");
+      sec.hidden = false;
+      sec.querySelector("[data-announcements]").innerHTML = snap.docs.map((d) => {
+        const a = d.data();
+        return `<div class="notice fx"><strong>${escapeHtml(a.title)}</strong><p>${escapeHtml(a.message)}</p></div>`;
+      }).join("");
+      window.forgeMotionRefresh?.(sec);
+    }
+  } catch { /* announcements are optional — stay quiet */ }
+</script>
+
+</body>
+</html>

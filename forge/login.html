@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Log In | The Forge — Iron Miles</title>
+<meta name="description" content="Log in to The Forge — the Iron Miles member hub.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap" style="max-width:460px">
+      <div class="section-head fx">
+        <span class="eyebrow">Log in</span>
+        <h2 class="fx-line">Back to <span class="green">work</span></h2>
+        <p class="lead">This is where the work gets tracked.</p>
+      </div>
+      <form class="forge-form panel fx" id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" autocomplete="email" required>
+          <span class="err">Enter a valid email.</span>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" required>
+          <span class="err">Enter your password.</span>
+        </div>
+        <button class="btn btn-green block" type="submit">Log In</button>
+        <p class="small">No account yet? <a class="green" href="register.html">Register</a> — it takes a minute.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, auth, signInWithEmailAndPassword, toast, withLoading,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  const next = new URLSearchParams(location.search).get("next") || "dashboard.html";
+  if (user) location.replace(next);
+
+  const form = document.getElementById("loginForm");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    let bad = false;
+    form.querySelectorAll("input[required]").forEach((el) => {
+      const ok = el.checkValidity();
+      el.closest(".field").classList.toggle("error", !ok);
+      if (!ok) bad = true;
+    });
+    if (bad) return;
+    withLoading(e.submitter, async () => {
+      try {
+        await signInWithEmailAndPassword(auth,
+          form.querySelector("#email").value.trim(),
+          form.querySelector("#password").value);
+        location.href = next;
+      } catch (err) {
+        console.error(err.code);
+        toast(err.code === "auth/invalid-credential"
+          ? "Wrong email or password. Go again."
+          : "Couldn't log you in. Check your connection and go again.", true);
+      }
+    }, "One more moment…");
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Sessions | The Forge — Iron Miles</title>
+<meta name="description" content="Upcoming Iron Miles sessions in Limerick — run club, strength, swims and events. All levels welcome. RSVP: I'm Showing Up.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+<style>
+  .rsvp-overlay{position:fixed;inset:0;z-index:140;background:rgba(8,8,8,.82);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    display:none;align-items:center;justify-content:center;padding:20px}
+  .rsvp-overlay.open{display:flex}
+  .rsvp-box{background:var(--panel);border:1px solid var(--line-2);border-radius:4px;
+    padding:28px;max-width:440px;width:100%;
+    animation:successin .4s cubic-bezier(.2,.9,.25,1) both}
+  .rsvp-box h3{margin-bottom:4px}
+  .rsvp-box .sub{font-size:.9rem;margin-bottom:18px}
+  @media(prefers-reduced-motion:reduce){.rsvp-box{animation:none}}
+</style>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap">
+      <div class="section-head fx">
+        <span class="eyebrow">Sessions</span>
+        <h2 class="fx-line">Show <span class="green">up</span></h2>
+        <p class="lead">Upcoming Iron Miles sessions in Limerick. You do not need to be fast. You just need to show up.</p>
+      </div>
+      <div class="grid-cards" data-sessions>
+        <div class="loader"><div class="txt">Loading The Forge…</div><div class="ln"></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- RSVP details for guests (logged-in members RSVP with their profile) -->
+<div class="rsvp-overlay" role="dialog" aria-modal="true" aria-labelledby="rsvpTitle">
+  <form class="rsvp-box forge-form" id="rsvpForm" novalidate>
+    <h3 id="rsvpTitle">I'm Showing Up</h3>
+    <p class="sub" data-rsvp-session></p>
+    <div class="field">
+      <label for="rsvpName">Name</label>
+      <input id="rsvpName" required>
+      <span class="err">We need a name to look out for.</span>
+    </div>
+    <div class="field">
+      <label for="rsvpEmail">Email</label>
+      <input id="rsvpEmail" type="email" required>
+      <span class="err">Enter a valid email.</span>
+    </div>
+    <div class="field">
+      <label for="rsvpInsta">Instagram <span class="opt">(optional)</span></label>
+      <input id="rsvpInsta" placeholder="@handle">
+    </div>
+    <button class="btn btn-green block" type="submit">I'm Showing Up</button>
+    <button class="btn btn-ghost block" type="button" data-rsvp-cancel>Not this time</button>
+  </form>
+</div>
+
+<script type="module">
+  import {
+    initForgePage, auth, db, collection, addDoc, getDocs, query, where,
+    serverTimestamp, toast, withLoading, escapeHtml, getMemberProfile,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+
+  /* Default sample session — shown until real sessions exist in Firestore.
+     Create real ones from /admin. */
+  const SAMPLE = [{
+    id: "sample-first-run-club",
+    title: "First Iron Miles Run Club",
+    date: "Saturday",
+    time: "10:00am",
+    location: "University of Limerick — Living Bridge",
+    type: "5k social run",
+    distance: "5k",
+    difficulty: "All levels welcome",
+    description: "No ego. No pressure. Just show up and move together.",
+    capacity: null,
+  }];
+
+  const box = document.querySelector("[data-sessions]");
+  let sessions = SAMPLE;
+  try {
+    const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
+    if (!snap.empty) {
+      sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    }
+  } catch (err) {
+    console.error("sessions load failed — showing sample", err);
+  }
+
+  box.innerHTML = sessions.map((s, i) => `
+    <div class="card session-card fx fx-scale" data-tilt>
+      <div class="meta">
+        ${s.type ? `<span class="tag green">${escapeHtml(s.type)}</span>` : ""}
+        ${s.difficulty ? `<span class="tag">${escapeHtml(s.difficulty)}</span>` : ""}
+        ${s.distance ? `<span class="tag">${escapeHtml(s.distance)}</span>` : ""}
+      </div>
+      <h3>${escapeHtml(s.title)}</h3>
+      <p class="when">${escapeHtml(s.date)} · ${escapeHtml(s.time)}</p>
+      <p>${escapeHtml(s.location)}</p>
+      ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
+      ${s.capacity ? `<p class="small">Capacity: ${escapeHtml(s.capacity)}</p>` : ""}
+      <button class="btn btn-green" data-rsvp="${i}">I'm Showing Up</button>
+    </div>`).join("");
+  window.forgeMotionRefresh?.(box.parentElement);
+
+  /* ---------- RSVP ---------- */
+  const overlay = document.querySelector(".rsvp-overlay");
+  const form = document.getElementById("rsvpForm");
+  let pending = null;
+
+  async function saveRsvp(s, name, email, instagram, uid) {
+    await addDoc(collection(db, "eventSignups"), {
+      eventId: s.id,
+      eventTitle: s.title,
+      ...(uid ? { uid } : {}),
+      name, email, instagram: instagram || "",
+      status: "going",
+      createdAt: serverTimestamp(),
+    });
+    toast("You're in. See you out there.");
+  }
+
+  box.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-rsvp]");
+    if (!btn) return;
+    const s = sessions[Number(btn.dataset.rsvp)];
+    const current = auth.currentUser;
+    if (current) {
+      // signed in: RSVP with profile details, no form
+      await withLoading(btn, async () => {
+        try {
+          const profile = await getMemberProfile(current.uid);
+          await saveRsvp(s,
+            profile?.fullName || current.displayName || current.email,
+            profile?.email || current.email,
+            profile?.instagram || "",
+            current.uid);
+          btn.textContent = "You're In";
+          btn.disabled = true;
+        } catch (err) {
+          console.error(err);
+          toast("That didn't save. Go again.", true);
+        }
+      }, "Forging…");
+    } else {
+      pending = { session: s, btn };
+      overlay.querySelector("[data-rsvp-session]").textContent = `${s.title} — ${s.date}, ${s.time}`;
+      overlay.classList.add("open");
+      document.getElementById("rsvpName").focus();
+    }
+  });
+
+  overlay.querySelector("[data-rsvp-cancel]").addEventListener("click", () => {
+    overlay.classList.remove("open");
+    pending = null;
+  });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) { overlay.classList.remove("open"); pending = null; }
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!pending) return;
+    let bad = false;
+    [form.querySelector("#rsvpName"), form.querySelector("#rsvpEmail")].forEach((el) => {
+      const ok = el.checkValidity();
+      el.closest(".field").classList.toggle("error", !ok);
+      if (!ok) bad = true;
+    });
+    if (bad) return;
+    withLoading(e.submitter, async () => {
+      try {
+        await saveRsvp(pending.session,
+          form.querySelector("#rsvpName").value.trim(),
+          form.querySelector("#rsvpEmail").value.trim().toLowerCase(),
+          form.querySelector("#rsvpInsta").value.trim(),
+          null);
+        pending.btn.textContent = "You're In";
+        pending.btn.disabled = true;
+        overlay.classList.remove("open");
+        form.reset();
+        pending = null;
+      } catch (err) {
+        console.error(err);
+        toast("That didn't save. Go again.", true);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

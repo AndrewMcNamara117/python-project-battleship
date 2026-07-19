@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Apply for Coaching | The Forge — Iron Miles</title>
+<meta name="description" content="Iron Miles coaching for runners, lifters, triathletes and first-time endurance athletes. Apply and it will be read properly.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap narrow">
+      <div class="section-head fx">
+        <span class="eyebrow">Coaching</span>
+        <h2 class="fx-line">Apply for <span class="green">Coaching</span></h2>
+        <p class="lead">Coaching for runners, lifters, triathletes and first-time endurance athletes who want a body that can handle the distance — and a mind that won't quit when it gets hard.</p>
+      </div>
+
+      <form class="forge-form panel fx" id="coachForm" novalidate>
+        <div class="f-row">
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" autocomplete="name" required>
+            <span class="err">We need a name.</span>
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="email" required>
+            <span class="err">Enter a valid email.</span>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input id="phone" type="tel" autocomplete="tel" required>
+            <span class="err">Enter a phone number.</span>
+          </div>
+          <div class="field">
+            <label for="instagram">Instagram <span class="opt">(optional)</span></label>
+            <input id="instagram" placeholder="@handle">
+          </div>
+        </div>
+        <div class="field">
+          <label for="mainGoal">Main goal</label>
+          <textarea id="mainGoal" placeholder="What are you actually trying to do?" required></textarea>
+          <span class="err">One honest line is enough.</span>
+        </div>
+        <div class="field">
+          <label for="currentTraining">Current training</label>
+          <textarea id="currentTraining" placeholder="What does a normal week look like right now? 'Nothing yet' is a valid answer." required></textarea>
+          <span class="err">Tell us where you're starting from.</span>
+        </div>
+        <div class="field">
+          <label for="biggestStruggle">Biggest struggle</label>
+          <textarea id="biggestStruggle" placeholder="Consistency? Injury? The dark middle of long efforts?" required></textarea>
+          <span class="err">This is the useful part — be honest.</span>
+        </div>
+        <div class="field">
+          <label for="injuries">Injuries or limitations <span class="opt">(if any)</span></label>
+          <textarea id="injuries"></textarea>
+        </div>
+        <div class="field">
+          <label for="eventGoal">Event or race goal <span class="opt">(if you have one)</span></label>
+          <input id="eventGoal" placeholder="First 5k, marathon, 70.3, none yet…">
+        </div>
+        <div class="field">
+          <label for="packageInterest">Package interest</label>
+          <select id="packageInterest" required>
+            <option value="">Select…</option>
+            <option>Foundation</option>
+            <option>Event Ready</option>
+            <option>Full Transform</option>
+            <option>Not Sure</option>
+          </select>
+          <span class="err">"Not Sure" is allowed.</span>
+        </div>
+        <div class="field">
+          <label for="message">Message <span class="opt">(anything else)</span></label>
+          <textarea id="message"></textarea>
+        </div>
+        <button class="btn btn-green block" type="submit">Send Application</button>
+      </form>
+
+      <div class="success-panel" id="coachSuccess" tabindex="-1">
+        <span class="eyebrow">Sent</span>
+        <h2>Application <span class="green">sent.</span></h2>
+        <p class="lead">I'll read this properly and get back to you.</p>
+        <div class="cta-row" style="justify-content:center">
+          <a class="btn btn-ghost" href="sessions.html">View Sessions</a>
+          <a class="btn btn-green" href="index.html">Back to the Hub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, db, collection, addDoc, serverTimestamp, toast, withLoading,
+  } from "./assets/js/forge-core.js";
+
+  await initForgePage();
+  const form = document.getElementById("coachForm");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    let bad = false;
+    form.querySelectorAll("input[required],select[required],textarea[required]").forEach((el) => {
+      const ok = el.checkValidity();
+      el.closest(".field").classList.toggle("error", !ok);
+      if (!ok) bad = true;
+    });
+    if (bad) return;
+    withLoading(e.submitter, async () => {
+      try {
+        await addDoc(collection(db, "coachingApplications"), {
+          name: form.querySelector("#name").value.trim(),
+          email: form.querySelector("#email").value.trim().toLowerCase(),
+          phone: form.querySelector("#phone").value.trim(),
+          instagram: form.querySelector("#instagram").value.trim(),
+          mainGoal: form.querySelector("#mainGoal").value.trim(),
+          currentTraining: form.querySelector("#currentTraining").value.trim(),
+          biggestStruggle: form.querySelector("#biggestStruggle").value.trim(),
+          injuries: form.querySelector("#injuries").value.trim(),
+          eventGoal: form.querySelector("#eventGoal").value.trim(),
+          packageInterest: form.querySelector("#packageInterest").value,
+          message: form.querySelector("#message").value.trim(),
+          status: "new",
+          createdAt: serverTimestamp(),
+        });
+        form.hidden = true;
+        const ok = document.getElementById("coachSuccess");
+        ok.classList.add("show");
+        ok.focus();
+        ok.scrollIntoView({ block: "center" });
+      } catch (err) {
+        console.error(err);
+        toast("That didn't send. Check your connection and go again.", true);
+      }
+    }, "Sending…");
+  });
+</script>
+
+</body>
+</html>

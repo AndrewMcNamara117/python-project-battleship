@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>Join The Forge | Iron Miles</title>
+<meta name="description" content="Join the Iron Miles community. One form, you're in. No tiers, no fees. Built in Limerick.">
+<link rel="stylesheet" href="assets/css/forge.css">
+<script defer src="assets/js/forge-ui.js"></script>
+</head>
+<body>
+
+<main id="main">
+  <section>
+    <div class="wrap narrow">
+      <div class="section-head fx">
+        <span class="eyebrow">Join</span>
+        <h2 class="fx-line">Join The <span class="green">Forge</span></h2>
+        <p class="lead">One form. You're in. No ego. No pressure. Just show up.</p>
+        <p class="small" style="margin-top:10px" data-auth-hint hidden>
+          You're signed in — this will be saved as your member profile.</p>
+      </div>
+
+      <form class="forge-form panel fx" id="joinForm" novalidate>
+        <div class="f-row">
+          <div class="field">
+            <label for="fullName">Full name</label>
+            <input id="fullName" name="fullName" autocomplete="name" required>
+            <span class="err">We need a name to know who's showing up.</span>
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required>
+            <span class="err">Enter a valid email.</span>
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" required>
+            <span class="err">Enter a phone number.</span>
+          </div>
+          <div class="field">
+            <label for="instagram">Instagram <span class="opt">(optional)</span></label>
+            <input id="instagram" name="instagram" placeholder="@handle">
+          </div>
+        </div>
+        <div class="f-row">
+          <div class="field">
+            <label for="location">Location</label>
+            <input id="location" name="location" placeholder="Limerick" required>
+            <span class="err">Where are you based?</span>
+          </div>
+          <div class="field">
+            <label for="fitnessLevel">Fitness level</label>
+            <select id="fitnessLevel" name="fitnessLevel" required>
+              <option value="">Select…</option>
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+            <span class="err">Pick one — beginner is a fine answer.</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="mainInterest">Main interest</label>
+          <select id="mainInterest" name="mainInterest" required>
+            <option value="">Select…</option>
+            <option>Running</option>
+            <option>Lifting</option>
+            <option>Swimming</option>
+            <option>Triathlon</option>
+            <option>General Fitness</option>
+            <option>Coaching</option>
+            <option>Events</option>
+          </select>
+          <span class="err">Pick what pulls you in most.</span>
+        </div>
+        <div class="field">
+          <label for="mainGoal">Main goal</label>
+          <textarea id="mainGoal" name="mainGoal" placeholder="First 5k. A marathon. Show up twice a week. Anything honest." required></textarea>
+          <span class="err">One honest line is enough.</span>
+        </div>
+        <div class="f-row">
+          <div class="field">
+            <label for="emergencyContactName">Emergency contact name</label>
+            <input id="emergencyContactName" name="emergencyContactName" required>
+            <span class="err">Required for sessions.</span>
+          </div>
+          <div class="field">
+            <label for="emergencyContactPhone">Emergency contact phone</label>
+            <input id="emergencyContactPhone" name="emergencyContactPhone" type="tel" required>
+            <span class="err">Required for sessions.</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="medicalNotes">Medical notes <span class="opt">(optional — anything we should know)</span></label>
+          <textarea id="medicalNotes" name="medicalNotes"></textarea>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="waiverAccepted" name="waiverAccepted" required>
+          <span>I have read and accept the <a class="green" href="https://ironmiles.ie/waiver.html" rel="noopener">Iron Miles waiver</a>. I train at my own risk.</span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="marketingConsent" name="marketingConsent">
+          <span>Keep me posted on sessions and events. No spam. Ever.</span>
+        </label>
+        <button class="btn btn-green block" type="submit">Join The Forge</button>
+        <p class="small">By joining you agree to us storing these details to run the community. See the <a class="green" href="https://ironmiles.ie/privacy.html" rel="noopener">privacy notice</a>.</p>
+      </form>
+
+      <div class="success-panel" id="joinSuccess" tabindex="-1">
+        <span class="eyebrow">Welcome</span>
+        <h2>You're in.<br><span class="green">Welcome to Iron Miles.</span></h2>
+        <p class="lead">Now show up. Forge One More.</p>
+        <div class="cta-row" style="justify-content:center">
+          <a class="btn btn-green" href="sessions.html">View Sessions</a>
+          <a class="btn btn-ghost" href="check-in.html">Log Today's Action</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import {
+    initForgePage, auth, db, collection, doc, addDoc, setDoc, serverTimestamp,
+    toast, withLoading,
+  } from "./assets/js/forge-core.js";
+
+  const user = await initForgePage();
+  if (user) {
+    document.querySelector("[data-auth-hint]").hidden = false;
+    if (user.email) document.getElementById("email").value = user.email;
+  }
+
+  const form = document.getElementById("joinForm");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    // inline validation states
+    let bad = false;
+    form.querySelectorAll(".field input[required],.field select[required],.field textarea[required]").forEach((el) => {
+      const ok = el.checkValidity();
+      el.closest(".field").classList.toggle("error", !ok);
+      if (!ok) bad = true;
+    });
+    if (!form.waiverAccepted.checked) {
+      toast("You need to accept the waiver before joining.", true);
+      bad = true;
+    }
+    if (bad) return;
+
+    withLoading(e.submitter, async () => {
+      const data = {
+        fullName: form.fullName.value.trim(),
+        email: form.email.value.trim().toLowerCase(),
+        phone: form.phone.value.trim(),
+        instagram: form.instagram.value.trim(),
+        location: form.location.value.trim(),
+        fitnessLevel: form.fitnessLevel.value,
+        mainInterest: form.mainInterest.value,
+        mainGoal: form.mainGoal.value.trim(),
+        emergencyContactName: form.emergencyContactName.value.trim(),
+        emergencyContactPhone: form.emergencyContactPhone.value.trim(),
+        medicalNotes: form.medicalNotes.value.trim(),
+        waiverAccepted: true,
+        marketingConsent: form.marketingConsent.checked,
+        createdAt: serverTimestamp(),
+      };
+      try {
+        const current = auth.currentUser;
+        if (current) {
+          // signed-in members own their profile doc (id == uid)
+          await setDoc(doc(db, "members", current.uid), { ...data, uid: current.uid }, { merge: true });
+        } else {
+          await addDoc(collection(db, "members"), data);
+        }
+        form.hidden = true;
+        const ok = document.getElementById("joinSuccess");
+        ok.classList.add("show");
+        ok.focus();
+        ok.scrollIntoView({ block: "center" });
+      } catch (err) {
+        console.error(err);
+        toast("That didn't save. Check your connection and go again.", true);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
