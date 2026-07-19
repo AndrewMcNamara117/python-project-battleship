@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Despite the repo name, this repository contains **several unrelated projects**:
 
 1. **Iron Miles marketing site** (the active project) — an immersive static website for the Iron Miles endurance community (Limerick, Ireland), served from the repo root. Documented in `IRONMILES.md`. All recent work happens here.
-2. **Brazen Headz barber site** (`brazenheadz.html`) — a single-page immersive site for Brazen Headz Barber Studio (Limerick), still fully self-contained (data-URI photos, WebGL particle hero, scroll choreography) with its own black-and-brass design system (Gold `#c6a45c`, serif display type).
+2. **Removed guest client sites** — `brazenheadz.html` (Brazen Headz Barber Studio) and `bodybalance.html` (Body Balance Neuromuscular Therapy) were unrelated single-page client sites once served from this repo. They were deleted so they no longer appear on ironmiles.ie; recover them from git history if a client needs them for their own domain.
 3. **Thomond Works agency site** (`thomondworks/`) — a self-contained Next.js + TypeScript + Tailwind 4 + GSAP/Lenis website for the Thomond Works digital studio brand. It has its own `package.json` and README; run `npm install && npm run dev` inside `thomondworks/`. It is not deployed by the GitHub Pages workflow (which only watches root `*.html` and `assets/**`).
 4. **Legacy battleship game** (the original project, dormant) — a Code Institute Python terminal game (`run.py`) plus the template's Node "mock terminal" that runs it in a browser for Heroku (`index.js`, `package.json`, `Procfile`, `controllers/`, `views/`, `.vscode/`, `.gitpod.*`). Leave these files alone unless explicitly asked; the `package.json` belongs to this legacy layer, not the website.
 
@@ -39,8 +39,6 @@ Read `IRONMILES.md` first — it is the project's own overview and lists every p
 - `assets/css/iron.css` — the locked design-system CSS + im-motion styles, linked by every page except `index.html` (which keeps its bespoke inline CSS).
 - `assets/js/im-motion.js` — the shared motion engine, loaded at the end of every inner page. Edit it once; there are no per-page copies any more.
 - `assets/images/` — all photography, deduplicated, referenced with `loading="lazy"` (heroes use `fetchpriority="high"`) and explicit `width`/`height`. `assets/images/iron-miles-preview.jpg` is the social-share image; `favicon.svg` the site icon.
-
-(`brazenheadz.html` predates this split and still embeds its photos as data URIs — its lines are huge, so Grep + offset-read it rather than reading it whole.)
 
 Key structural facts that span multiple files:
 
