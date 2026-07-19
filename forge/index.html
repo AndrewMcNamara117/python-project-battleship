@@ -6,11 +6,19 @@
 <meta name="theme-color" content="#080808">
 <title>The Forge | Iron Miles Member Hub — Limerick</title>
 <meta name="description" content="The Forge is the Iron Miles hub for the ones who keep going. Join the community, RSVP to run club sessions, log your Forge One More moments. Built in Limerick.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Iron Miles">
+<meta property="og:title" content="The Forge | Iron Miles Member Hub — Limerick">
+<meta property="og:description" content="The Forge is the Iron Miles hub for the ones who keep going. Join the community, RSVP to run club sessions, log your Forge One More moments. Built in Limerick.">
+<meta property="og:image" content="https://ironmiles.ie/assets/images/iron-miles-preview.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 780 660'%3E%3Cpolygon points='9,17 131,130 131,628 9,628' fill='%23eeeeee'/%3E%3Cpolygon points='172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337' fill='%232dff8a'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 </head>
 <body>
+<noscript><p style="padding:16px 20px;background:#111312;color:#eeeeee;border-bottom:1px solid rgba(45,255,138,.4)">The Forge needs JavaScript. Enable it and reload.</p></noscript>
 
 <main id="main">
 
@@ -173,8 +181,14 @@
         <p>${escapeHtml(s.location)}</p>
         ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
         <a class="btn btn-green" href="sessions.html">I'm Showing Up</a>
-      </div>`).join("") : FALLBACK_SESSION;
+      </div>`).join("") : `
+      <div class="card session-card fx">
+        <h3>Nothing on the board right now</h3>
+        <p>The next session is being planned. Join The Forge and you'll hear when it lands.</p>
+        <a class="btn btn-green" href="join.html">Join The Forge</a>
+      </div>`;
   } catch {
+    // backend unreachable (e.g. not configured yet) — show the sample
     box.innerHTML = FALLBACK_SESSION;
   }
   window.forgeMotionRefresh?.(box.parentElement);

@@ -6,7 +6,14 @@
 <meta name="theme-color" content="#080808">
 <title>Sessions | The Forge — Iron Miles</title>
 <meta name="description" content="Upcoming Iron Miles sessions in Limerick — run club, strength, swims and events. All levels welcome. RSVP: I'm Showing Up.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Iron Miles">
+<meta property="og:title" content="Sessions | The Forge — Iron Miles">
+<meta property="og:description" content="Upcoming Iron Miles sessions in Limerick — run club, strength, swims and events. All levels welcome. RSVP: I'm Showing Up.">
+<meta property="og:image" content="https://ironmiles.ie/assets/images/iron-miles-preview.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 780 660'%3E%3Cpolygon points='9,17 131,130 131,628 9,628' fill='%23eeeeee'/%3E%3Cpolygon points='172,162 381,365 729,17 729,628 607,628 607,311 376,541 172,337' fill='%232dff8a'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/forge.css">
 <script defer src="assets/js/forge-ui.js"></script>
 <style>
@@ -23,13 +30,14 @@
 </style>
 </head>
 <body>
+<noscript><p style="padding:16px 20px;background:#111312;color:#eeeeee;border-bottom:1px solid rgba(45,255,138,.4)">The Forge needs JavaScript. Enable it and reload.</p></noscript>
 
 <main id="main">
   <section>
     <div class="wrap">
       <div class="section-head fx">
         <span class="eyebrow">Sessions</span>
-        <h2 class="fx-line">Show <span class="green">up</span></h2>
+        <h1 class="fx-line">Show <span class="green">up</span></h1>
         <p class="lead">Upcoming Iron Miles sessions in Limerick. You do not need to be fast. You just need to show up.</p>
       </div>
       <div class="grid-cards" data-sessions>
@@ -87,19 +95,21 @@
   }];
 
   const box = document.querySelector("[data-sessions]");
-  let sessions = SAMPLE;
+  /* The sample only shows when the backend is unreachable (e.g. Firebase not
+     configured yet). A successful-but-empty query gets an honest empty state —
+     never a phantom event people might actually show up for. */
+  let sessions;
   try {
     const snap = await getDocs(query(collection(db, "sessions"), where("isActive", "==", true)));
-    if (!snap.empty) {
-      // dates are freeform text ("Saturday 26 July"), so keep admin creation order
-      sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
-    }
+    // dates are freeform text ("Saturday 26 July"), so keep admin creation order
+    sessions = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
   } catch (err) {
     console.error("sessions load failed — showing sample", err);
+    sessions = SAMPLE;
   }
 
-  box.innerHTML = sessions.map((s, i) => `
+  box.innerHTML = sessions.length ? sessions.map((s, i) => `
     <div class="card session-card fx fx-scale" data-tilt>
       <div class="meta">
         ${s.type ? `<span class="tag green">${escapeHtml(s.type)}</span>` : ""}
@@ -112,8 +122,28 @@
       ${s.description ? `<p>${escapeHtml(s.description)}</p>` : ""}
       ${s.capacity ? `<p class="small">Capacity: ${escapeHtml(s.capacity)}</p>` : ""}
       <button class="btn btn-green" data-rsvp="${i}">I'm Showing Up</button>
-    </div>`).join("");
+    </div>`).join("") : `
+    <div class="card session-card fx">
+      <h3>Nothing on the board right now</h3>
+      <p>The next session is being planned. Join The Forge and you'll hear when it lands.</p>
+      <a class="btn btn-green" href="join.html">Join The Forge</a>
+    </div>`;
   window.forgeMotionRefresh?.(box.parentElement);
+
+  /* signed-in members: mark the sessions they've already said yes to,
+     so nobody double-RSVPs after a reload */
+  if (user) {
+    try {
+      const mine = await getDocs(query(collection(db, "eventSignups"), where("uid", "==", user.uid)));
+      const going = new Set(mine.docs.map((d) => d.data().eventId));
+      box.querySelectorAll("[data-rsvp]").forEach((b) => {
+        if (going.has(sessions[Number(b.dataset.rsvp)]?.id)) {
+          b.textContent = "You're In";
+          b.disabled = true;
+        }
+      });
+    } catch { /* non-fatal — worst case a duplicate RSVP row for admin */ }
+  }
 
   /* ---------- RSVP ---------- */
   const overlay = document.querySelector(".rsvp-overlay");
@@ -138,22 +168,25 @@
     const s = sessions[Number(btn.dataset.rsvp)];
     const current = auth.currentUser;
     if (current) {
-      // signed in: RSVP with profile details, no form
-      await withLoading(btn, async () => {
-        try {
-          const profile = await getMemberProfile(current.uid);
-          await saveRsvp(s,
-            profile?.fullName || current.displayName || current.email,
-            profile?.email || current.email,
-            profile?.instagram || "",
-            current.uid);
-          btn.textContent = "You're In";
-          btn.disabled = true;
-        } catch (err) {
-          console.error(err);
-          toast("That didn't save. Go again.", true);
-        }
-      }, "Forging…");
+      // signed in: RSVP with profile details, no form.
+      // (not withLoading — on success the button must STAY "You're In")
+      const orig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Forging…";
+      try {
+        const profile = await getMemberProfile(current.uid);
+        await saveRsvp(s,
+          profile?.fullName || current.displayName || current.email,
+          profile?.email || current.email,
+          profile?.instagram || "",
+          current.uid);
+        btn.textContent = "You're In";
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = orig;
+        toast("That didn't save. Go again.", true);
+      }
     } else {
       pending = { session: s, btn };
       overlay.querySelector("[data-rsvp-session]").textContent = `${s.title} — ${s.date}, ${s.time}`;

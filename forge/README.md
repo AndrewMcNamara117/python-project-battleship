@@ -115,10 +115,12 @@ The Admin link then appears in the nav. From `/admin` you
 can view members, RSVPs, Forge Logs and coaching applications, create/edit/
 delete sessions, and publish announcements.
 
-Until you create a session, the Sessions page shows the built-in sample
-(**First Iron Miles Run Club** — Saturday 10:00am, UL Living Bridge). Create a
-real session in `/admin` and the sample disappears. Note: RSVPs to the sample
-session are stored with `eventId: "sample-first-run-club"`.
+The built-in sample session (**First Iron Miles Run Club** — Saturday 10:00am,
+UL Living Bridge) only appears while the backend is unreachable (e.g. Firebase
+not configured yet). Once connected, an empty sessions collection shows an
+honest "nothing on the board" state — never a phantom event people might show
+up for. RSVPs to the sample are stored with `eventId: "sample-first-run-club"`.
+Password resets are self-service via "Forgot your password?" on `/login`.
 
 ## What you still need to update manually
 

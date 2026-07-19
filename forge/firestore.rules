@@ -41,9 +41,8 @@ service cloud.firestore {
 
     // Members — public join form may create; signed-in members own
     // the doc whose id == their uid; only admin reads the list.
-    match /members/{memberId} {
-      allow create: if
-        request.resource.data.keys().hasOnly([
+    function validMember() {
+      return request.resource.data.keys().hasOnly([
           'fullName','email','phone','instagram','location','fitnessLevel',
           'mainInterest','mainGoal','emergencyContactName','emergencyContactPhone',
           'medicalNotes','waiverAccepted','marketingConsent','createdAt','uid'
@@ -53,8 +52,13 @@ service cloud.firestore {
         okStr(request.resource.data.email, 200) &&
         okStr(request.resource.data.mainGoal, 2000) &&
         okStr(request.resource.data.medicalNotes, 2000);
-      allow read, update: if isAdmin() ||
+    }
+    match /members/{memberId} {
+      allow create: if validMember();
+      allow read: if isAdmin() ||
         (signedIn() && request.auth.uid == memberId);
+      allow update: if isAdmin() ||
+        (signedIn() && request.auth.uid == memberId && validMember());
       allow delete: if isAdmin();
     }
 

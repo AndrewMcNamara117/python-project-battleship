@@ -17,7 +17,7 @@
   --green-glow:rgba(45,255,138,.14);
   --white:#eeeeee;
   --muted:#8b918d;
-  --muted-2:#5d625f;
+  --muted-2:#767c74; /* ≥4.5:1 on Iron Black — small text must stay readable */
   --line:rgba(238,238,238,.10);
   --line-2:rgba(238,238,238,.18);
   --danger:#ff5d5d;
@@ -198,7 +198,9 @@ nav.links a.ext{color:var(--muted-2)}
 section{padding:clamp(54px,8vw,110px) 0;position:relative}
 section.tight{padding:clamp(34px,5vw,64px) 0}
 .section-head{max-width:64ch;margin-bottom:clamp(30px,4.5vw,54px)}
-.section-head h2{margin:.18em 0 .4em}
+.section-head h1,.section-head h2{margin:.18em 0 .4em}
+/* inner pages lead with an h1 (proper document outline) at h2 scale */
+.section-head h1{font-size:clamp(1.8rem,5.5vw,3.2rem)}
 .rule{display:flex;align-items:center;gap:14px;margin-bottom:18px}
 .rule .mark{width:20px}
 .rule .ln{flex:1;height:1px;background:var(--line)}

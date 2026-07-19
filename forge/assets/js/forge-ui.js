@@ -81,6 +81,12 @@
     const open = links.classList.toggle("open");
     toggle.setAttribute("aria-expanded", String(open));
   });
+  document.addEventListener("click", (e) => {
+    if (links.classList.contains("open") && !e.target.closest("header.forge-header")) {
+      links.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  });
 
   /* form error states clear as soon as the field is corrected */
   document.addEventListener("input", (e) => {

@@ -10,6 +10,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/fireba
 import {
   getAuth, onAuthStateChanged, signOut,
   createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification,
+  sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
@@ -27,7 +28,7 @@ export {
   collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
   query, where, orderBy, limit, serverTimestamp,
   onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  sendEmailVerification, ADMIN_EMAILS,
+  sendEmailVerification, sendPasswordResetEmail, ADMIN_EMAILS,
 };
 
 export const isAdminUser = (user) =>
