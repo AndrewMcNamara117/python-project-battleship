@@ -10,7 +10,7 @@ Immersive marketing site for the Iron Miles endurance community (Limerick, Irela
 | `club.html` | The Iron Miles Club — sessions, ethos, the Forge Ultra |
 | `origins.html` | The origin story and journey timeline |
 | `coaching.html` | 1:1 coaching tiers and philosophy |
-| `tay.html` | Tay Cooper — co-founder page |
+| `tay.html` | Tay Cooper — co-founder page (unpublished — kept out of nav and sitemap until Tay signs off) |
 | `services.html` | All services — run club, coaching, PT, race prep, strength for runners |
 | `privacy.html` / `terms.html` / `waiver.html` | Legal templates (solicitor review required before publishing) |
 
