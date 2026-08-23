@@ -170,12 +170,18 @@
       categoryLabel: "Road / daily trainer",
       status: "draft",
 
-      /* No authentic product photograph exists in the repo yet, and none will
-         be faked. The card and hero fall back to a forged-panel treatment. */
-      heroImage: null,
-      imageAlt: null,
-      heroWidth: null,
-      heroHeight: null,
+      /* Product photographs of Andrew's own pair (supplied Aug 2026). These are
+         descriptive product shots only — they carry no performance claim. */
+      heroImage: "assets/images/nike-vomero-premium.webp",
+      imageAlt:
+        "A pair of Nike Vomero Premium running shoes in coral with a translucent blue midsole",
+      heroWidth: 1050,
+      heroHeight: 1400,
+      images: [
+        "assets/images/nike-vomero-premium.webp",
+        "assets/images/nike-vomero-premium-heel.webp",
+        "assets/images/nike-vomero-premium-top.webp"
+      ],
 
       /* No verdict has been given. Nothing is invented here. */
       shortVerdict: null,
@@ -213,9 +219,8 @@
         "Your final verdict, and a score out of 10 only if you want one shown"
       ],
       needsImages: [
-        "Vomero Premium product photograph",
-        "Andrew wearing the Vomero Premium",
-        "Outsole and upper detail shots after use"
+        "Andrew wearing / running in the Vomero Premium",
+        "Outsole and upper detail shots once there are real miles on them"
       ]
     }
   ];
