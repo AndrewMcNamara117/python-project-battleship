@@ -181,11 +181,10 @@
       productName: "Nike Vomero Premium",
       brand: "Nike",
       category: "shoes",
-      categoryLabel: "Road / daily trainer",
-      status: "draft",
+      categoryLabel: "Road / recovery",
+      status: "published",
 
-      /* Product photographs of Andrew's own pair (supplied Aug 2026). These are
-         descriptive product shots only — they carry no performance claim. */
+      /* Product photographs of Andrew's own pair. */
       heroImage: "assets/images/nike-vomero-premium.webp",
       imageAlt:
         "A pair of Nike Vomero Premium running shoes in coral with a translucent blue midsole",
@@ -197,44 +196,93 @@
         "assets/images/nike-vomero-premium-top.webp"
       ],
 
-      /* No verdict has been given. Nothing is invented here. */
-      shortVerdict: null,
+      shortVerdict:
+        "An excellent maximum-cushioning shoe for heavier runners who want comfort and " +
+        "protection on recovery runs and long training days — but the 55 mm stack rules " +
+        "it out for sharp turns, technical terrain and race day.",
 
       author: ANDREW,
-      publishedDate: null,
-      updatedDate: null,
+      publishedDate: "2026-08-23",
+      updatedDate: "2026-08-23",
 
       testedDistance: null,
+      purchasedPersonally: true,
+      brandRelationship: "None at the time of review",
       testedEvents: [],
       runnerWeight: "~100 kg",
-      useCases: [],
+      useCases: [
+        "Recovery runs",
+        "Easy-paced road mileage",
+        "Long, controlled training sessions",
+        "High-volume training weeks"
+      ],
 
-      pros: [],
-      considerations: [],
-      sections: [],
-      finalVerdict: null,
-      rating: null,
+      pros: [
+        "Exceptional cushioning",
+        "Very comfortable for recovery running",
+        "Protective under a heavier athlete",
+        "Well suited to long road sessions",
+        "Useful during high-volume training",
+        "Responsive ZoomX and Air Zoom combination"
+      ],
+      considerations: [
+        "Extremely tall platform",
+        "Not my choice for sharp turns",
+        "Unsuitable for technical terrain",
+        "Heavier than a typical performance shoe",
+        "Not intended as a race-day shoe",
+        "Expensive for a specialised recovery trainer"
+      ],
+
+      sections: [
+        { id: "perspective", label: "My perspective" },
+        { id: "cushioning", label: "Maximum cushioning" },
+        { id: "best-use", label: "Best use" },
+        { id: "stability", label: "Stability and turning" },
+        { id: "race-day", label: "Is it suitable for race day?" },
+        { id: "pros", label: "Pros" },
+        { id: "limitations", label: "Limitations" },
+        { id: "verdict", label: "Final verdict" }
+      ],
+
+      finalVerdict:
+        "A very good specialised training shoe for heavier runners — maximum cushioning " +
+        "for recovery days and long, controlled road runs, but not a race-day or " +
+        "technical-terrain option.",
+
+      /* A REAL score, but a SCOPED one: 8/10 for recovery use specifically.
+         ratingLabel is mandatory here so it is never rendered as an overall
+         product verdict — Andrew explicitly would not race in this shoe.
+         For the same reason no Review/Product JSON-LD is emitted: a bare
+         reviewRating of 8 would misrepresent the verdict in rich results. */
+      rating: 8,
+      ratingMax: 10,
+      ratingLabel: "Recovery rating",
 
       affiliateUrl: null,
       affiliateDisclosure: DISCLOSURE,
 
-      specs: { verified: false, source: null, items: [], notStated: [] },
+      /* Specs appear in the page prose as supplied by Andrew. Not auto-rendered:
+         Nike's domains are blocked from our build environment, so the 55 mm stack
+         and 351 g weight could not be confirmed against an official page. */
+      specs: {
+        verified: false,
+        source: "Supplied by Andrew; not independently confirmed against nike.com",
+        items: [
+          { label: "Stack height", value: "55 mm" },
+          { label: "Midsole", value: "Full-length ZoomX with heel and forefoot Air Zoom units" },
+          { label: "Weight", value: "Approx. 351 g (men's UK 9)" },
+          { label: "Plate", value: "None" }
+        ],
+        notStated: []
+      },
 
-      /* Shown only in the local/dev draft panel — never in production. */
-      draftNote:
-        "Andrew has bought and is running in the Vomero Premium. Long-term feedback " +
-        "has not been supplied yet, so no verdict, rating or performance claim is published.",
       needsInput: [
-        "First impressions out of the box",
-        "Fit and sizing vs. the Zoom Fly 6",
-        "What you are using them for (easy miles, recovery, daily trainer, walking)",
-        "How they feel at 100 kg over an hour-plus",
-        "Any comparison you want drawn against the Zoom Fly 6",
-        "Your final verdict, and a score out of 10 only if you want one shown"
+        "Confirm the 55 mm stack and 351 g weight against Nike's own product page, then set specs.verified"
       ],
       needsImages: [
-        "Andrew wearing / running in the Vomero Premium",
-        "Outsole and upper detail shots once there are real miles on them"
+        "Andrew running in the Vomero Premium",
+        "Outsole wear detail once there are real miles on them"
       ]
     }
   ];

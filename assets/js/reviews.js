@@ -74,13 +74,19 @@
         status: review.status
       });
 
-      /* --- rating: renders ONLY when a real number exists --- */
+      /* --- rating: renders ONLY when a real number exists ---
+         ratingLabel is required alongside a scoped score (e.g. "Recovery
+         rating"), so a rating given for one use case is never presented as
+         an overall verdict for the product. */
       var ratingHost = doc.querySelector("[data-rv-rating]");
       if (ratingHost) {
         if (typeof review.rating === "number" && isFinite(review.rating)) {
+          var max = typeof review.ratingMax === "number" ? review.ratingMax : 10;
           ratingHost.innerHTML =
-            '<div class="rv-rating"><span class="score">' + review.rating +
-            '</span><span class="out">out of 10</span></div>';
+            '<div class="rv-rating">' +
+            (review.ratingLabel ? '<span class="rlbl">' + esc(review.ratingLabel) + "</span>" : "") +
+            '<span class="score">' + review.rating + "</span>" +
+            '<span class="out">out of ' + max + "</span></div>";
         } else {
           ratingHost.remove();
         }
