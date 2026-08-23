@@ -65,16 +65,19 @@
       heroHeight: 940,
 
       shortVerdict:
-        "The shoe I learned to run long in. A half marathon, a road marathon and " +
-        "63 km of Connemara — and not one blister.",
+        "My first serious running shoe — and the shoe that carried me from a first half " +
+        "marathon to a full marathon and through the 63 km Connemara Ultra. Across all " +
+        "three distances, I never developed a blister.",
 
       author: ANDREW,
       publishedDate: "2026-08-23",
       updatedDate: "2026-08-23",
 
       /* Only what is confirmed. Cumulative mileage was never logged, so it
-         stays null rather than being invented — see needsInput. */
+         stays null rather than being invented. */
       testedDistance: null,
+      purchasedPersonally: true,
+      brandRelationship: "None at the time of review",
       testedEvents: [
         "First half marathon",
         "Great Limerick Marathon",
@@ -84,38 +87,48 @@
       useCases: ["Long runs", "Road marathon", "Ultra distance", "First serious running shoe"],
 
       pros: [
-        "Carried a half marathon, a full marathon and a 63 km ultra without a single blister",
-        "Held up under a runner at around 100 kg — not a lightweight-only shoe",
-        "Approachable enough to be a genuine first serious running shoe",
-        "Same shoe handled short sessions and race day, so there was nothing to re-learn"
+        "Comfortable across half-marathon, marathon and ultramarathon distances",
+        "No blisters during any of my three major events",
+        "Performance-focused construction without being restricted to short races",
+        "Suitable for both training and race-day use in my experience",
+        "Responsive platform combining ZoomX foam and a carbon-fibre plate",
+        "Gave me confidence as my distances progressed",
+        "Proved that a 100 kg runner can benefit from performance-oriented footwear"
       ],
       considerations: [
-        "A plated shoe is a big first purchase — it is not the cheapest way into running",
-        "Andrew has not tested it in a direct back-to-back against other plated trainers",
-        "Long-term outsole wear beyond the events listed has not been formally tracked"
+        "My experience does not guarantee the same fit for every runner",
+        "Foot shape, lacing, socks and race preparation affect blister outcomes",
+        "Runners should build into plated footwear gradually",
+        "A carbon plate cannot replace appropriate conditioning or sensible progression",
+        "This is a road shoe, not a technical trail-running shoe",
+        "No exact durability figure — verified total mileage was not recorded",
+        "Runners with injury concerns should choose footwear on individual assessment"
       ],
 
       /* Section nav is generated from this list; ids match the page headings. */
       sections: [
-        { id: "beyond-marketing", label: "Tested beyond the marketing" },
-        { id: "background", label: "Andrew's background" },
+        { id: "testing-summary", label: "Testing summary" },
+        { id: "technical", label: "Technical overview" },
+        { id: "background", label: "Strength athlete to endurance runner" },
         { id: "first-impressions", label: "First impressions" },
-        { id: "fit", label: "Fit and comfort" },
-        { id: "short-sessions", label: "Shorter sessions" },
-        { id: "long-runs", label: "Long-run performance" },
+        { id: "the-ride", label: "The ride" },
+        { id: "fit", label: "Fit, comfort and blisters" },
+        { id: "half-marathon", label: "First half marathon" },
         { id: "marathon", label: "Great Limerick Marathon" },
-        { id: "ultra", label: "63 km Connemara Ultra" },
-        { id: "heavier-runner", label: "Stability for a heavier runner" },
-        { id: "what-worked", label: "What worked" },
-        { id: "limitations", label: "Possible limitations" },
-        { id: "who-for", label: "Who it may suit" },
+        { id: "ultra", label: "Connemara Ultra 63 km" },
+        { id: "heavier-runner", label: "Performance for a 100 kg runner" },
+        { id: "what-i-liked", label: "What I liked" },
+        { id: "considerations", label: "Important considerations" },
+        { id: "who-for", label: "Who is it for?" },
+        { id: "who-else", label: "Who may need something different?" },
         { id: "verdict", label: "Final verdict" }
       ],
 
       finalVerdict:
-        "For a strength athlete moving into endurance, the Zoom Fly 6 did the one " +
-        "thing that matters most: it got me to the finish of everything I entered, " +
-        "comfortably, without my feet falling apart.",
+        "For this approximately 100 kg runner, the Nike Zoom Fly 6 proved comfortable, " +
+        "versatile and capable of going far beyond the distance I originally imagined I " +
+        "could run. It wasn't just my first serious running shoe. It was the shoe that " +
+        "came with me while I became a runner.",
 
       /* No numeric score has been given. Leave null — the rating component
          does not render at all unless a real number is entered here. */
@@ -126,27 +139,28 @@
       affiliateUrl: null,
       affiliateDisclosure: DISCLOSURE,
 
-      /* Specs: Nike's own domains are blocked from our build environment, so
-         these could not be read directly off an official Nike product page.
-         They are held here UNVERIFIED and are not printed on the page while
-         verified === false. Confirm on nike.com, then set verified: true. */
+      /* Specs are stated in the page prose, explicitly attributed to Nike, as
+         supplied by Andrew. They are NOT auto-rendered as a spec table here:
+         Nike's domains are blocked from our build environment, so the 8 mm drop
+         could not be confirmed against an official page. The ~265 g figure does
+         corroborate what official Nike pages state for men's US 10 (= UK 9).
+         Set verified: true once the drop is confirmed on nike.com. */
       specs: {
         verified: false,
-        source: "Search results citing official Nike pages — needs direct confirmation on nike.com",
+        source: "Supplied by Andrew, attributed to Nike; drop not independently confirmed",
         items: [
           { label: "Midsole foam", value: "ZoomX" },
-          { label: "Plate", value: "Full-length carbon fibre Flyplate" },
-          { label: "Weight", value: "Approx. 265 g / 9.3 oz (men's US 10)" },
-          { label: "Vs. Zoom Fly 5", value: "Around 10% lighter" }
+          { label: "Plate", value: "Full-length carbon-fibre Flyplate" },
+          { label: "Weight", value: "Approx. 265 g (men's UK 9)" },
+          { label: "Heel-to-toe drop", value: "8 mm" }
         ],
-        notStated: ["Stack height (mm)", "Heel-to-toe drop"]
+        notStated: []
       },
 
       needsInput: [
-        "Approximate total mileage run in the shoe (or 'never counted' — that is a fine answer)",
-        "Your usual size vs. the size you took in this shoe",
-        "Whether you would buy the same shoe again today",
-        "Anything you noticed about outsole wear after Connemara"
+        "Confirm the 8 mm heel-to-toe drop against Nike's own product page, then set specs.verified",
+        "Your usual size vs. the size you took in this shoe (optional — the review states fit is individual)",
+        "A score out of 10, only if you ever want one displayed"
       ],
       /* Supplied: outsole wear + upper detail (from Andrew's own clips, Aug 2026). */
       images: [
