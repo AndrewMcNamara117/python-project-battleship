@@ -6,6 +6,8 @@ on:
     paths:
       - "*.html"
       - "assets/**"
+      - "reviews/**"
+      - "CNAME"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 

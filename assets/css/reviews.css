@@ -1,0 +1,256 @@
+/* ============================================================
+   IRON MILES — review components
+   Extends the locked design system in iron.css. No new tokens,
+   no new fonts, no dependencies. Every component is prefixed .rv-
+   so it can never collide with existing site classes.
+   ============================================================ */
+
+/* Local aliases only — all values come from iron.css :root */
+.rv-scope{ --rv-ink:#b9beba; --rv-steel:rgba(238,238,238,.06); }
+
+/* Paragraph rhythm inside review section heads. Scoped to .rv-scope so the
+   locked design system in iron.css is not altered for the rest of the site. */
+.rv-scope .section-head p+p{margin-top:1.05em}
+
+/* ---- breadcrumbs ---- */
+.rv-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--muted-2)}
+.rv-crumbs a{color:var(--muted);transition:color .2s}
+.rv-crumbs a:hover{color:var(--white)}
+.rv-crumbs span[aria-current]{color:var(--green)}
+.rv-crumbs .sep{color:var(--muted-2)}
+
+/* ---- forged panel: the shared surface for every review component ----
+   A single restrained sheen. No glow, no heavy gradient. */
+.rv-panel{position:relative;background:var(--panel);border:1px solid var(--line);
+  border-radius:3px;overflow:hidden}
+.rv-panel::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(120deg,rgba(238,238,238,.05) 0%,transparent 38%);}
+
+/* ============ 1. review hero ============ */
+.rv-hero{position:relative;min-height:clamp(420px,72vh,700px);display:flex;align-items:flex-end;overflow:hidden}
+.rv-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.rv-hero::after{content:"";position:absolute;inset:0;z-index:1;
+  background:linear-gradient(180deg,rgba(8,8,8,.62) 0%,rgba(8,8,8,.34) 30%,rgba(8,8,8,.78) 74%,var(--iron) 100%)}
+.rv-hero .inner{position:relative;z-index:2;width:100%;max-width:var(--maxw);margin:0 auto;padding:26px 22px 46px}
+/* keeps hero text legible wherever the photograph is brightest */
+.rv-hero .inner{text-shadow:0 1px 18px rgba(8,8,8,.55)}
+.rv-hero.rv-noimg .inner{text-shadow:none}
+.rv-hero h1{font-size:clamp(2.1rem,6.6vw,4.2rem);margin:.28em 0 .3em;max-width:16ch}
+.rv-hero .rv-sub{color:var(--white);font-size:clamp(1.02rem,1.7vw,1.3rem);line-height:1.5;max-width:52ch}
+.rv-hero .rv-meta{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:var(--muted)}
+.rv-hero .rv-meta b{color:var(--white);font-weight:700}
+/* forged-panel hero fallback when no authentic photograph exists */
+.rv-hero.rv-noimg{min-height:clamp(340px,52vh,520px);background:
+  radial-gradient(120% 100% at 15% 0%,#141716 0%,var(--iron) 68%)}
+.rv-hero.rv-noimg::after{background:none}
+.rv-hero.rv-noimg .rv-forge{position:absolute;right:-4%;top:50%;transform:translateY(-50%);
+  width:min(46%,430px);opacity:.07;z-index:0}
+
+/* ---- status flag ---- */
+.rv-flag{display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:800;
+  letter-spacing:.2em;text-transform:uppercase;padding:6px 12px;border-radius:2px;
+  border:1px solid var(--line-2);color:var(--muted)}
+.rv-flag.is-draft{border-color:rgba(45,255,138,.42);color:var(--green)}
+
+/* ============ article shell ============ */
+.rv-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:clamp(28px,5vw,66px);align-items:start}
+@media(max-width:900px){.rv-layout{grid-template-columns:1fr;gap:26px}}
+
+/* ============ 5. section navigation ============ */
+.rv-toc{position:sticky;top:78px}
+.rv-toc .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);
+  font-weight:700;margin-bottom:14px}
+.rv-toc ol{list-style:none;display:flex;flex-direction:column;gap:2px;margin:0;padding:0;
+  border-left:1px solid var(--line)}
+.rv-toc a{display:block;padding:7px 0 7px 14px;margin-left:-1px;border-left:1px solid transparent;
+  font-size:12.5px;line-height:1.35;color:var(--muted);transition:color .2s,border-color .2s}
+.rv-toc a:hover{color:var(--white)}
+.rv-toc a[aria-current="true"]{color:var(--green);border-left-color:var(--green)}
+@media(max-width:900px){
+  .rv-toc{position:static}
+  .rv-toc ol{flex-direction:row;flex-wrap:wrap;gap:8px;border-left:none}
+  .rv-toc a{padding:8px 13px;border:1px solid var(--line);border-radius:2px;font-size:11.5px;
+    letter-spacing:.06em;margin-left:0}
+  .rv-toc a[aria-current="true"]{border-color:var(--green)}
+}
+
+/* ============ article typography ============ */
+.rv-body{max-width:72ch}
+/* scroll-margin sits on the section, because the TOC links target section ids
+   — without it the sticky header covers the heading on jump. */
+.rv-body section{padding:0;margin:0 0 clamp(38px,5vw,60px);scroll-margin-top:92px}
+.rv-body h2{font-size:clamp(1.35rem,3.3vw,2rem);margin:0 0 .6em;line-height:1.1;
+  scroll-margin-top:92px}
+.rv-body h3{font-size:1.02rem;text-transform:uppercase;letter-spacing:.05em;margin:1.8em 0 .5em}
+.rv-body p{color:var(--rv-ink,#b9beba);font-size:1.02rem;line-height:1.78;margin-bottom:1.05em}
+.rv-body p:last-child{margin-bottom:0}
+.rv-body strong{color:var(--white);font-weight:600}
+.rv-body a:not(.btn){color:var(--green);text-decoration:underline;text-underline-offset:2px}
+.rv-body ul{list-style:none;margin:0 0 1.2em;padding:0;display:flex;flex-direction:column;gap:11px}
+.rv-body ul li{position:relative;padding-left:24px;color:var(--rv-ink,#b9beba);line-height:1.6}
+.rv-body ul li::before{content:"";position:absolute;left:0;top:11px;width:12px;height:2px;background:var(--green)}
+.rv-body figure{margin:clamp(26px,4vw,40px) 0}
+.rv-body figure img{width:100%;border-radius:3px}
+.rv-body figcaption{margin-top:10px;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted-2);font-weight:600}
+
+/* ============ 2. product information panel ============ */
+.rv-product{padding:clamp(22px,3vw,30px)}
+.rv-product dl{display:grid;grid-template-columns:auto 1fr;gap:12px 22px;margin:0}
+.rv-product dt{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+.rv-product dd{margin:0;font-size:14px;color:var(--white);font-weight:600}
+.rv-product .rv-unverified{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--muted);letter-spacing:.02em;line-height:1.5}
+
+/* ============ 3. key testing facts ============ */
+.rv-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.rv-facts .cell{background:var(--iron-2);padding:26px 22px}
+.rv-facts .k{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+.rv-facts .v{margin-top:9px;font-weight:800;font-size:clamp(1.05rem,2.1vw,1.35rem);color:var(--white);line-height:1.2}
+.rv-facts .v.green{color:var(--green)}
+@media(max-width:760px){.rv-facts{grid-template-columns:1fr}.rv-facts .cell{padding:20px}}
+
+/* ============ 4. pros and considerations ============ */
+.rv-pc{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rv-pc .col{padding:clamp(22px,3vw,30px)}
+.rv-pc h3{font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin:0 0 16px;font-weight:800}
+.rv-pc .pros h3{color:var(--green)}
+.rv-pc .cons h3{color:var(--muted)}
+.rv-pc ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px}
+.rv-pc li{position:relative;padding-left:24px;font-size:14.5px;line-height:1.6;color:var(--rv-ink,#b9beba)}
+.rv-pc li::before{content:"";position:absolute;left:0;top:10px;width:12px;height:2px}
+.rv-pc .pros li::before{background:var(--green)}
+.rv-pc .cons li::before{background:var(--muted-2)}
+@media(max-width:760px){.rv-pc{grid-template-columns:1fr}}
+
+/* ============ 6. pull quote ============ */
+.rv-pull{margin:clamp(32px,5vw,52px) 0;padding-left:clamp(18px,3vw,28px);
+  border-left:3px solid var(--green)}
+.rv-pull blockquote{font-weight:800;text-transform:uppercase;line-height:1.08;
+  font-size:clamp(1.25rem,3.2vw,2rem);color:var(--white);max-width:20ch}
+.rv-pull cite{display:block;margin-top:14px;font-style:normal;font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--green);font-weight:700}
+
+/* ============ 7. final verdict ============ */
+.rv-verdict{padding:clamp(28px,4vw,44px);border-left:3px solid var(--green)}
+.rv-verdict .lbl{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--green);font-weight:800}
+.rv-verdict p{color:var(--white);font-size:clamp(1.05rem,1.8vw,1.32rem);line-height:1.55;margin:14px 0 0}
+
+/* ============ 13. optional rating (renders only with a real score) ============ */
+.rv-rating{display:flex;align-items:baseline;gap:12px;margin-top:20px}
+.rv-rating .score{font-weight:800;font-size:clamp(1.8rem,4vw,2.5rem);color:var(--green);line-height:1}
+.rv-rating .out{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* ============ 8. methodology ============ */
+.rv-method{padding:clamp(22px,3vw,32px)}
+.rv-method h2{font-size:1.05rem;text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px}
+.rv-method p{color:var(--muted);font-size:14.5px;line-height:1.7;margin:0}
+.rv-method ul{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rv-method li{position:relative;padding-left:22px;color:var(--muted);font-size:14px;line-height:1.6}
+.rv-method li::before{content:"";position:absolute;left:0;top:10px;width:10px;height:2px;background:var(--green-dim)}
+
+/* ============ 9. disclosure ============ */
+.rv-disclosure{padding:clamp(20px,3vw,28px);border-left:3px solid var(--muted-2)}
+.rv-disclosure .lbl{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--muted-2);font-weight:800;margin-bottom:10px}
+.rv-disclosure p{color:var(--muted);font-size:13.5px;line-height:1.7;margin:0}
+
+/* ============ 10. product CTA ============ */
+.rv-cta{padding:clamp(24px,3.5vw,36px);display:flex;flex-wrap:wrap;gap:18px;
+  align-items:center;justify-content:space-between}
+.rv-cta .t{font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  font-size:clamp(1rem,2vw,1.2rem);color:var(--white)}
+.rv-cta .s{font-size:12.5px;color:var(--muted);margin-top:6px;max-width:44ch;line-height:1.6}
+/* Neutral, non-linked state while no valid destination is configured */
+.rv-cta .rv-inert{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:13px;
+  letter-spacing:.18em;text-transform:uppercase;padding:16px 26px;border-radius:2px;
+  border:1px solid var(--line);color:var(--muted-2);cursor:default}
+
+/* ============ 12. author card ============ */
+.rv-author{padding:clamp(22px,3vw,30px);display:flex;gap:20px;align-items:flex-start}
+.rv-author img{width:74px;height:74px;border-radius:3px;object-fit:cover;object-position:top center;flex:none}
+.rv-author .n{font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:15px}
+.rv-author .r{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--green);
+  font-weight:700;margin-top:5px}
+.rv-author p{color:var(--muted);font-size:14px;line-height:1.65;margin:12px 0 0}
+@media(max-width:520px){.rv-author{flex-direction:column;gap:14px}}
+
+/* ============ 11. related reviews ============ */
+.rv-related{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:760px){.rv-related{grid-template-columns:1fr}}
+
+/* ============ hub: review cards ============ */
+.rv-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(14px,2vw,20px)}
+@media(max-width:860px){.rv-cards{grid-template-columns:1fr}}
+.rv-card{display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
+.rv-card:hover{border-color:rgba(45,255,138,.5);transform:translateY(-3px)}
+.rv-card .shot{position:relative;aspect-ratio:16/10;overflow:hidden;background:
+  radial-gradient(120% 100% at 20% 0%,#161a18 0%,#0b0c0c 70%)}
+.rv-card .shot img{width:100%;height:100%;object-fit:cover;transition:transform .55s ease}
+.rv-card:hover .shot img{transform:scale(1.045)}
+.rv-card .shot .rv-forge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:84px;opacity:.16}
+.rv-card .shot .rv-flag{position:absolute;left:14px;top:14px;z-index:2;
+  background:rgba(8,8,8,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.rv-card .cbody{padding:clamp(20px,2.6vw,28px);display:flex;flex-direction:column;flex:1}
+.rv-card .cat{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);font-weight:700}
+.rv-card h3{margin:12px 0 0;font-size:clamp(1.15rem,2.4vw,1.5rem);line-height:1.06}
+.rv-card .verdict{color:var(--rv-ink,#b9beba);font-size:14.5px;line-height:1.66;margin:14px 0 0}
+.rv-card .evts{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:7px}
+.rv-card .evts li{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  color:var(--muted);border:1px solid var(--line);border-radius:2px;padding:6px 10px}
+.rv-card .cfoot{margin-top:auto;padding-top:22px;display:flex;align-items:center;gap:10px;
+  font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+.rv-card .cfoot .arrow{transition:transform .25s}
+.rv-card:hover .cfoot .arrow{transform:translateX(5px)}
+.rv-card.is-draft .cfoot{color:var(--muted-2)}
+.rv-card.is-draft:hover{transform:none;border-color:var(--line-2)}
+
+/* ============ hub: category filters ============ */
+.rv-filters{display:flex;flex-wrap:wrap;gap:9px}
+.rv-chip{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  padding:10px 16px;border:1px solid var(--line);border-radius:2px;color:var(--muted);
+  background:transparent;cursor:pointer;transition:.2s;font-family:inherit}
+.rv-chip:hover{color:var(--white);border-color:var(--line-2)}
+.rv-chip[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#04130a}
+.rv-chip[disabled]{opacity:.4;cursor:not-allowed}
+.rv-chip[disabled]:hover{color:var(--muted);border-color:var(--line)}
+.rv-soon{font-size:11.5px;color:var(--muted-2);letter-spacing:.02em;margin-top:14px}
+
+/* ============ draft notice (development only) ============ */
+.rv-draftbar{display:none;background:rgba(45,255,138,.07);border:1px solid rgba(45,255,138,.32);
+  border-radius:3px;padding:18px 22px;margin-bottom:26px}
+.rv-draftbar .lbl{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--green);font-weight:800}
+.rv-draftbar p{color:var(--muted);font-size:13.5px;line-height:1.65;margin:8px 0 0}
+.rv-draftbar ul{margin:10px 0 0;padding-left:18px}
+.rv-draftbar li{color:var(--muted);font-size:13px;line-height:1.6}
+html.rv-dev .rv-draftbar{display:block}
+
+/* Content that must never reach production while a review is a draft.
+   !important is deliberate: this is a content-safety gate, and it must win
+   against any component rule (e.g. .rv-body ul sets display:flex, which has
+   higher specificity than a single class and would otherwise reveal it). */
+.rv-draft-only{display:none!important}
+html.rv-dev .rv-draft-only{display:block!important}
+
+/* ---- paired product shots ---- */
+.rv-shots{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:clamp(26px,4vw,40px) 0}
+.rv-shots figure{margin:0}
+@media(max-width:640px){.rv-shots{grid-template-columns:1fr}}
+
+/* ============ "coming soon" state ============ */
+.rv-soonpanel{padding:clamp(30px,5vw,54px);text-align:center}
+.rv-soonpanel .rv-forge{width:54px;margin:0 auto 20px;opacity:.5}
+.rv-soonpanel h2{font-size:clamp(1.3rem,3.2vw,1.9rem);margin-bottom:.6em}
+.rv-soonpanel p{color:var(--muted);max-width:52ch;margin:0 auto;line-height:1.75}
+
+/* ---- motion: restrained, and fully collapsible ---- */
+@media(prefers-reduced-motion:reduce){
+  .rv-card,.rv-card .shot img,.rv-card .cfoot .arrow,.rv-chip,.rv-toc a{transition:none}
+  .rv-card:hover{transform:none}
+  .rv-card:hover .shot img{transform:none}
+  .rv-card:hover .cfoot .arrow{transform:none}
+}
