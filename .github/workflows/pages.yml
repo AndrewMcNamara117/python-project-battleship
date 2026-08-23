@@ -8,6 +8,8 @@ on:
       - "assets/**"
       - "reviews/**"
       - "CNAME"
+      - "sitemap.xml"
+      - "robots.txt"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
