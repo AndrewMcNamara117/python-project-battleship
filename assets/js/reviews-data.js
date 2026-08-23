@@ -188,8 +188,8 @@
       heroImage: "assets/images/nike-vomero-premium.webp",
       imageAlt:
         "A pair of Nike Vomero Premium running shoes in coral with a translucent blue midsole",
-      heroWidth: 1050,
-      heroHeight: 1400,
+      heroWidth: 1400,
+      heroHeight: 1217,
       images: [
         "assets/images/nike-vomero-premium.webp",
         "assets/images/nike-vomero-premium-heel.webp",
