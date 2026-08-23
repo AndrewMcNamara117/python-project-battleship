@@ -12,6 +12,8 @@ Immersive marketing site for the Iron Miles endurance community (Limerick, Irela
 | `coaching.html` | 1:1 coaching tiers and philosophy |
 | `tay.html` | Tay Cooper — co-founder page (unpublished — kept out of nav and sitemap until Tay signs off) |
 | `services.html` | All services — run club, coaching, PT, race prep, strength for runners |
+| `reviews/index.html` | Shoe & gear reviews hub — `/reviews/` |
+| `reviews/<slug>/index.html` | Individual product review — e.g. `/reviews/nike-zoom-fly-6/` |
 | `privacy.html` / `terms.html` / `waiver.html` | Legal templates (solicitor review required before publishing) |
 
 ## Tech
@@ -20,6 +22,7 @@ Immersive marketing site for the Iron Miles endurance community (Limerick, Irela
 - **WebGL, hand-rolled** — the homepage hero renders ~10,000 particles forming the Iron Miles mark (raw WebGL 1, custom shaders, mouse parallax, scroll-driven dissolve). The Forge Ultra section renders a procedural wireframe terrain (GLSL fBm noise) that flows toward the camera.
 - **Scroll choreography** — pinned kinetic-type manifesto (position: sticky + rAF), scroll-velocity marquees, parallax photography, clip-path image reveals, per-character headline staggers, animated stat counters.
 - **Micro-interactions** — custom cursor with trailing ring, magnetic buttons, 3D tilt cards with pointer-tracked glow, scroll progress bar.
+- **Reviews system** — `/reviews/` is driven by a structured registry in `assets/js/reviews-data.js`; `assets/js/reviews.js` gates draft/published state, ratings, affiliate CTAs and spec tables, and `assets/css/reviews.css` holds the review components. See `REVIEWS.md`.
 - **Motion engine** — inner pages share a single vanilla-JS engine (`assets/js/im-motion.js`) providing the cursor, parallax, char reveals and counters site-wide.
 - **Accessible by default** — full `prefers-reduced-motion` support (all animation collapses to static content), semantic markup, focus-visible styles, aria labels, alt text on photography.
 
