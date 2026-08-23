@@ -148,11 +148,15 @@
         "Whether you would buy the same shoe again today",
         "Anything you noticed about outsole wear after Connemara"
       ],
+      /* Supplied: outsole wear + upper detail (from Andrew's own clips, Aug 2026). */
+      images: [
+        "assets/images/nike-zoom-fly-6-outsole-wear.webp",
+        "assets/images/nike-zoom-fly-6-upper-detail.webp"
+      ],
       needsImages: [
         "Zoom Fly 6 product photograph (clean side-on, dark background)",
         "Andrew wearing or holding the Zoom Fly 6",
-        "Great Limerick Marathon photograph",
-        "Outsole and upper detail shots after use"
+        "Great Limerick Marathon photograph"
       ]
     },
 
