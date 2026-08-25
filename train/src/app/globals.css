@@ -1,0 +1,295 @@
+@import "tailwindcss";
+
+/* ============================================================
+   IRON MILES TRAINING — design system
+   Iron Black #050505 · Miles Green #2dff8a · Forge White #eeeeee
+   System font stack only. No web fonts, no CDNs.
+   ============================================================ */
+
+@theme {
+  --color-iron: #050505;
+  --color-iron-2: #0a0b0b;
+  --color-surface: #101211;
+  --color-surface-2: #161918;
+  --color-surface-3: #1d2120;
+  --color-green: #2dff8a;
+  --color-green-dim: #1f9e5a;
+  --color-green-deep: #04130a;
+  --color-white: #eeeeee;
+  --color-muted: #8b918d;
+  --color-muted-2: #5d625f;
+  --color-line: rgba(238, 238, 238, 0.09);
+  --color-line-2: rgba(238, 238, 238, 0.17);
+  --color-warn: #ffb648;
+  --color-alert: #ff6b5a;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-cond: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+
+  --ease-forge: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-steel: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --im-maxw: 1240px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--color-line-2) transparent;
+}
+
+body {
+  background: var(--color-iron);
+  color: var(--color-white);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: var(--color-green);
+  color: var(--color-green-deep);
+}
+
+/* ---- focus ---- */
+:focus-visible {
+  outline: 2px solid var(--color-green);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- typography primitives ---- */
+.im-display {
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.94;
+  letter-spacing: 0.005em;
+}
+.im-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--color-green);
+}
+.im-eyebrow-mute {
+  color: var(--color-muted-2);
+}
+.im-mono {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+.im-micro {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-muted-2);
+}
+
+/* ---- grain: one shared overlay, GPU-cheap ---- */
+.im-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- surfaces: smoked glass over brushed steel ---- */
+.im-panel {
+  position: relative;
+  /* grid and flex items default to min-width:auto, which lets a wide table or
+     a chart container widen the track instead of scrolling inside it. Panels
+     always shrink; their own overflow-x containers handle wide content. */
+  min-width: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.008) 42%, rgba(0, 0, 0, 0.15) 100%),
+    var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+}
+.im-panel-raised {
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.045) inset, 0 22px 50px -28px rgba(0, 0, 0, 0.9);
+}
+.im-panel-hover {
+  transition: border-color 0.28s var(--ease-forge), transform 0.28s var(--ease-forge), box-shadow 0.28s var(--ease-forge);
+}
+.im-panel-hover:hover {
+  border-color: var(--color-line-2);
+  transform: translateY(-2px);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 30px 60px -30px rgba(0, 0, 0, 0.95);
+}
+
+/* accent edge — the teal hairline that marks a live/primary panel */
+.im-edge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--color-green), rgba(45, 255, 138, 0.05));
+}
+
+/* ---- topographic contour reference ---- */
+.im-topo {
+  background-image: repeating-radial-gradient(
+    circle at 22% 8%,
+    rgba(45, 255, 138, 0.055) 0 1px,
+    transparent 1px 62px
+  );
+}
+.im-rule {
+  background-image: linear-gradient(90deg, var(--color-line-2), transparent);
+  height: 1px;
+}
+
+/* ---- scrollbars inside panels ---- */
+.im-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.im-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-line-2);
+  border-radius: 3px;
+}
+.im-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- animation primitives (all transform/opacity only) ---- */
+@keyframes im-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes im-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes im-pulse-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@keyframes im-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes im-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.im-rise {
+  animation: im-rise 0.7s var(--ease-forge) both;
+}
+.im-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+.im-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.045), transparent);
+  animation: im-shimmer 1.5s var(--ease-steel) infinite;
+}
+.im-marquee-track {
+  animation: im-marquee 34s linear infinite;
+}
+
+/* ---- reduced motion: everything collapses to static, readable content ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .im-rise {
+    opacity: 1;
+    transform: none;
+  }
+  .im-skeleton::after {
+    display: none;
+  }
+}
+
+/* ---- native inputs, reskinned ---- */
+input[type="range"].im-range {
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--color-line-2);
+  border-radius: 2px;
+}
+input[type="range"].im-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-green);
+  border: 3px solid var(--color-iron);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--color-green-dim);
+}
+input[type="range"].im-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-green);
+  border: 3px solid var(--color-iron);
+  cursor: pointer;
+}
+
+/* ---- safe area for mobile bottom nav ---- */
+.im-safe-b {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

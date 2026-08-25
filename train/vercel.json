@@ -1,0 +1,10 @@
+{
+  "crons": [
+    { "path": "/api/cron/morning-reminder", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/session-incomplete", "schedule": "0 19 * * *" },
+    { "path": "/api/cron/checkin-request", "schedule": "0 17 * * 0" },
+    { "path": "/api/cron/weekly-summary", "schedule": "0 18 * * 0" },
+    { "path": "/api/cron/race-countdown", "schedule": "30 6 * * *" },
+    { "path": "/api/cron/coach-alerts", "schedule": "0 8 * * 1" }
+  ]
+}
