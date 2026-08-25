@@ -8,16 +8,29 @@ import { addDays, startOfMonth, startOfWeek } from './dates';
  * the score should never make overtraining look like progress.
  */
 
-export const FORGE_RULES: { kind: ForgeEventKind; label: string; points: number; note: string }[] = [
-  { kind: 'run_completed', label: 'Prescribed run completed', points: 10, note: 'As written — not further.' },
-  { kind: 'strength_completed', label: 'Strength session completed', points: 8, note: 'The work that keeps you running.' },
-  { kind: 'checkin_completed', label: 'Weekly check-in', points: 5, note: 'Tells your coach what the data cannot.' },
-  { kind: 'community_run', label: 'Iron Miles club run', points: 10, note: 'Saturday mornings.' },
-  { kind: 'full_week_adherence', label: '100% weekly adherence', points: 20, note: 'Every session, as prescribed.' },
-  { kind: 'streak_week', label: 'Consecutive full week', points: 12, note: 'Consistency compounds.' },
-  { kind: 'volunteered', label: 'Volunteered at an event', points: 15, note: 'The club runs on this.' },
-  { kind: 'race_completed', label: 'Race completed', points: 25, note: 'Start lines count.' },
-  { kind: 'milestone', label: 'Personal milestone', points: 0, note: 'Earns a badge, not points.' },
+export interface ForgeRule {
+  kind: ForgeEventKind;
+  label: string;
+  points: number;
+  note: string;
+  /**
+   * True when logging in the app awards this by itself. False means a coach
+   * records it — the platform does not detect it yet, and the UI says so rather
+   * than implying points that never arrive.
+   */
+  automatic: boolean;
+}
+
+export const FORGE_RULES: ForgeRule[] = [
+  { kind: 'run_completed', label: 'Prescribed run completed', points: 10, note: 'As written — not further.', automatic: true },
+  { kind: 'strength_completed', label: 'Strength session completed', points: 8, note: 'The work that keeps you running.', automatic: true },
+  { kind: 'checkin_completed', label: 'Weekly check-in', points: 5, note: 'Tells your coach what the data cannot.', automatic: true },
+  { kind: 'community_run', label: 'Iron Miles club run', points: 10, note: 'Logged like any other session.', automatic: true },
+  { kind: 'full_week_adherence', label: '100% weekly adherence', points: 20, note: 'Every session, as prescribed.', automatic: true },
+  { kind: 'streak_week', label: 'Consecutive full week', points: 12, note: 'Consistency compounds.', automatic: false },
+  { kind: 'volunteered', label: 'Volunteered at an event', points: 15, note: 'The club runs on this.', automatic: false },
+  { kind: 'race_completed', label: 'Race completed', points: 25, note: 'Start lines count.', automatic: true },
+  { kind: 'milestone', label: 'Personal milestone', points: 0, note: 'Earns a badge, not points.', automatic: false },
 ];
 
 export function pointsFor(kind: ForgeEventKind): number {

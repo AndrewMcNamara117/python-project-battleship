@@ -45,6 +45,7 @@ export const NAV_GROUPS: { key: NavItem['group']; label: string }[] = [
 export const COACH_NAV: NavItem[] = [
   { href: '/coach', label: 'Overview', short: 'Home', icon: 'home', group: 'train' },
   { href: '/coach/athletes', label: 'Athletes', short: 'Athletes', icon: 'athletes', group: 'train' },
+  { href: '/coach/applications', label: 'Applications', short: 'Intake', icon: 'checkin', group: 'train' },
   { href: '/coach/checkins', label: 'Check-ins', short: 'Check-ins', icon: 'checkin', group: 'train' },
   { href: '/coach/messages', label: 'Messages', short: 'Messages', icon: 'coach', group: 'train' },
   { href: '/coach/programs', label: 'Programmes', short: 'Programmes', icon: 'calendar', group: 'progress' },

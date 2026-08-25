@@ -55,13 +55,45 @@ correct for a demo and must never be production storage; `getRepo()` guarantees 
 
 ---
 
+## The coach ↔ athlete loop
+
+This is the workflow the product exists to serve. Every step runs end to end and
+is covered by `e2e/loop.mjs`.
+
+1. **Someone applies** at `/apply`. Public, rate limited, validated server-side.
+2. **A coach reviews** at `/coach/applications` and accepts, declines, or marks
+   reviewing. The decision goes through `im_decide_application`, a
+   security-definer function that re-checks the caller is staff.
+3. **The athlete is created and linked.** A coach cannot create an account — a
+   profile row is tied to an `auth.users` row. So acceptance records the
+   decision, and the sign-up trigger forms the coach-athlete link (and the
+   message thread) the moment that person registers with the address they
+   applied with. If they already have an account, they are linked immediately.
+4. **Onboarding** captures the goal, history, availability, health screen and
+   coaching preferences, and writes the athlete's primary goal.
+5. **The coach assigns a programme** at `/coach/programs`. This creates a
+   `programs` row and copies every session into the athlete's own calendar, so
+   editing one athlete never touches another.
+6. **The athlete completes sessions** and logs distance, duration, RPE, heart
+   rate, soreness and notes.
+7. **The coach sees it** on the athlete's page — logs, adherence, charts.
+8. **The coach edits the plan** inline on that page: rename, retype, re-date,
+   change distance or RPE, add a coach note, or remove a session. Completed
+   sessions are locked; they are a record, not a plan.
+9. **The athlete sees the change** on their next page load.
+10. **The weekly check-in** captures seven scores and six questions.
+11. **Triage routes it.** Rule-based, server-side. Cross-week patterns and
+    red-flag language escalate to the coach's queue.
+12. **Forge Score updates** from the session, the check-in and weekly adherence.
+
 ## Setting up Supabase
 
 1. Create a project, then run the migrations in order:
 
    ```
-   supabase/migrations/0001_schema.sql    # tables, enums, foreign keys, triggers
-   supabase/migrations/0002_rls.sql       # row-level security — read this one
+   supabase/migrations/0001_schema.sql      # tables, enums, foreign keys, triggers
+   supabase/migrations/0002_rls.sql         # row-level security — read this one
+   supabase/migrations/0003_acceptance.sql  # intake: acceptance and auto-linking
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -81,6 +113,43 @@ RLS is the enforcement boundary, not the application. Default deny on every tabl
 
 Middleware (`src/middleware.ts`) is the coarse gate and refreshes the Supabase session. A request
 that slipped past it still could not read another athlete's data.
+
+---
+
+## Testing
+
+Four suites. The first three need nothing but `npm install`.
+
+```bash
+npm run typecheck
+npm run lint
+npm test              # unit + RLS: 71 assertions
+npm run test:rls      # RLS only
+
+# the two browser suites need a running server, in demo mode
+npm run build && npx next start -p 3000 &
+BASE_URL=http://localhost:3000 npm run test:e2e      # the coach ↔ athlete loop, 19 steps
+BASE_URL=http://localhost:3000 npm run test:guards   # access control + failure states, 53 checks
+```
+
+**`supabase/test/rls.test.mjs` is the one to read first.** It runs the shipped
+migrations against a real Postgres — PGlite, Postgres compiled to WASM — as a
+non-superuser role, so the policies actually execute. It proves the claims this
+product makes about privacy rather than asserting them:
+
+- an athlete reads their own rows and no one else's, by id or otherwise
+- a coach reads only athletes actively linked to them
+- private coach notes are invisible to the athlete even when asked for directly
+- an athlete cannot promote themselves, award themselves Forge points, grant
+  themselves a subscription, send a message as someone else, or post as FORGE
+- leaderboard opt-in exposes a name and a score — never training or check-in data
+- accepting an application links the athlete automatically on sign-up
+- an export refuses any subject but yourself, coaches included
+- deleting a profile cascades through every table that references it
+
+`e2e/loop.mjs` needs a freshly started server: demo state lives in the server
+process, so a second run against the same process is a different starting state.
+It detects that and says so rather than failing obscurely.
 
 ---
 
@@ -201,8 +270,13 @@ that only watches root `*.html`, `assets/**` and `reviews/**`, so the marketing 
 
 ## Not done yet
 
-Named honestly rather than left to be discovered:
+Named honestly rather than left to be discovered. Everything here is also
+labelled in the interface, so nothing looks functional when it is not.
 
+- **Milestones and volunteering are recorded by a coach**, not detected. The
+  Forge rules list marks them "coach records" and the milestones panel says so.
+- **Community reactions are read-only.** The counts are real; there is no way to
+  add one, and the UI says that rather than showing a control that does nothing.
 - **Device sync.** Strava, Garmin, COROS, Apple Health and Google Fit have a schema
   (`integrations`, `activity_imports`) and a settings UI showing "coming soon". No OAuth flows.
   Manual logging is the supported path today.
@@ -213,4 +287,7 @@ Named honestly rather than left to be discovered:
 - **Rate limiting** is per-process memory. Multi-instance deployment needs Redis; only
   `src/lib/rate-limit.ts` changes.
 - **Push notifications.** Jobs write to the `notifications` table; wiring web push is separate work.
-- **Demo data** is fictional, including the coach persona.
+- **Demo data** is fictional, including the coach persona. Demo writes live in
+  the server process and are lost on restart; the intake queue states this
+  where it matters. `getRepo()` never selects the demo adapter when Supabase
+  credentials are present.

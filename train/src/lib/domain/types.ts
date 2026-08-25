@@ -460,6 +460,8 @@ export interface CommunityEvent {
   description: string;
   capacity: number | null;
   attendingCount: number;
+  /** Whether the athlete asking is signed up. Populated per viewer. */
+  attending: boolean;
 }
 
 export interface CommunityPost {
@@ -570,8 +572,28 @@ export interface CoachingApplication {
   experience: string;
   injuries: string | null;
   startWhen: string;
-  status: 'new' | 'reviewing' | 'accepted' | 'declined';
+  status: ApplicationStatus;
   createdAt: ISOTimestamp;
+  /** Set when a coach accepts; the link forms when the athlete registers. */
+  acceptedBy: UUID | null;
+  acceptedAt: ISOTimestamp | null;
+  decidedNote: string | null;
+  /** Populated once the applicant has an account and is linked. */
+  joinedAthleteId: UUID | null;
+}
+
+export type ApplicationStatus = 'new' | 'reviewing' | 'accepted' | 'declined';
+
+/** What accepting an application produced. */
+export interface AcceptanceOutcome {
+  application: CoachingApplication;
+  /** Non-null only when the athlete already exists and was linked immediately. */
+  athleteId: UUID | null;
+  /**
+   * True when the athlete has been accepted but has not registered yet — the
+   * coach-athlete link forms automatically on sign-up.
+   */
+  awaitingSignUp: boolean;
 }
 
 /* ---------------- notifications ---------------- */

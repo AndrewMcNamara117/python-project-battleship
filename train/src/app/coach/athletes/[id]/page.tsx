@@ -27,6 +27,7 @@ import { addDays, daysBetween, endOfWeek, formatDayMonth, startOfWeek, toISODate
 import { totalScore } from '@/lib/domain/forge-score';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { CoachNoteForm, CheckInResponder } from './CoachControls';
+import { SessionEditor } from './SessionEditor';
 
 export const metadata: Metadata = { title: 'Athlete' };
 
@@ -152,6 +153,15 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                 </div>
               </div>
             </Panel>
+          </Reveal>
+
+          <Reveal delay={0.05}>
+            <SessionEditor
+              athleteId={id}
+              sessions={scheduled
+                .filter((w) => w.date >= addDays(today, -7))
+                .slice(0, 24)}
+            />
           </Reveal>
 
           <Reveal delay={0.06}>

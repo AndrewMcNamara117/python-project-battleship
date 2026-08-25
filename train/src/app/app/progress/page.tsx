@@ -160,6 +160,10 @@ export default async function ProgressPage() {
                 ))}
                 {!achievements.length && <p className="text-[14px] text-muted">Nothing recorded yet.</p>}
               </ul>
+              <p className="mt-6 border-t border-line pt-4 text-[11px] leading-relaxed text-muted-2">
+                Milestones are recorded by your coach. The platform does not award them
+                automatically yet, so a personal best will not appear here on its own.
+              </p>
             </Panel>
           </Reveal>
         </div>

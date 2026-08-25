@@ -69,11 +69,87 @@ export async function messageAthlete(athleteId: string, formData: FormData): Pro
 
 /** Coach edits to a prescribed session. The athlete cannot reach this path. */
 export async function updateScheduledWorkout(workout: ScheduledWorkout): Promise<Result> {
-  await requireCoach();
+  const session = await requireCoach();
   const repo = await getRepo();
+
+  // a coach may only edit sessions for an athlete they actually coach
+  const roster = await repo.listAthletesForCoach(session.userId);
+  if (!roster.some((a) => a.id === workout.athleteId)) {
+    return { ok: false, message: 'That athlete is not on your roster.' };
+  }
+
+  const existing = await repo.getScheduled(workout.id);
+  if (existing && existing.athleteId !== workout.athleteId) {
+    return { ok: false, message: 'That session belongs to a different athlete.' };
+  }
+
   await repo.saveScheduled(workout);
+
   revalidatePath(`/coach/athletes/${workout.athleteId}`);
-  return { ok: true, message: 'Session updated.' };
+  // the athlete's own views, so the edit is visible without waiting for a cache miss
+  revalidatePath('/app');
+  revalidatePath('/app/today');
+  revalidatePath('/app/calendar');
+  revalidatePath('/app/training');
+  return { ok: true, message: 'Session updated. The athlete sees it now.' };
+}
+
+/** Remove a prescribed session from an athlete's plan. */
+export async function deleteScheduledWorkout(
+  workoutId: string,
+  athleteId: string,
+): Promise<Result> {
+  const session = await requireCoach();
+  const repo = await getRepo();
+
+  const roster = await repo.listAthletesForCoach(session.userId);
+  if (!roster.some((a) => a.id === athleteId)) {
+    return { ok: false, message: 'That athlete is not on your roster.' };
+  }
+
+  const existing = await repo.getScheduled(workoutId);
+  if (!existing || existing.athleteId !== athleteId) {
+    return { ok: false, message: 'Session not found.' };
+  }
+  if (existing.status === 'completed') {
+    return { ok: false, message: 'A completed session is a record of what happened — it stays.' };
+  }
+
+  await repo.deleteScheduled(workoutId);
+  revalidatePath(`/coach/athletes/${athleteId}`);
+  revalidatePath('/app');
+  revalidatePath('/app/today');
+  revalidatePath('/app/calendar');
+  return { ok: true, message: 'Session removed.' };
+}
+
+/* ------------------------------------------------------------------
+   Intake — deciding who gets coached
+   ------------------------------------------------------------------ */
+
+export async function decideApplication(
+  applicationId: string,
+  decision: 'accepted' | 'declined' | 'reviewing',
+  note: string | null,
+): Promise<Result> {
+  const session = await requireCoach();
+  const repo = await getRepo();
+
+  const outcome = await repo.decideApplication(applicationId, session.userId, decision, note);
+
+  revalidatePath('/coach/applications');
+  revalidatePath('/coach');
+  revalidatePath('/coach/athletes');
+
+  if (decision === 'declined') return { ok: true, message: 'Declined.' };
+  if (decision === 'reviewing') return { ok: true, message: 'Marked as reviewing.' };
+
+  return {
+    ok: true,
+    message: outcome.awaitingSignUp
+      ? `Accepted. ${outcome.application.fullName} is linked to you automatically when they register with ${outcome.application.email}.`
+      : `Accepted. ${outcome.application.fullName} is on your roster and can start onboarding.`,
+  };
 }
 
 /**
@@ -112,6 +188,21 @@ export async function assignProgramTemplate(
   if (!template) return { ok: false, message: 'Unknown template.' };
 
   const startDate = startOfWeek(startDateInput || toISODate(new Date()));
+  const endDate = addDays(startDate, template.weeks * 7 - 1);
+
+  // the programme row is what the athlete's Endurance page resolves; without it
+  // an assigned block renders as "no active programme"
+  const goal = await repo.getPrimaryGoal(athleteId);
+  const program = await repo.createProgram({
+    athleteId,
+    coachId: session.userId,
+    templateId: template.id,
+    goalId: goal?.id ?? null,
+    name: template.name,
+    startDate,
+    endDate,
+    status: 'active',
+  });
   const easy = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-easy')!;
   const long = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-long')!;
   const threshold = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-threshold')!;
@@ -133,7 +224,7 @@ export async function assignProgramTemplate(
 
       await repo.saveScheduled({
         id: `sw-${athleteId}-${date}-0`,
-        programId: null,
+        programId: program.id,
         athleteId,
         date,
         slot: 0,
@@ -162,13 +253,19 @@ export async function assignProgramTemplate(
   await repo.addCoachNote({
     athleteId,
     coachId: session.userId,
-    body: `Assigned "${template.name}" (${template.weeks} weeks) from ${startDate}.`,
+    body: `Assigned "${template.name}" — ${template.weeks} weeks from ${startDate}.`,
     visibility: 'shared',
   });
 
   revalidatePath(`/coach/athletes/${athleteId}`);
   revalidatePath('/coach/programs');
-  return { ok: true, message: `${template.name} assigned — ${template.weeks} weeks from ${startDate}.` };
+  revalidatePath('/app');
+  revalidatePath('/app/training');
+  revalidatePath('/app/calendar');
+  return {
+    ok: true,
+    message: `${template.name} assigned — ${template.weeks} weeks from ${startDate}. The athlete sees it now.`,
+  };
 }
 
 /** Copy one week's prescription forward. The bulk edit coaches actually use. */

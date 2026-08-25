@@ -4,8 +4,17 @@ import { useState, useTransition } from 'react';
 import { toggleEventAttendance } from '@/app/actions/training';
 import { Button } from '@/components/ui/Button';
 
-export function AttendButton({ eventId, full }: { eventId: string; full: boolean }) {
-  const [going, setGoing] = useState(false);
+export function AttendButton({
+  eventId,
+  full,
+  attending,
+}: {
+  eventId: string;
+  full: boolean;
+  attending: boolean;
+}) {
+  // seeded from the server, so the answer survives a reload
+  const [going, setGoing] = useState(attending);
   const [pending, start] = useTransition();
 
   return (

@@ -1,6 +1,8 @@
 import type {
+  AcceptanceOutcome,
   Achievement,
   CheckIn,
+  ApplicationStatus,
   CoachNote,
   CoachingApplication,
   CommunityEvent,
@@ -81,7 +83,7 @@ export interface IronMilesRepo {
   awardForgePoints(event: Omit<ForgeScoreEvent, 'id'>): Promise<void>;
   getLeaderboard(scope: LeaderboardScope, category: LeaderboardCategory): Promise<LeaderboardEntry[]>;
   listAchievements(athleteId: UUID): Promise<Achievement[]>;
-  listCommunityEvents(): Promise<CommunityEvent[]>;
+  listCommunityEvents(viewerId?: UUID): Promise<CommunityEvent[]>;
   listCommunityPosts(): Promise<CommunityPost[]>;
   setEventAttendance(eventId: UUID, athleteId: UUID, going: boolean): Promise<void>;
 
@@ -100,7 +102,26 @@ export interface IronMilesRepo {
   listNotifications(userId: UUID): Promise<Notification[]>;
 
   /* public */
-  createApplication(app: Omit<CoachingApplication, 'id' | 'createdAt' | 'status'>): Promise<CoachingApplication>;
+  createApplication(
+    app: Omit<
+      CoachingApplication,
+      'id' | 'createdAt' | 'status' | 'acceptedBy' | 'acceptedAt' | 'decidedNote' | 'joinedAthleteId'
+    >,
+  ): Promise<CoachingApplication>;
+
+  /* intake — the step between "applied" and "being coached" */
+  listApplications(status?: ApplicationStatus): Promise<CoachingApplication[]>;
+  decideApplication(
+    applicationId: UUID,
+    coachId: UUID,
+    decision: ApplicationStatus,
+    note: string | null,
+  ): Promise<AcceptanceOutcome>;
+  /** Adopt an athlete who already has an account. */
+  linkAthlete(coachId: UUID, athleteId: UUID): Promise<void>;
+
+  /* programmes */
+  createProgram(program: Omit<Program, 'id' | 'createdAt'>): Promise<Program>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;

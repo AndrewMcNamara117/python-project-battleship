@@ -4,7 +4,9 @@
 -- so row-level security can be expressed as a single ownership check.
 -- ============================================================
 
-create extension if not exists "pgcrypto";
+-- gen_random_uuid() is Postgres core from 13 onward, so no extension is needed.
+-- (pgcrypto used to be required for it; depending on it now only adds a
+-- privilege the migration does not otherwise need.)
 
 -- ---------- enums ----------
 create type im_role            as enum ('athlete','coach','admin');

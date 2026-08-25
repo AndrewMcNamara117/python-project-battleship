@@ -29,7 +29,7 @@ export default async function CommunityPage() {
   const ctx = await loadAthleteContext();
   const repo = await getRepo();
   const [events, posts, races] = await Promise.all([
-    repo.listCommunityEvents(),
+    repo.listCommunityEvents(ctx.session.userId),
     repo.listCommunityPosts(),
     repo.listRaces(),
   ]);
@@ -50,7 +50,7 @@ export default async function CommunityPage() {
             <h2 className="im-micro">Coming up</h2>
             <RevealGroup className="mt-4 space-y-4">
               {events.map((e) => {
-                const full = e.capacity != null && e.attendingCount >= e.capacity;
+                const full = e.capacity != null && e.attendingCount >= e.capacity && !e.attending;
                 return (
                   <RevealItem key={e.id}>
                     <Panel hover className="p-6">
@@ -81,7 +81,7 @@ export default async function CommunityPage() {
                             {e.attendingCount}
                             {e.capacity ? ` / ${e.capacity}` : ''} going
                           </span>
-                          <AttendButton eventId={e.id} full={full} />
+                          <AttendButton eventId={e.id} full={full} attending={e.attending} />
                         </div>
                       </div>
                     </Panel>
@@ -107,13 +107,18 @@ export default async function CommunityPage() {
                       </span>
                     </div>
                     <p className="mt-4 text-[15px] leading-relaxed text-white">{p.body}</p>
-                    <div className="mt-5 flex gap-4 border-t border-line pt-4">
-                      {Object.entries(p.reactions).map(([key, count]) => (
-                        <span key={key} className="im-micro">
-                          {key} · {count}
+                    {Object.keys(p.reactions).length > 0 && (
+                      <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-line pt-4">
+                        {Object.entries(p.reactions).map(([key, count]) => (
+                          <span key={key} className="im-micro">
+                            {key} · {count}
+                          </span>
+                        ))}
+                        <span className="text-[10px] uppercase tracking-[0.16em] text-muted-2">
+                          Reactions are read-only for now
                         </span>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </Panel>
                 </RevealItem>
               ))}

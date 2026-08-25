@@ -2,7 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { currentStreakWeeks } from '@/lib/domain/forge-score';
 import type {
+  AcceptanceOutcome,
   Achievement,
+  ApplicationStatus,
   CheckIn,
   CoachNote,
   CoachingApplication,
@@ -668,13 +670,25 @@ export class SupabaseRepo implements IronMilesRepo {
     );
   }
 
-  async listCommunityEvents(): Promise<CommunityEvent[]> {
+  async listCommunityEvents(viewerId?: UUID): Promise<CommunityEvent[]> {
     const { data, error } = await this.db
       .from('community_events')
       .select('*, event_attendance(count)')
       .gte('starts_at', new Date(Date.now() - 86400000).toISOString())
       .order('starts_at');
     if (error) throw new Error(error.message);
+
+    // RLS only returns this athlete's own attendance rows, which is exactly
+    // the set needed to decide whether the button reads "I'm in"
+    let mine = new Set<string>();
+    if (viewerId) {
+      const { data: rows } = await this.db
+        .from('event_attendance')
+        .select('event_id')
+        .eq('athlete_id', viewerId);
+      mine = new Set((rows ?? []).map((r: any) => r.event_id));
+    }
+
     return (data ?? []).map((r: any) => ({
       id: r.id,
       title: r.title,
@@ -684,6 +698,7 @@ export class SupabaseRepo implements IronMilesRepo {
       description: r.description,
       capacity: r.capacity,
       attendingCount: r.event_attendance?.[0]?.count ?? 0,
+      attending: mine.has(r.id),
     }));
   }
 
@@ -858,7 +873,132 @@ export class SupabaseRepo implements IronMilesRepo {
 
   /* ---------- public ---------- */
 
-  async createApplication(app: Omit<CoachingApplication, 'id' | 'createdAt' | 'status'>): Promise<CoachingApplication> {
+  private toApplication = (r: any): CoachingApplication => ({
+    id: r.id,
+    fullName: r.full_name,
+    email: r.email,
+    phone: r.phone,
+    goal: r.goal,
+    targetRace: r.target_race,
+    targetDate: r.target_date,
+    currentWeeklyKm: r.current_weekly_km == null ? null : Number(r.current_weekly_km),
+    experience: r.experience,
+    injuries: r.injuries,
+    startWhen: r.start_when,
+    status: r.status,
+    createdAt: r.created_at,
+    acceptedBy: r.accepted_by ?? null,
+    acceptedAt: r.accepted_at ?? null,
+    decidedNote: r.decided_note ?? null,
+    joinedAthleteId: r.joined_athlete_id ?? null,
+  });
+
+  listApplications(status?: ApplicationStatus) {
+    let q = this.db.from('coaching_applications').select('*');
+    if (status) q = q.eq('status', status);
+    return this.rows(q.order('created_at', { ascending: false }).limit(200), this.toApplication);
+  }
+
+  /**
+   * Decide an application.
+   *
+   * The decision runs through `im_decide_application`, a security-definer
+   * function that re-checks the caller is staff — so the authorisation lives in
+   * the database next to the data, not only in the action that called it.
+   *
+   * Accepting does not create an account: a profile row is tied to an
+   * auth.users row, so the coach-athlete link is formed by the sign-up trigger
+   * when the applicant registers with the address they applied with. If they
+   * already have an account, they are linked immediately.
+   */
+  async decideApplication(
+    applicationId: UUID,
+    coachId: UUID,
+    decision: ApplicationStatus,
+    note: string | null,
+  ): Promise<AcceptanceOutcome> {
+    const { data, error } = await this.db.rpc('im_decide_application', {
+      application_id: applicationId,
+      decision,
+      note,
+    });
+    if (error) throw new Error(error.message);
+
+    const application = this.toApplication(Array.isArray(data) ? data[0] : data);
+    if (decision !== 'accepted') {
+      return { application, athleteId: null, awaitingSignUp: false };
+    }
+
+    // already registered? link now rather than waiting for a sign-up that happened
+    const { data: existing } = await this.db
+      .from('profiles')
+      .select('id')
+      .ilike('email', application.email)
+      .eq('role', 'athlete')
+      .maybeSingle();
+
+    if (existing?.id) {
+      await this.linkAthlete(coachId, existing.id);
+      await this.db
+        .from('coaching_applications')
+        .update({ joined_athlete_id: existing.id })
+        .eq('id', applicationId);
+      return { application: { ...application, joinedAthleteId: existing.id }, athleteId: existing.id, awaitingSignUp: false };
+    }
+
+    return { application, athleteId: null, awaitingSignUp: true };
+  }
+
+  async linkAthlete(_coachId: UUID, athleteId: UUID): Promise<void> {
+    // the coach is taken from auth.uid() inside the function, never from an argument
+    const { error } = await this.db.rpc('im_link_athlete', { target_athlete: athleteId });
+    if (error) throw new Error(error.message);
+  }
+
+  async createProgram(program: Omit<Program, 'id' | 'createdAt'>): Promise<Program> {
+    // one active programme per athlete
+    await this.db
+      .from('programs')
+      .update({ status: 'archived' })
+      .eq('athlete_id', program.athleteId)
+      .eq('status', 'active');
+
+    const { data, error } = await this.db
+      .from('programs')
+      .insert({
+        athlete_id: program.athleteId,
+        coach_id: program.coachId,
+        template_id: program.templateId,
+        goal_id: program.goalId,
+        name: program.name,
+        start_date: program.startDate,
+        end_date: program.endDate,
+        status: program.status,
+      })
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+
+    return {
+      id: data.id,
+      athleteId: data.athlete_id,
+      coachId: data.coach_id,
+      templateId: data.template_id,
+      goalId: data.goal_id,
+      name: data.name,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      status: data.status,
+      createdAt: data.created_at,
+    };
+  }
+
+  async createApplication(
+    app: Omit<
+      CoachingApplication,
+      'id' | 'createdAt' | 'status' | 'acceptedBy' | 'acceptedAt' | 'decidedNote' | 'joinedAthleteId'
+    >,
+  ): Promise<CoachingApplication> {
     const { data, error } = await this.db
       .from('coaching_applications')
       .insert({
@@ -876,7 +1016,16 @@ export class SupabaseRepo implements IronMilesRepo {
       .select('id, created_at')
       .single();
     if (error) throw new Error(error.message);
-    return { ...app, id: data.id, status: 'new', createdAt: data.created_at };
+    return {
+      ...app,
+      id: data.id,
+      status: 'new',
+      createdAt: data.created_at,
+      acceptedBy: null,
+      acceptedAt: null,
+      decidedNote: null,
+      joinedAthleteId: null,
+    };
   }
 
   /* ---------- privacy ---------- */

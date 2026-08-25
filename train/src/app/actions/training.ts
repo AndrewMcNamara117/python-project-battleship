@@ -119,6 +119,15 @@ export async function saveStrengthProgress(
   const session = await requireSession();
   const repo = await getRepo();
 
+  // never trust a workout id from the client: without this an athlete could
+  // complete somebody else's prescribed session by passing its id
+  if (scheduledWorkoutId) {
+    const scheduled = await repo.getScheduled(scheduledWorkoutId);
+    if (!scheduled || scheduled.athleteId !== session.userId) {
+      return { ok: false, message: 'That session is not on your plan.' };
+    }
+  }
+
   await repo.saveStrengthSession({
     id: `ss-${session.userId}-${date}`,
     athleteId: session.userId,

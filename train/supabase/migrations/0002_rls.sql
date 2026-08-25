@@ -68,7 +68,14 @@ create policy profiles_admin_all on profiles
 create or replace function im_guard_role_change() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if new.role is distinct from old.role and not im_is_admin() then
+  -- auth.uid() is null when there is no end user behind the statement: the
+  -- service role, a migration, a seed script. Those paths are already fully
+  -- privileged and bypass RLS entirely, so guarding them here would only break
+  -- legitimate server-side work. The escalation this prevents is an
+  -- authenticated user changing their own role.
+  if new.role is distinct from old.role
+     and auth.uid() is not null
+     and not im_is_admin() then
     raise exception 'role changes require an administrator';
   end if;
   return new;

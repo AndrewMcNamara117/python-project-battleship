@@ -685,6 +685,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       description: 'The standing Saturday session. Every pace covered, nobody left behind. Coffee after.',
       capacity: null,
       attendingCount: 34,
+      attending: false,
     },
     {
       id: 'ce-hills',
@@ -695,6 +696,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       description: 'Six by four minutes uphill. Head torches from October.',
       capacity: 24,
       attendingCount: 19,
+      attending: false,
     },
     {
       id: 'ce-volunteer',
@@ -705,6 +707,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       description: 'Six volunteers needed. Counts toward your Forge Score.',
       capacity: 6,
       attendingCount: 4,
+      attending: false,
     },
   ];
 

@@ -1,14 +1,18 @@
 import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, type DemoDataset } from '@/data/demo-seed';
 import { addDays, startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
+import { parseTimeToSeconds } from '@/lib/domain/dates';
 import type {
+  AcceptanceOutcome,
   Achievement,
+  ApplicationStatus,
   CheckIn,
   CoachNote,
   CoachingApplication,
   CommunityEvent,
   CommunityPost,
   CompletedWorkout,
+  ForgeEventKind,
   ForgeScoreEvent,
   Goal,
   Integration,
@@ -27,6 +31,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
+import { FORGE_POINTS } from '@/lib/domain/types';
 import type { IronMilesRepo } from './repo';
 
 /**
@@ -50,6 +55,14 @@ function dataset(): DemoDataset {
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+
+/** Which Forge event a completed session earns. */
+function forgeKindFor(name: string, type: string): ForgeEventKind {
+  if (/club run|iron miles/i.test(name)) return 'community_run';
+  if (type === 'race') return 'race_completed';
+  if (type === 'strength') return 'strength_completed';
+  return 'run_completed';
+}
 
 export class DemoRepo implements IronMilesRepo {
   readonly mode = 'demo' as const;
@@ -110,6 +123,42 @@ export class DemoRepo implements IronMilesRepo {
       p.leaderboardOptIn = data.preferences.leaderboardOptIn;
       p.forgeAssistantEnabled = data.preferences.forgeAssistantEnabled;
       p.healthDataConsentAt = new Date().toISOString();
+    }
+
+    // The Supabase adapter records the athlete's goal here, so this one must
+    // too — an adapter that quietly does less is worse than no adapter, because
+    // the divergence only shows up in production.
+    if (data.goal?.raceDate) {
+      const existing = d.goals.findIndex((g) => g.athleteId === athleteId && g.isPrimary);
+      const goal: Goal = {
+        id: uid('goal'),
+        athleteId,
+        raceId: null,
+        eventType: data.goal.eventType,
+        targetDate: data.goal.raceDate,
+        outcome: data.goal.outcome,
+        targetTimeSeconds: parseTimeToSeconds(data.goal.targetTime || '') ?? null,
+        why: data.goal.why ?? '',
+        isPrimary: true,
+        createdAt: new Date().toISOString(),
+      };
+      if (existing >= 0) d.goals[existing] = goal;
+      else d.goals.push(goal);
+
+      if (data.goal.raceName) {
+        d.races.push({
+          id: uid('race'),
+          name: data.goal.raceName,
+          date: data.goal.raceDate,
+          location: data.personal?.location ?? null,
+          eventType: data.goal.eventType,
+          distanceKm: null,
+          elevationM: null,
+          url: null,
+          createdBy: athleteId,
+        });
+        goal.raceId = d.races[d.races.length - 1].id;
+      }
     }
   }
 
@@ -182,10 +231,13 @@ export class DemoRepo implements IronMilesRepo {
     if (entry.scheduledWorkoutId) {
       const sched = d.scheduled.find((w) => w.id === entry.scheduledWorkoutId);
       if (sched) sched.status = 'completed';
+      // score the session that actually happened: a Saturday club run is
+      // community attendance, not just another prescribed run
+      const kind = forgeKindFor(sched?.name ?? '', entry.type);
       await this.awardForgePoints({
         athleteId: entry.athleteId,
-        kind: 'run_completed',
-        points: 10,
+        kind,
+        points: FORGE_POINTS[kind],
         date: entry.date,
         label: sched?.name ?? 'Session completed',
         sourceId: entry.scheduledWorkoutId,
@@ -355,8 +407,19 @@ export class DemoRepo implements IronMilesRepo {
     );
   }
 
-  async listCommunityEvents(): Promise<CommunityEvent[]> {
-    return clone(dataset().communityEvents.slice().sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+  /** eventId -> athletes attending. Mirrors the event_attendance table. */
+  private attendance = new Map<string, Set<string>>();
+
+  async listCommunityEvents(viewerId?: UUID): Promise<CommunityEvent[]> {
+    return clone(
+      dataset()
+        .communityEvents.slice()
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+        .map((e) => ({
+          ...e,
+          attending: viewerId ? (this.attendance.get(e.id)?.has(viewerId) ?? false) : false,
+        })),
+    );
   }
 
   async listCommunityPosts(): Promise<CommunityPost[]> {
@@ -366,8 +429,17 @@ export class DemoRepo implements IronMilesRepo {
   async setEventAttendance(eventId: UUID, athleteId: UUID, going: boolean): Promise<void> {
     const e = dataset().communityEvents.find((x) => x.id === eventId);
     if (!e) return;
-    e.attendingCount = Math.max(0, e.attendingCount + (going ? 1 : -1));
-    void athleteId;
+
+    const going_ = this.attendance.get(eventId) ?? new Set<string>();
+    const already = going_.has(athleteId);
+    if (going && !already) {
+      going_.add(athleteId);
+      e.attendingCount += 1;
+    } else if (!going && already) {
+      going_.delete(athleteId);
+      e.attendingCount = Math.max(0, e.attendingCount - 1);
+    }
+    this.attendance.set(eventId, going_);
   }
 
   /* ---------- coaching comms ---------- */
@@ -430,14 +502,123 @@ export class DemoRepo implements IronMilesRepo {
   /* ---------- public ---------- */
   private applications: CoachingApplication[] = [];
 
-  async createApplication(app: Omit<CoachingApplication, 'id' | 'createdAt' | 'status'>): Promise<CoachingApplication> {
+  async createApplication(
+    app: Omit<
+      CoachingApplication,
+      'id' | 'createdAt' | 'status' | 'acceptedBy' | 'acceptedAt' | 'decidedNote' | 'joinedAthleteId'
+    >,
+  ): Promise<CoachingApplication> {
     const row: CoachingApplication = {
       ...app,
       id: uid('app'),
       status: 'new',
       createdAt: new Date().toISOString(),
+      acceptedBy: null,
+      acceptedAt: null,
+      decidedNote: null,
+      joinedAthleteId: null,
     };
     this.applications.push(row);
+    return clone(row);
+  }
+
+  async listApplications(status?: ApplicationStatus): Promise<CoachingApplication[]> {
+    return clone(
+      this.applications
+        .filter((a) => !status || a.status === status)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    );
+  }
+
+  /**
+   * Demo intake.
+   *
+   * Production cannot create an account on the athlete's behalf — a profile is
+   * tied to an auth user, so acceptance there records the decision and the link
+   * forms when the athlete registers. There is no auth here, so accepting
+   * creates the athlete and links them immediately and reports that it did
+   * (`awaitingSignUp: false`), which the coach UI states plainly rather than
+   * implying an invite was sent.
+   */
+  async decideApplication(
+    applicationId: UUID,
+    coachId: UUID,
+    decision: ApplicationStatus,
+    note: string | null,
+  ): Promise<AcceptanceOutcome> {
+    const app = this.applications.find((a) => a.id === applicationId);
+    if (!app) throw new Error('Application not found');
+
+    app.status = decision;
+    app.decidedNote = note;
+
+    if (decision !== 'accepted') {
+      app.acceptedBy = null;
+      app.acceptedAt = null;
+      return { application: clone(app), athleteId: null, awaitingSignUp: false };
+    }
+
+    app.acceptedBy = coachId;
+    app.acceptedAt = new Date().toISOString();
+
+    const d = dataset();
+    const existing = d.profiles.find(
+      (p) => p.email.toLowerCase() === app.email.toLowerCase() && p.role === 'athlete',
+    );
+
+    const athleteId = existing?.id ?? uid('athlete');
+    if (!existing) {
+      d.profiles.push({
+        id: athleteId,
+        role: 'athlete',
+        fullName: app.fullName,
+        email: app.email,
+        avatarUrl: null,
+        dateOfBirth: null,
+        location: null,
+        timezone: 'Europe/Dublin',
+        units: 'metric',
+        createdAt: new Date().toISOString(),
+        // not onboarded: their first sign-in lands on onboarding, as in production
+        onboardedAt: null,
+        healthDataConsentAt: null,
+        leaderboardOptIn: false,
+        forgeAssistantEnabled: true,
+      });
+    }
+
+    await this.linkAthlete(coachId, athleteId);
+    app.joinedAthleteId = athleteId;
+
+    return { application: clone(app), athleteId, awaitingSignUp: false };
+  }
+
+  async linkAthlete(coachId: UUID, athleteId: UUID): Promise<void> {
+    const d = dataset();
+    const existing = d.links.find((l) => l.coachId === coachId && l.athleteId === athleteId);
+    if (existing) {
+      existing.status = 'active';
+      existing.endedAt = null;
+      return;
+    }
+    d.links.push({
+      id: uid('link'),
+      coachId,
+      athleteId,
+      status: 'active',
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+    });
+  }
+
+  async createProgram(program: Omit<Program, 'id' | 'createdAt'>): Promise<Program> {
+    const d = dataset();
+    // one active programme per athlete; assigning a new block retires the old one
+    for (const p of d.programs) {
+      if (p.athleteId === program.athleteId && p.status === 'active') p.status = 'archived';
+    }
+    const row: Program = { ...program, id: uid('prog'), createdAt: new Date().toISOString() };
+    d.programs.push(row);
     return clone(row);
   }
 

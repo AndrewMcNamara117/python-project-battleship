@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { StatCard } from '@/components/app/StatCard';
 import { RevealGroup, RevealItem } from '@/components/motion/Reveal';
+import { Badge } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
 import { getRepo } from '@/lib/data';
@@ -70,7 +71,14 @@ export default async function LeaderboardPage() {
 
       <section className="mt-12">
         <Panel className="p-6 sm:p-8">
-          <PanelHeader label="How points are earned" />
+          <PanelHeader
+            label="How points are earned"
+            action={
+              <span className="text-[11px] text-muted-2">
+                Items marked &ldquo;coach records&rdquo; are not detected automatically yet
+              </span>
+            }
+          />
           <ul className="mt-6 divide-y divide-line">
             {FORGE_RULES.map((rule) => (
               <li key={rule.kind} className="flex items-center gap-5 py-4">
@@ -81,6 +89,7 @@ export default async function LeaderboardPage() {
                   <span className="block text-[14px] font-bold">{rule.label}</span>
                   <span className="mt-1 block text-[12px] text-muted">{rule.note}</span>
                 </span>
+                {!rule.automatic && <Badge tone="neutral">Coach records</Badge>}
               </li>
             ))}
           </ul>
