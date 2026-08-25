@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
-import { IronMilesLogo } from '@/components/brand/IronMilesMark';
+import { IronMilesLogo } from '@/components/brand/IronMilesLogo';
 import { NavIcon } from './NavIcon';
 import { MOBILE_NAV, NAV_GROUPS, type NavItem } from './nav-config';
 
@@ -17,7 +17,7 @@ function Rail({ items, sub }: { items: NavItem[]; sub: string }) {
   const pathname = usePathname();
 
   return (
-    <aside className="im-scroll sticky top-0 hidden h-dvh w-[232px] shrink-0 overflow-y-auto border-r border-line bg-iron-2 lg:block">
+    <aside className="im-scroll sticky top-0 hidden h-dvh w-[232px] shrink-0 overflow-y-auto border-r border-hairline bg-slate lg:block">
       <div className="px-6 py-6">
         <Link href={items[0].href} aria-label="Iron Miles Training">
           <IronMilesLogo sub={sub} />
@@ -40,16 +40,16 @@ function Rail({ items, sub }: { items: NavItem[]; sub: string }) {
                         href={item.href}
                         aria-current={active ? 'page' : undefined}
                         className={`relative flex items-center gap-3 px-6 py-2.5 text-[13px] transition-colors duration-200 ${
-                          active ? 'text-white' : 'text-muted hover:text-white'
+                          active ? 'text-ink-body' : 'text-ink-secondary hover:text-ink-body'
                         }`}
                       >
                         {active && (
                           <span
                             aria-hidden
-                            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 bg-green"
+                            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 bg-mint"
                           />
                         )}
-                        <NavIcon name={item.icon} className={`size-4.5 ${active ? 'text-green' : ''}`} />
+                        <NavIcon name={item.icon} className={`size-4.5 ${active ? 'text-mint' : ''}`} />
                         <span className="font-bold uppercase tracking-[0.1em]">{item.label}</span>
                       </Link>
                     </li>
@@ -72,7 +72,7 @@ function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="im-safe-b fixed inset-x-0 bottom-0 z-60 border-t border-line bg-iron/95 backdrop-blur-xl lg:hidden"
+      className="im-safe-b fixed inset-x-0 bottom-0 z-60 border-t border-hairline bg-onyx/95 backdrop-blur-xl lg:hidden"
     >
       <ul className="grid grid-cols-5">
         {MOBILE_NAV.map((item) => {
@@ -83,17 +83,17 @@ function BottomNav() {
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={`relative flex flex-col items-center gap-1.5 py-2.5 transition-colors duration-200 ${
-                  active ? 'text-green' : 'text-muted-2'
+                  active ? 'text-mint' : 'text-ink-tertiary'
                 }`}
               >
                 {active && !reduced && (
                   <motion.span
                     layoutId="im-bottom-nav-marker"
-                    className="absolute inset-x-5 top-0 h-0.5 bg-green"
+                    className="absolute inset-x-5 top-0 h-0.5 bg-mint"
                     transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                   />
                 )}
-                {active && reduced && <span className="absolute inset-x-5 top-0 h-0.5 bg-green" />}
+                {active && reduced && <span className="absolute inset-x-5 top-0 h-0.5 bg-mint" />}
                 <NavIcon name={item.icon} className="size-5.5" />
                 <span className="text-[9px] font-bold uppercase tracking-[0.14em]">{item.short}</span>
               </Link>
@@ -117,7 +117,7 @@ export function AppShell({
   topBar: ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh bg-iron">
+    <div className="flex min-h-dvh bg-onyx">
       <Rail items={items} sub={sub} />
       <div className="im-grain relative flex min-w-0 flex-1 flex-col">
         {topBar}

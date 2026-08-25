@@ -1,38 +1,111 @@
 @import "tailwindcss";
 
 /* ============================================================
-   IRON MILES TRAINING — design system
-   Iron Black #050505 · Miles Green #2dff8a · Forge White #eeeeee
-   System font stack only. No web fonts, no CDNs.
+   IRON MILES TRAINING — Digital Design System v1.0
+   Onyx #0B0B0B · Charcoal #111418 · Slate #1A1F23 · Steel #2A2F35
+   Iron Miles Mint #2DFF8A — the only hue in the system.
+   Montserrat, self-hosted. No CDNs, no runtime font requests.
+   Canonical values live in src/lib/tokens.ts.
    ============================================================ */
 
 @theme {
-  --color-iron: #050505;
-  --color-iron-2: #0a0b0b;
-  --color-surface: #101211;
-  --color-surface-2: #161918;
-  --color-surface-3: #1d2120;
+  /* ============================================================
+     CANONICAL — Digital Design System v1.0
+     Mirrors src/lib/tokens.ts. Change both together.
+     ============================================================ */
+
+  /* -- surfaces: cool neutral, never green-tinted -- */
+  --color-onyx: #0b0b0b;
+  --color-charcoal: #111418;
+  --color-slate: #1a1f23;
+  --color-steel: #2a2f35;
+
+  /* -- accent: the only hue in the system -- */
+  --color-mint: #2dff8a;
+  --color-mint-dim: #1f9e5a;
+  --color-mint-deep: #04130a;
+  --color-mint-bright: #5fffa8;
+
+  /* -- ink: each value carries its measured contrast on Charcoal -- */
+  --color-ink: #ffffff;          /* 18.5:1 — headings, hero numerals */
+  --color-ink-body: #e6e6e6;     /* 14.8:1 — body, workout instructions */
+  --color-ink-secondary: #a3a3a3;/*  7.3:1 — labels, captions, axis */
+  --color-ink-tertiary: #7e858d; /*  5.0:1 — dimmest step still AA for text */
+  --color-ink-faint: #646b73;    /*  3.4:1 — BELOW AA. Hairlines only. Never text. */
+
+  /* -- lines -- */
+  --color-hairline: rgba(230, 230, 230, 0.09);
+  --color-hairline-strong: rgba(230, 230, 230, 0.17);
+
+  /* -- status: semantic, separate from the accent, all AA on every surface -- */
+  --color-status-completed: #2dff8a;
+  --color-status-scheduled: #8fb8d9;
+  --color-status-progress: #ffb648;
+  --color-status-missed: #ff6b5a;
+  --color-status-low: #ff9448;
+
+  /* ============================================================
+     LEGACY ALIASES
+     Surfaces not yet migrated to the canonical names still resolve,
+     and pick up the new palette immediately. Removed page by page as
+     the migration proceeds.
+     ============================================================ */
+  --color-iron: #0b0b0b;
+  --color-iron-2: #0e1114;
+  --color-surface: #111418;
+  --color-surface-2: #1a1f23;
+  --color-surface-3: #2a2f35;
   --color-green: #2dff8a;
   --color-green-dim: #1f9e5a;
   --color-green-deep: #04130a;
-  --color-white: #eeeeee;
-  --color-muted: #8b918d;
-  --color-muted-2: #5d625f;
-  --color-line: rgba(238, 238, 238, 0.09);
-  --color-line-2: rgba(238, 238, 238, 0.17);
+  --color-white: #e6e6e6;
+  --color-muted: #a3a3a3;
+  --color-muted-2: #7e858d;      /* was #5d625f at 3.0:1 — that failed AA */
+  --color-line: rgba(230, 230, 230, 0.09);
+  --color-line-2: rgba(230, 230, 230, 0.17);
   --color-warn: #ffb648;
   --color-alert: #ff6b5a;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-cond: "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  /* ============================================================
+     TYPE — Montserrat, self-hosted. --font-im-sans is set by
+     next/font/local in layout.tsx.
+     ============================================================ */
+  --font-sans: var(--font-im-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-cond: var(--font-im-sans), "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
 
+  /* -- radii: technical, never pill -- */
   --radius-none: 0px;
   --radius-xs: 2px;
   --radius-sm: 3px;
   --radius-md: 4px;
+  --radius-lg: 6px;
 
+  /* ============================================================
+     MOTION — DRAW → BUILD → FORGE → COMPLETE
+     ============================================================ */
   --ease-forge: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-steel: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+:root {
+  /* motion durations, as CSS for animation shorthand */
+  --motion-draw: 1400ms;
+  --motion-build: 700ms;
+  --motion-forge: 420ms;
+  --motion-complete: 260ms;
+  --motion-stagger: 60ms;
+
+  /* topographic opacity ceilings — terrain is atmosphere, never content */
+  --topo-marketing: 0.1;
+  --topo-header: 0.055;
+  --topo-card: 0.035;
+  --topo-empty: 0.07;
+
+  /* ForgeLine */
+  --fl-stroke: 1.6px;
+  --fl-stroke-bold: 2px;
+  --fl-node: 3px;
 }
 
 :root {
@@ -48,12 +121,12 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scrollbar-color: var(--color-line-2) transparent;
+  scrollbar-color: var(--color-hairline-strong) transparent;
 }
 
 body {
-  background: var(--color-iron);
-  color: var(--color-white);
+  background: var(--color-onyx);
+  color: var(--color-ink-body);
   font-family: var(--font-sans);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -62,13 +135,13 @@ body {
 }
 
 ::selection {
-  background: var(--color-green);
-  color: var(--color-green-deep);
+  background: var(--color-mint);
+  color: var(--color-mint-deep);
 }
 
 /* ---- focus ---- */
 :focus-visible {
-  outline: 2px solid var(--color-green);
+  outline: 2px solid var(--color-mint);
   outline-offset: 3px;
   border-radius: 1px;
 }
@@ -76,33 +149,68 @@ body {
   outline: none;
 }
 
-/* ---- typography primitives ---- */
+/* ============================================================
+   TYPOGRAPHY
+   Montserrat carries the identity. Three registers, used strictly:
+   display (heavy, uppercase, tight), body (regular, generous),
+   micro (small, bold, widely tracked). Hierarchy comes from size,
+   weight and tracking — never from dropping text below AA contrast.
+   ============================================================ */
+
 .im-display {
   font-weight: 800;
   text-transform: uppercase;
-  line-height: 0.94;
+  line-height: 0.95;
   letter-spacing: 0.005em;
+  text-wrap: balance;
 }
+.im-display-tight {
+  line-height: 0.88;
+  letter-spacing: -0.012em;
+}
+
+/* Numerals the athlete reads at a glance: large, heavy, tabular so
+   digits do not shift width as values change. */
+.im-figure {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  color: var(--color-ink);
+}
+
 .im-eyebrow {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.42em;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: var(--color-green);
+  color: var(--color-mint);
 }
 .im-eyebrow-mute {
-  color: var(--color-muted-2);
+  color: var(--color-ink-secondary);
 }
+
+/* Any digits that line up in a column. */
 .im-mono {
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
+
+/* Small technical labels. Deliberate spacing is the point — they read
+   as instrument markings, not shrunken body copy. */
 .im-micro {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--color-muted-2);
+  color: var(--color-ink-secondary);
+}
+.im-micro-lg {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink-secondary);
 }
 
 /* ---- grain: one shared overlay, GPU-cheap ---- */
@@ -123,21 +231,32 @@ body {
      a chart container widen the track instead of scrolling inside it. Panels
      always shrink; their own overflow-x containers handle wide content. */
   min-width: 0;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.008) 42%, rgba(0, 0, 0, 0.15) 100%),
-    var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
+  /* A single cool highlight raking across the top edge — the light on a
+     technical surface, not a glassy gradient. */
+  background: linear-gradient(
+      168deg,
+      rgba(230, 230, 230, 0.035) 0%,
+      rgba(230, 230, 230, 0.008) 38%,
+      rgba(0, 0, 0, 0.12) 100%
+    ),
+    var(--color-charcoal);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
 }
 .im-panel-raised {
-  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.045) inset, 0 22px 50px -28px rgba(0, 0, 0, 0.9);
+  box-shadow:
+    0 1px 0 0 rgba(230, 230, 230, 0.05) inset,
+    0 22px 50px -28px rgba(0, 0, 0, 0.9);
 }
 .im-panel-hover {
   transition: border-color 0.28s var(--ease-forge), transform 0.28s var(--ease-forge), box-shadow 0.28s var(--ease-forge);
 }
 .im-panel-hover:hover {
-  border-color: var(--color-line-2);
+  border-color: var(--color-hairline-strong);
   transform: translateY(-2px);
-  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 30px 60px -30px rgba(0, 0, 0, 0.95);
+  box-shadow:
+    0 1px 0 0 rgba(230, 230, 230, 0.07) inset,
+    0 30px 60px -30px rgba(0, 0, 0, 0.95);
 }
 
 /* accent edge — the teal hairline that marks a live/primary panel */
@@ -148,19 +267,19 @@ body {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: linear-gradient(180deg, var(--color-green), rgba(45, 255, 138, 0.05));
+  background: linear-gradient(180deg, var(--color-mint), rgba(45, 255, 138, 0.05));
 }
 
-/* ---- topographic contour reference ---- */
+/* Retired: `.im-topo` was a repeating-radial-gradient standing in for terrain.
+   The <TopoField> component replaces it with real contour geometry and a
+   per-context opacity ceiling. The class is kept as a no-op only so surfaces
+   not yet migrated do not break; it will go when the migration completes. */
 .im-topo {
-  background-image: repeating-radial-gradient(
-    circle at 22% 8%,
-    rgba(45, 255, 138, 0.055) 0 1px,
-    transparent 1px 62px
-  );
+  background-image: none;
 }
+
 .im-rule {
-  background-image: linear-gradient(90deg, var(--color-line-2), transparent);
+  background-image: linear-gradient(90deg, var(--color-hairline-strong), transparent);
   height: 1px;
 }
 
@@ -170,14 +289,24 @@ body {
   height: 6px;
 }
 .im-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-line-2);
+  background: var(--color-hairline-strong);
   border-radius: 3px;
 }
 .im-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* ---- animation primitives (all transform/opacity only) ---- */
+/* ============================================================
+   MOTION — DRAW → BUILD → FORGE → COMPLETE
+
+   Four stages, one vocabulary. A route line DRAWS along its length,
+   training volume BUILDS from a baseline, an element FORGES into
+   position, a finished session COMPLETES. Anything that maps to none
+   of these does not belong in the product.
+
+   Transform and opacity only. Motion never gates information: the
+   numbers are in the DOM before the animation starts.
+   ============================================================ */
 @keyframes im-rise {
   from {
     opacity: 0;
@@ -188,9 +317,45 @@ body {
     transform: none;
   }
 }
+/* DRAW — a line advancing along its own length. Paths carry
+   pathLength="1", so this works regardless of real geometry. */
 @keyframes im-draw {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* BUILD — volume accumulating from the baseline. */
+@keyframes im-build {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* FORGE — an element locking into place. */
+@keyframes im-forge {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* COMPLETE — a state resolving. */
+@keyframes im-complete {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 @keyframes im-pulse-ring {
@@ -225,7 +390,34 @@ body {
 }
 
 .im-rise {
-  animation: im-rise 0.7s var(--ease-forge) both;
+  animation: im-rise var(--motion-build) var(--ease-forge) both;
+}
+
+/* Utility forms. Each maps to exactly one stage of the vocabulary. */
+.im-anim-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: im-draw var(--motion-draw) var(--ease-forge) forwards;
+}
+/* A line waiting to be drawn. Held in CSS rather than an inline style so the
+   reduced-motion rule below can override it — an inline style could not be,
+   which would leave an off-screen line permanently invisible. */
+.im-line-pending {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.im-build-pending {
+  transform: scaleY(0);
+}
+.im-anim-build {
+  transform-origin: bottom;
+  animation: im-build var(--motion-build) var(--ease-forge) both;
+}
+.im-anim-forge {
+  animation: im-forge var(--motion-forge) var(--ease-forge) both;
+}
+.im-anim-complete {
+  animation: im-complete var(--motion-complete) var(--ease-forge) both;
 }
 .im-skeleton {
   position: relative;
@@ -253,8 +445,21 @@ body {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  .im-rise {
+  .im-rise,
+  .im-anim-forge,
+  .im-anim-complete {
     opacity: 1;
+    transform: none;
+  }
+  /* the drawn line renders complete, not faded — the data is the point, and it
+     must be visible whether or not the line ever scrolls into view */
+  .im-anim-draw,
+  .im-line-pending {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+  .im-anim-build,
+  .im-build-pending {
     transform: none;
   }
   .im-skeleton::after {
@@ -267,7 +472,7 @@ input[type="range"].im-range {
   appearance: none;
   width: 100%;
   height: 2px;
-  background: var(--color-line-2);
+  background: var(--color-hairline-strong);
   border-radius: 2px;
 }
 input[type="range"].im-range::-webkit-slider-thumb {
@@ -275,17 +480,17 @@ input[type="range"].im-range::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--color-green);
-  border: 3px solid var(--color-iron);
+  background: var(--color-mint);
+  border: 3px solid var(--color-onyx);
   cursor: pointer;
-  box-shadow: 0 0 0 1px var(--color-green-dim);
+  box-shadow: 0 0 0 1px var(--color-mint-dim);
 }
 input[type="range"].im-range::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--color-green);
-  border: 3px solid var(--color-iron);
+  background: var(--color-mint);
+  border: 3px solid var(--color-onyx);
   cursor: pointer;
 }
 

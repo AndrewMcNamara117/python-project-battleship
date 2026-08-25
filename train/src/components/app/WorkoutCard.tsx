@@ -56,7 +56,7 @@ export function WorkoutCard({
       </div>
 
       {!isRest && (
-        <dl className="mt-7 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-line pt-6 sm:grid-cols-4">
+        <dl className="mt-7 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-hairline pt-6 sm:grid-cols-4">
           {workout.distanceKm != null && (
             <Metric label="Distance" value={formatDistance(workout.distanceKm, units)} />
           )}
@@ -70,7 +70,7 @@ export function WorkoutCard({
       )}
 
       {(workout.warmUp || workout.mainSet || workout.coolDown) && (
-        <div className="mt-7 space-y-4 border-t border-line pt-6">
+        <div className="mt-7 space-y-4 border-t border-hairline pt-6">
           {workout.warmUp && <Block label="Warm-up" body={workout.warmUp} />}
           {workout.mainSet && <Block label="Main set" body={workout.mainSet} accent />}
           {workout.coolDown && <Block label="Cool-down" body={workout.coolDown} />}
@@ -78,17 +78,17 @@ export function WorkoutCard({
       )}
 
       {workout.notes && (
-        <p className="mt-6 border-t border-line pt-5 text-[13px] leading-relaxed text-muted">{workout.notes}</p>
+        <p className="mt-6 border-t border-hairline pt-5 text-[13px] leading-relaxed text-ink-secondary">{workout.notes}</p>
       )}
 
       {workout.coachNote && (
-        <div className="mt-6 border-l-2 border-green bg-green/5 px-5 py-4">
-          <p className="im-micro text-green">Coach note</p>
-          <p className="mt-2 text-[14px] leading-relaxed text-white">{workout.coachNote}</p>
+        <div className="mt-6 border-l-2 border-mint bg-mint/5 px-5 py-4">
+          <p className="im-micro text-mint">Coach note</p>
+          <p className="mt-2 text-[14px] leading-relaxed text-ink-body">{workout.coachNote}</p>
         </div>
       )}
 
-      {children && <div className="mt-7 border-t border-line pt-6">{children}</div>}
+      {children && <div className="mt-7 border-t border-hairline pt-6">{children}</div>}
     </Panel>
   );
 }
@@ -106,7 +106,7 @@ function Block({ label, body, accent }: { label: string; body: string; accent?: 
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:gap-5">
       <p className="im-micro shrink-0 sm:w-24 sm:pt-1">{label}</p>
-      <p className={`text-[14px] leading-relaxed ${accent ? 'text-white' : 'text-muted'}`}>{body}</p>
+      <p className={`text-[14px] leading-relaxed ${accent ? 'text-ink-body' : 'text-ink-secondary'}`}>{body}</p>
     </div>
   );
 }
@@ -120,13 +120,13 @@ export function WorkoutRow({ workout, units = 'metric' }: { workout: ScheduledWo
     <div className="flex items-center gap-3">
       <span
         aria-hidden
-        className={`block h-8 w-0.5 shrink-0 ${done ? 'bg-green' : missed ? 'bg-alert/60' : 'bg-line-2'}`}
+        className={`block h-8 w-0.5 shrink-0 ${done ? 'bg-mint' : missed ? 'bg-status-missed/60' : 'bg-line-2'}`}
       />
       <span className="min-w-0 flex-1">
-        <span className={`block truncate text-[12px] font-bold ${missed ? 'text-muted-2 line-through' : ''}`}>
+        <span className={`block truncate text-[12px] font-bold ${missed ? 'text-ink-tertiary line-through' : ''}`}>
           {workout.name}
         </span>
-        <span className="im-mono mt-0.5 block text-[10px] tracking-[0.1em] text-muted-2">
+        <span className="im-mono mt-0.5 block text-[10px] tracking-[0.1em] text-ink-tertiary">
           {workout.type === 'rest'
             ? 'Rest'
             : [

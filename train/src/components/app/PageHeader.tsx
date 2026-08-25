@@ -12,11 +12,11 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-6 border-b border-line pb-7">
+    <div className="flex flex-wrap items-end justify-between gap-6 border-b border-hairline pb-7">
       <div className="min-w-0">
         {eyebrow && <p className="im-eyebrow">{eyebrow}</p>}
         <h1 className="im-display mt-3 text-[clamp(1.8rem,4vw,2.6rem)]">{title}</h1>
-        {lead && <p className="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-muted">{lead}</p>}
+        {lead && <p className="mt-3 max-w-[62ch] text-[14px] leading-relaxed text-ink-secondary">{lead}</p>}
       </div>
       {action}
     </div>

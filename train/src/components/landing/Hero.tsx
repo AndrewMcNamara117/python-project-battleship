@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'motion/react';
-import { IronMilesMark } from '@/components/brand/IronMilesMark';
+import { IronMilesMark } from '@/components/brand/IronMilesLogo';
 import { ForgeRing } from '@/components/hero/ForgeRing';
 import { ButtonLink } from '@/components/ui/Button';
 
@@ -44,11 +44,11 @@ export function Hero() {
       {/* legibility scrim — the type must always clear the object */}
       <div
         aria-hidden
-        className="absolute inset-0 z-2 bg-[linear-gradient(100deg,#050505_0%,rgba(5,5,5,0.92)_30%,rgba(5,5,5,0.34)_52%,rgba(5,5,5,0.12)_78%,rgba(5,5,5,0.45)_100%)]"
+        className="absolute inset-0 z-2 bg-[linear-gradient(100deg,var(--color-onyx)_0%,rgba(11,11,11,0.92)_30%,rgba(11,11,11,0.34)_52%,rgba(11,11,11,0.12)_78%,rgba(11,11,11,0.45)_100%)]"
       />
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 z-2 h-40 bg-[linear-gradient(180deg,transparent,#050505)]"
+        className="absolute inset-x-0 bottom-0 z-2 h-40 bg-[linear-gradient(180deg,transparent,var(--color-onyx))]"
       />
 
       <div className="relative z-3 mx-auto flex min-h-[92svh] max-w-[1240px] flex-col justify-center px-5 py-24">
@@ -58,7 +58,7 @@ export function Hero() {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="flex items-center gap-3"
         >
-          <IronMilesMark className="h-8 w-auto" title="Iron Miles" />
+          <IronMilesMark height={32} title="Iron Miles" />
           <span className="im-micro text-muted">Iron Miles Training</span>
         </motion.div>
 

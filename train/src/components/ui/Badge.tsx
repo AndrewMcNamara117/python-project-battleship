@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
 const tones = {
-  green: 'border-green/35 text-green bg-green/8',
-  neutral: 'border-line-2 text-muted bg-white/3',
-  warn: 'border-warn/35 text-warn bg-warn/8',
-  alert: 'border-alert/40 text-alert bg-alert/8',
-  solid: 'border-transparent bg-green text-green-deep',
+  green: 'border-mint/35 text-mint bg-mint/8',
+  neutral: 'border-hairline-strong text-ink-secondary bg-white/3',
+  warn: 'border-status-progress/35 text-status-progress bg-status-progress/8',
+  alert: 'border-status-missed/40 text-status-missed bg-status-missed/8',
+  solid: 'border-transparent bg-mint text-mint-deep',
 } as const;
 
 export type BadgeTone = keyof typeof tones;
@@ -36,6 +36,6 @@ export function Badge({
 }
 
 export function Dot({ tone = 'green' }: { tone?: 'green' | 'warn' | 'alert' | 'muted' }) {
-  const map = { green: 'bg-green', warn: 'bg-warn', alert: 'bg-alert', muted: 'bg-muted-2' };
+  const map = { green: 'bg-mint', warn: 'bg-status-progress', alert: 'bg-status-missed', muted: 'bg-ink-faint' };
   return <span className={`inline-block size-1.5 rounded-full ${map[tone]}`} aria-hidden />;
 }

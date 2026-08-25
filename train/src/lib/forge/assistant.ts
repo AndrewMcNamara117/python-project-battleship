@@ -195,11 +195,11 @@ export function explainSession(workout: ScheduledWorkout): string {
 /* ---------- helpers ---------- */
 
 function describeSession(w: ScheduledWorkout, units: Profile['units']): string {
-  const bits = [
-    w.distanceKm != null ? formatDistance(w.distanceKm, units) : null,
-    w.type === 'strength' ? 'strength' : null,
-  ].filter(Boolean);
-  return bits.length ? `${w.name} — ${bits.join(', ')}` : w.name;
+  // Only add a detail the name does not already carry. "Strength — Foundation A"
+  // does not need the word "strength" appended to it.
+  if (w.distanceKm != null) return `${w.name} — ${formatDistance(w.distanceKm, units)}`;
+  if (w.durationMinutes != null && w.type !== 'rest') return `${w.name} — ${w.durationMinutes} min`;
+  return w.name;
 }
 
 const INTENT: Partial<Record<ScheduledWorkout['type'], string>> = {

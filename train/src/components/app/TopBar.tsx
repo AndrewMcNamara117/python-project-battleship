@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { IronMilesLogo } from '@/components/brand/IronMilesMark';
+import { IronMilesLogo } from '@/components/brand/IronMilesLogo';
 import { Badge } from '@/components/ui/Badge';
 import { SignOutButton } from './SignOutButton';
 
@@ -15,10 +15,10 @@ export function TopBar({
   unread: number;
 }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-iron/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-hairline bg-onyx/85 backdrop-blur-xl">
       <div className="flex items-center justify-between gap-4 px-5 py-3 lg:px-8">
         <Link href="/app" className="lg:hidden" aria-label="Iron Miles Training">
-          <IronMilesLogo sub="Training" markClassName="h-5 w-auto" />
+          <IronMilesLogo sub="Training" markHeight={20} />
         </Link>
 
         <div className="hidden min-w-0 lg:block">

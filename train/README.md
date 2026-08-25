@@ -249,17 +249,80 @@ supabase/migrations/  schema and RLS
 
 ---
 
-## Design system
+## Design system — v1.0
 
-Iron Black `#050505` · Miles Green `#2dff8a` · Forge White `#eeeeee`. System font stack only — no
-web fonts, no CDNs. The logo is the exact supplied asset (`IronMilesMark`), never redrawn.
+Canonical values live in **`src/lib/tokens.ts`**, mirrored into CSS custom properties in
+`globals.css`. Change both together. Nothing else in the codebase should contain a colour literal.
 
-- `prefers-reduced-motion` is honoured everywhere; all motion collapses to static, readable content.
-- Only `transform`, `opacity` and SVG attributes are animated.
-- Charts use an emphasis palette, not a categorical one: the measured series wears Miles Green and
-  any reference series is deliberately recessive gray. Where four measures must be compared
-  (wellbeing) it faceted into small multiples rather than inventing three more hues. Never a
-  dual-axis chart.
+**Surfaces** Onyx `#0B0B0B` · Charcoal `#111418` · Slate `#1A1F23` · Steel `#2A2F35` — cool
+neutral, never green-tinted. **Accent** Iron Miles Mint `#2DFF8A`, the only hue in the system.
+
+**Ink is assigned by measured contrast**, not by eye. Each token records its ratio on Charcoal:
+`ink` 18.5:1 (headings, hero numerals) · `ink-body` 14.8:1 (body, workout instructions) ·
+`ink-secondary` 7.3:1 (labels, captions, axis) · `ink-tertiary` 5.0:1 (the dimmest step that still
+clears AA) · `ink-faint` 3.4:1 — **below AA, constrained to hairlines and never used for text.**
+That constraint closed a real defect: the token this replaced sat at 3.0:1 and carried every micro
+label in the product.
+
+**Typography** Montserrat, self-hosted. One variable file, Latin subset, 37KB, covering weights
+100–900 — served from our own origin via `next/font/local`. No CDN, no runtime font request, and an
+offline build still works.
+
+### The logo is immutable
+
+`public/brand/iron-miles-mark.svg` is the supplied file, byte-for-byte. The transparent variant is
+the same file with only the opaque background rectangle removed — both polygons, their points,
+fills, proportions, angles and relationship are identical to the original.
+
+**Never redraw, reconstruct, approximate or re-derive the mark in code** — not as inline SVG, CSS,
+canvas or a font glyph. `IronMilesLogo` references the asset; it does not draw it. If the mark
+changes, the asset file changes and the component follows.
+
+### ForgeLine
+
+`src/components/forge/ForgeLine.tsx` — one continuous accent line standing for an athlete's
+progression, in five contextual variants: `route` (decorative), `elevation`, `load`, `performance`
+and `race`. A server component: plain SVG and CSS, no client JavaScript, no canvas, no library.
+
+Paths carry `pathLength={1}`, so the draw is `stroke-dashoffset: 1 → 0` regardless of real
+geometry — no path measurement, no layout read, no resize handler. Geometry lives in `path.ts` as
+pure functions and is covered by tests: larger values must sit higher, the curve must pass through
+every real point, and it must not invent a peak the data does not contain.
+
+**It does not wait for scroll.** An earlier version gated the draw on an IntersectionObserver, which
+left any line below the fold invisible until scrolled to, and invisible permanently without
+JavaScript. Motion may not gate information — a CSS animation runs whether or not JavaScript does.
+
+### TopoField
+
+Real contour geometry with an opacity ceiling chosen by **context, not by the caller**: `marketing`
+0.10, `empty` 0.07, `header` 0.055, `card` 0.035. The `safe` prop masks the field away from where
+content sits. Contours are never permitted beneath numerals or workout instructions.
+
+### Motion
+
+`DRAW → BUILD → FORGE → COMPLETE`. Four named stages, one vocabulary — a line draws, volume builds
+from a baseline, an element forges into place, a state completes. Anything mapping to none of these
+does not belong in the product. Transform and opacity only.
+
+`prefers-reduced-motion` is honoured everywhere and settles every stage to its **final** state — the
+drawn line renders complete, not faded, because the data is the point.
+
+On product surfaces use `<Rise>` (CSS-only, server-rendered, no client JS). `<Reveal>` is for
+marketing pages, where scroll choreography is the intent.
+
+### Charts
+
+An emphasis palette, not a categorical one: the measured series wears Mint and any reference series
+is deliberately recessive Steel. Where four measures must be compared (wellbeing) it facets into
+small multiples rather than inventing three more hues. Never a dual-axis chart.
+
+### Migration status
+
+The **athlete dashboard** (`src/app/app/page.tsx`) is the reference implementation. The components
+it renders are migrated to canonical token names. Everything else still uses the legacy alias layer
+at the top of `globals.css`, which resolves to the new palette — so the whole product picks up the
+new colours immediately, and the remaining surfaces migrate page by page without a big-bang break.
 
 ## Deployment
 

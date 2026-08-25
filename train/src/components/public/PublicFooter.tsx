@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { IronMilesLogo } from '@/components/brand/IronMilesMark';
+import { IronMilesLogo } from '@/components/brand/IronMilesLogo';
 
 const COLUMNS = [
   {
@@ -41,7 +41,7 @@ export function PublicFooter() {
       <div className="mx-auto max-w-[1240px] px-5 py-16">
         <div className="grid gap-12 md:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
-            <IronMilesLogo sub="Training" markClassName="h-7 w-auto" />
+            <IronMilesLogo sub="Training" markHeight={28} />
             <p className="mt-5 max-w-[34ch] text-[13px] leading-relaxed text-muted">
               Endurance coaching and an athlete training hub, built in Limerick for people training
               for something that matters.

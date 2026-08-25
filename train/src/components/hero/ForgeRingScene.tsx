@@ -3,6 +3,15 @@
 import { useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { ACCENT, INK, SURFACE } from '@/lib/tokens';
+
+const INK_BODY = INK.body;
+
+/* Scene lighting, not brand colour: a cool key light and the faint warm
+   emissive inside the steel. These describe how the object is lit, so they
+   belong to the scene rather than to the palette. */
+const KEY_LIGHT = '#E8F0EC';
+const EMISSIVE = '#12402a';
 
 /**
  * THE FORGE RING — the hero object.
@@ -33,8 +42,8 @@ function elevationAt(i: number): number {
 function Bars({ pointer }: { pointer: React.RefObject<{ x: number; y: number }> }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const colorSteel = useMemo(() => new THREE.Color('#6b7a72'), []);
-  const colorGreen = useMemo(() => new THREE.Color('#2dff8a'), []);
+  const colorSteel = useMemo(() => new THREE.Color(SURFACE.steel), []);
+  const colorGreen = useMemo(() => new THREE.Color(ACCENT.mint), []);
   const scratch = useMemo(() => new THREE.Color(), []);
 
   const profile = useMemo(() => Array.from({ length: BAR_COUNT }, (_, i) => elevationAt(i)), []);
@@ -84,7 +93,7 @@ function Bars({ pointer }: { pointer: React.RefObject<{ x: number; y: number }> 
       <meshStandardMaterial
         metalness={0.72}
         roughness={0.28}
-        emissive="#154a2c"
+        emissive={EMISSIVE}
         emissiveIntensity={0.85}
         toneMapped={false}
       />
@@ -102,15 +111,15 @@ function CoreRings() {
     <group ref={group} rotation={[Math.PI / 2, 0, 0]}>
       <mesh>
         <torusGeometry args={[RADIUS - 0.5, 0.009, 6, 200]} />
-        <meshBasicMaterial color="#2dff8a" transparent opacity={0.6} toneMapped={false} />
+        <meshBasicMaterial color={ACCENT.mint} transparent opacity={0.6} toneMapped={false} />
       </mesh>
       <mesh>
         <torusGeometry args={[RADIUS + 0.55, 0.004, 6, 200]} />
-        <meshBasicMaterial color="#eeeeee" transparent opacity={0.09} toneMapped={false} />
+        <meshBasicMaterial color={INK_BODY} transparent opacity={0.09} toneMapped={false} />
       </mesh>
       <mesh>
         <torusGeometry args={[RADIUS - 1.25, 0.003, 6, 160]} />
-        <meshBasicMaterial color="#eeeeee" transparent opacity={0.06} toneMapped={false} />
+        <meshBasicMaterial color={INK_BODY} transparent opacity={0.06} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -157,12 +166,12 @@ export default function ForgeRingScene() {
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <color attach="background" args={['#050505']} />
-        <fog attach="fog" args={['#050505', 11, 22]} />
+        <color attach="background" args={[SURFACE.onyx]} />
+        <fog attach="fog" args={[SURFACE.onyx, 11, 22]} />
         <ambientLight intensity={0.85} />
-        <directionalLight position={[4, 6, 3]} intensity={2.1} color="#dfeee7" />
-        <pointLight position={[-3, 1, -2]} intensity={34} color="#2dff8a" distance={11} decay={2} />
-        <pointLight position={[3, -1, 2]} intensity={16} color="#2dff8a" distance={9} decay={2} />
+        <directionalLight position={[4, 6, 3]} intensity={2.1} color={KEY_LIGHT} />
+        <pointLight position={[-3, 1, -2]} intensity={34} color={ACCENT.mint} distance={11} decay={2} />
+        <pointLight position={[3, -1, 2]} intensity={16} color={ACCENT.mint} distance={9} decay={2} />
         {/* scaled to sit inside the frame at every aspect ratio */}
         <group scale={0.88}>
           <Bars pointer={pointer} />

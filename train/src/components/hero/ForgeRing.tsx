@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useSyncExternalStore } from 'react';
 import { useReducedMotion } from 'motion/react';
+import { ACCENT, INK, SURFACE } from '@/lib/tokens';
 
 /** Three.js is code-split out of the initial bundle and never server-rendered. */
 const ForgeRingScene = dynamic(() => import('./ForgeRingScene'), {
@@ -27,13 +28,13 @@ export function ForgeRingStatic() {
     <svg viewBox="-160 -160 320 320" className="absolute inset-0 size-full" aria-hidden>
       <defs>
         <linearGradient id="fr-bar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#2dff8a" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#6b7a72" stopOpacity="0.65" />
+          <stop offset="0%" stopColor={ACCENT.mint} stopOpacity="0.9" />
+          <stop offset="100%" stopColor={SURFACE.steel} stopOpacity="0.65" />
         </linearGradient>
       </defs>
-      <circle r="102" fill="none" stroke="#2dff8a" strokeOpacity="0.45" strokeWidth="0.8" />
-      <circle r="132" fill="none" stroke="#eeeeee" strokeOpacity="0.14" strokeWidth="0.5" />
-      <circle r="62" fill="none" stroke="#eeeeee" strokeOpacity="0.05" strokeWidth="0.5" />
+      <circle r="102" fill="none" stroke={ACCENT.mint} strokeOpacity="0.45" strokeWidth="0.8" />
+      <circle r="132" fill="none" stroke={INK.body} strokeOpacity="0.14" strokeWidth="0.5" />
+      <circle r="62" fill="none" stroke={INK.body} strokeOpacity="0.05" strokeWidth="0.5" />
       {bars.map(({ t, len }, i) => {
         const x1 = Math.cos(t) * 108;
         const y1 = Math.sin(t) * 108;

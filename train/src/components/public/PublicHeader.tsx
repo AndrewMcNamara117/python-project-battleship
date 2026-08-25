@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { IronMilesLogo } from '@/components/brand/IronMilesMark';
+import { IronMilesLogo } from '@/components/brand/IronMilesLogo';
 import { ButtonLink } from '@/components/ui/Button';
 
 const LINKS = [

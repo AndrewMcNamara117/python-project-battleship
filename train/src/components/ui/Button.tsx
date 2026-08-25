@@ -10,10 +10,10 @@ const base =
   'active:translate-y-px disabled:pointer-events-none disabled:opacity-40 select-none';
 
 const variants: Record<Variant, string> = {
-  solid: 'bg-green text-green-deep hover:bg-[#5fffa8] border border-transparent',
-  ghost: 'border border-line-2 text-white hover:border-green hover:text-green bg-transparent',
-  quiet: 'border border-transparent text-muted hover:text-white bg-transparent',
-  danger: 'border border-alert/40 text-alert hover:bg-alert/10 bg-transparent',
+  solid: 'bg-mint text-mint-deep hover:bg-mint-bright border border-transparent',
+  ghost: 'border border-hairline-strong text-ink-body hover:border-mint hover:text-mint bg-transparent',
+  quiet: 'border border-transparent text-ink-secondary hover:text-ink bg-transparent',
+  danger: 'border border-status-missed/40 text-status-missed hover:bg-status-missed/10 bg-transparent',
 };
 
 const sizes: Record<Size, string> = {

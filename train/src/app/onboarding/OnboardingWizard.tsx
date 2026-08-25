@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { completeOnboarding, saveOnboardingStep } from '@/app/actions/onboarding';
-import { IronMilesMark } from '@/components/brand/IronMilesMark';
+import { IronMilesMark } from '@/components/brand/IronMilesLogo';
 import { Button } from '@/components/ui/Button';
 import { Checkbox, Field, Input, Segmented, Select, Textarea } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
@@ -145,7 +145,7 @@ export function OnboardingWizard({ initial, startStep }: { initial: Partial<Onbo
     <div className="mx-auto max-w-[860px] px-5 py-[clamp(40px,6vw,72px)]">
       {/* ---- progress ---- */}
       <div className="flex items-center gap-3">
-        <IronMilesMark className="h-6 w-auto" title="Iron Miles" />
+        <IronMilesMark height={24} title="Iron Miles" />
         <span className="im-micro">Onboarding</span>
       </div>
 

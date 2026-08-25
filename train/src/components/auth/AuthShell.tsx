@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { IronMilesMark } from '@/components/brand/IronMilesMark';
+import { IronMilesMark } from '@/components/brand/IronMilesLogo';
 import { Panel } from '@/components/ui/Panel';
 import { RouteLine } from '@/components/motion/RouteLine';
 
@@ -20,7 +20,7 @@ export function AuthShell({
   return (
     <div className="im-grain relative mx-auto grid max-w-[1240px] gap-14 px-5 py-[clamp(56px,8vw,110px)] lg:grid-cols-2 lg:items-center lg:gap-20">
       <div>
-        <IronMilesMark className="h-10 w-auto" title="Iron Miles" />
+        <IronMilesMark height={40} title="Iron Miles" />
         <p className="im-eyebrow mt-8">{eyebrow}</p>
         <h1 className="im-display mt-5 text-[clamp(2.4rem,6vw,4rem)]">{title}</h1>
         <p className="mt-6 max-w-[42ch] text-[15px] leading-relaxed text-muted">{lead}</p>

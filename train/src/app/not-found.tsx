@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { IronMilesMark } from '@/components/brand/IronMilesMark';
+import { IronMilesMark } from '@/components/brand/IronMilesLogo';
 import { ButtonLink } from '@/components/ui/Button';
 
 export default function NotFound() {
   return (
     <main className="im-grain flex min-h-dvh flex-col items-center justify-center px-5 text-center">
-      <IronMilesMark className="h-10 w-auto" title="Iron Miles" />
+      <IronMilesMark height={40} title="Iron Miles" />
       <p className="im-eyebrow mt-9">404</p>
       <h1 className="im-display mt-5 text-[clamp(2.2rem,7vw,4rem)]">Wrong turn.</h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-muted">

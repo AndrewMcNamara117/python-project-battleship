@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { IronMilesMark } from '@/components/brand/IronMilesMark';
+import { IronMilesMark } from '@/components/brand/IronMilesLogo';
 import { Button, ButtonLink } from '@/components/ui/Button';
 
 export default function GlobalError({
@@ -18,7 +18,7 @@ export default function GlobalError({
 
   return (
     <main className="im-grain flex min-h-dvh flex-col items-center justify-center px-5 text-center">
-      <IronMilesMark className="h-10 w-auto" title="Iron Miles" />
+      <IronMilesMark height={40} title="Iron Miles" />
       <p className="im-eyebrow mt-9">Something broke</p>
       <h1 className="im-display mt-5 text-[clamp(2rem,6vw,3.4rem)]">Not your fault.</h1>
       <p className="mt-5 max-w-[44ch] text-[15px] leading-relaxed text-muted">
