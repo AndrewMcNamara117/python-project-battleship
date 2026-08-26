@@ -37,6 +37,16 @@ describe('demo extraction — parity', () => {
     assert.ok(preview.notes.some((n) => n.kind === 'structure' && n.severity === 'info'));
   });
 
+  it('counts training sessions and rest days apart', async () => {
+    const { repo, programId } = await onProgramme();
+    const preview = await repo.previewProgrammeExtraction(programId);
+    const structure = preview.notes.find((n) => n.kind === 'structure');
+    const rest = preview.notes.find((n) => n.kind === 'rest');
+
+    assert.equal(structure!.count, preview.sessions, 'the session count is training sessions');
+    assert.equal(rest!.count, preview.restDays, 'rest days are their own number');
+  });
+
   it('reads the training frequency off what was built', async () => {
     const { repo, programId } = await onProgramme();
     const preview = await repo.previewProgrammeExtraction(programId);

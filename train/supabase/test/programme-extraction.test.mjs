@@ -60,6 +60,20 @@ describe('the preview', () => {
     assert.match(structure.detail, /2 block\(s\), 12 week\(s\)/);
   });
 
+  it('counts training sessions and rest days apart', async () => {
+    const rows = await preview(coachA, programId);
+    const structure = rows.find((r) => r.kind === 'structure');
+    const rest = rows.find((r) => r.kind === 'rest');
+    assert.ok(structure && rest);
+
+    const { rows: [live] } = await t.asService(`
+      select count(*) filter (where type <> 'rest')::int training,
+             count(*) filter (where type = 'rest')::int rest
+        from scheduled_workouts where program_id=$1 and program_week_id is not null`, [programId]);
+    assert.equal(structure.count, live.training, 'the session count is training sessions');
+    assert.equal(rest.count, live.rest, 'rest days are their own number');
+  });
+
   it('warns about sessions the library does not hold', async () => {
     const rows = await preview(coachA, programId);
     const promote = rows.find((r) => r.kind === 'promote');

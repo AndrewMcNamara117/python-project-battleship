@@ -1748,16 +1748,20 @@ export class DemoRepo implements IronMilesRepo {
     const weeks = this.weeks.filter((w) => w.programId === programId);
     const sessions = this.extractionSessions(programId);
 
+    // training sessions and rest days are counted apart, because they read
+    // apart: a coach asking "how many sessions" does not mean the rest days
+    const rest = sessions.filter((s) => s.type === 'rest').length;
+    const training = sessions.length - rest;
+
     if (!weeks.length) {
       add('block', 'structure', 'This programme has no weeks, so there is no shape to save.');
     } else if (!sessions.length) {
       add('block', 'structure', 'This programme has no sessions attached to its weeks.');
     } else {
       add('info', 'structure',
-        `${blocks.length} block(s), ${weeks.length} week(s) and ${sessions.length} session(s) will be saved.`,
-        sessions.length);
+        `${blocks.length} block(s), ${weeks.length} week(s) and ${training} session(s) will be saved.`,
+        training);
 
-      const rest = sessions.filter((s) => s.type === 'rest').length;
       if (rest) add('info', 'rest', `${rest} prescribed rest day(s) are kept as rest days.`, rest);
 
       const promote = sessions.filter((s) => this.dispositionOf(s) === 'promote').length;

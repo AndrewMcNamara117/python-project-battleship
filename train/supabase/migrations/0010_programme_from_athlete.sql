@@ -135,15 +135,19 @@ begin
 
   select count(*) into v_blocks from program_blocks where program_id = p_program;
   select count(*) into v_weeks  from program_weeks  where program_id = p_program;
+  -- training sessions and rest days are counted apart, because they read
+  -- apart: a coach asking "how many sessions" does not mean the rest days
   select count(*) into v_sessions from scheduled_workouts
-   where program_id = p_program and program_week_id is not null;
+   where program_id = p_program and program_week_id is not null and type <> 'rest';
+  select count(*) into v_rest from scheduled_workouts
+   where program_id = p_program and program_week_id is not null and type = 'rest';
 
   if v_weeks = 0 then
     return query select 'block', 'structure',
       'This programme has no weeks, so there is no shape to save.', 0;
     return;
   end if;
-  if v_sessions = 0 then
+  if v_sessions + v_rest = 0 then
     return query select 'block', 'structure',
       'This programme has no sessions attached to its weeks.', 0;
     return;
@@ -154,8 +158,6 @@ begin
     '%s block(s), %s week(s) and %s session(s) will be saved.',
     v_blocks, v_weeks, v_sessions), v_sessions;
 
-  select count(*) into v_rest from scheduled_workouts
-   where program_id = p_program and program_week_id is not null and type = 'rest';
   if v_rest > 0 then
     return query select 'info', 'rest',
       format('%s prescribed rest day(s) are kept as rest days.', v_rest), v_rest;
