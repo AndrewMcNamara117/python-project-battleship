@@ -5,6 +5,7 @@ import { requireCoach, requireCoachOf } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
 import type { Result } from './coach';
 import type { Weekday } from '@/lib/domain/types';
+import type { ExtractionMetadata } from '@/lib/domain/programme-template';
 
 /**
  * The programme template builder.
@@ -328,8 +329,37 @@ export async function assignProgramme(
 /** Database refusals are written to be read; anything else gets a plain sentence. */
 function messageFor(error: unknown): string {
   const raw = error instanceof Error ? error.message : '';
-  if (/Monday|roster|archived|still holds|cannot be edited|no weeks|no sessions|available to you|structurally/i.test(raw)) {
+  if (/Monday|roster|archived|still holds|cannot be edited|no weeks|no sessions|available to you|structurally|belongs to the coach|Give the template a name|no shape to save/i.test(raw)) {
     return raw;
   }
   return 'That did not save. Try again.';
+}
+
+/**
+ * Save an athlete's live programme back out as a reusable template.
+ *
+ * The database re-checks every blocker before it copies anything, and the
+ * template belongs to the coach who saved it — never to the athlete whose
+ * programme it came from.
+ */
+export async function saveProgrammeAsTemplate(
+  programId: string,
+  athleteId: string,
+  metadata: ExtractionMetadata,
+): Promise<Result & { id?: string }> {
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
+  const name = metadata.name.trim();
+  if (name.length < 2) return { ok: false, message: 'Give the template a name.' };
+
+  const repo = await getRepo();
+  try {
+    const id = await repo.extractProgrammeTemplate(programId, { ...metadata, name });
+    revalidatePath('/coach/programs');
+    revalidatePath(`/coach/athletes/${athleteId}`);
+    return { ok: true, message: `Saved. "${name}" is in your programmes now.`, id };
+  } catch (error) {
+    return { ok: false, message: messageFor(error) };
+  }
 }

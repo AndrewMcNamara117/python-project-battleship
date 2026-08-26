@@ -23,6 +23,19 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--disable-dev-shm-usage'],
 });
 
+/**
+ * Assigning over prescribed training now needs a deliberate confirmation.
+ * Tick it when it appears; a programme going into an empty calendar has no
+ * gate to pass.
+ */
+async function confirmReplacementIfAsked(page) {
+  const replace = page.getByRole('button', { name: /Replace and assign/i });
+  if (!(await replace.count())) return page.getByRole('button', { name: /Assign programme/i });
+  await page.getByText(/Replace .* scheduled sessions from/i).click();
+  await page.waitForTimeout(200);
+  return replace;
+}
+
 const nextMonday = () => {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 7);
@@ -115,7 +128,7 @@ try {
       /Nothing has been moved or dropped/i.test(review));
   }
 
-  const assignButton = p.getByRole('button', { name: /Assign programme/i });
+  const assignButton = await confirmReplacementIfAsked(p);
   check('assignment is offered despite warnings', await assignButton.isEnabled());
 
   /* ---- assign, and check the athlete's calendar ---- */

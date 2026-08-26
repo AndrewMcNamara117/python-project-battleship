@@ -233,7 +233,15 @@ try {
     step(17, 'the review opens before anything is written',
       /\/assign/.test(p.url()) && /Before you assign/i.test(await p.locator('body').innerText()));
 
-    await p.getByRole('button', { name: /Assign programme/i }).click();
+    // assigning over prescribed training needs a deliberate confirmation now
+    const replace = p.getByRole('button', { name: /Replace and assign/i });
+    if (await replace.count()) {
+      await p.getByText(/Replace .* scheduled sessions from/i).click();
+      await p.waitForTimeout(200);
+      await replace.click();
+    } else {
+      await p.getByRole('button', { name: /Assign programme/i }).click();
+    }
     const status = p.locator('[role="status"]');
     await status.first().waitFor({ timeout: 30000 });
     step(18, 'coach assigns a programme', /Assigned/i.test(await status.first().innerText()));

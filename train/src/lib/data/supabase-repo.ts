@@ -48,6 +48,9 @@ import type {
 import type {
   AssignmentConflict,
   AssignmentPreview,
+  ExtractionMetadata,
+  ExtractionNote,
+  ExtractionPreview,
   ProgramTemplate,
   ProgramTemplateBlock,
   ProgramTemplateDetail,
@@ -56,6 +59,7 @@ import type {
   TemplateWeekVolume,
 } from '@/lib/domain/programme-template';
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
+import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import type {
   IronMilesRepo,
   LibraryKind,
@@ -2086,6 +2090,66 @@ export class SupabaseRepo implements IronMilesRepo {
       p_start: startDate,
       p_name: options?.name ?? null,
       p_goal: options?.goalId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  /* ---- saving a live programme back out as a template ---- */
+
+  async previewProgrammeExtraction(programId: UUID): Promise<ExtractionPreview> {
+    const { data, error } = await this.db.rpc('im_extract_preview', { p_program: programId });
+    if (error) throw new Error(error.message);
+    const notes = ((data ?? []) as ExtractionNote[]).map((n) => ({ ...n, count: Number(n.count ?? 0) }));
+
+    const [program, blocks] = await Promise.all([
+      this.one(
+        this.db.from('programs').select('id, name, athlete_id, goal_id').eq('id', programId).single(),
+        (r: any) => r,
+      ),
+      this.rows(
+        this.db.from('program_blocks').select('id').eq('program_id', programId),
+        (r: any) => r.id as UUID,
+      ),
+    ]);
+    if (!program) throw new Error('That programme no longer exists.');
+
+    const [profile, weeks, sessions] = await Promise.all([
+      this.getProfile(program.athlete_id),
+      this.rows(this.db.from('program_weeks').select('id').eq('program_id', programId), (r: any) => r.id as UUID),
+      this.rows(
+        this.db.from('scheduled_workouts').select('date, type, program_week_id').eq('program_id', programId),
+        (r: any) => r,
+      ),
+    ]);
+
+    return buildExtractionPreview({
+      programId,
+      programName: program.name,
+      athleteName: profile?.fullName ?? 'This athlete',
+      blockCount: blocks.length,
+      weekCount: weeks.length,
+      sessions: sessions
+        .filter((r: any) => r.program_week_id)
+        .map((r: any) => ({ date: r.date as ISODate, type: r.type as string, weekId: r.program_week_id as UUID })),
+      goalEventType: (await this.getPrimaryGoal(program.athlete_id))?.eventType ?? null,
+      notes,
+    });
+  }
+
+  async extractProgrammeTemplate(programId: UUID, metadata: ExtractionMetadata): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_extract_program_template', {
+      p_program: programId,
+      p_name: metadata.name,
+      p_visibility: metadata.visibility,
+      p_discipline: metadata.discipline,
+      p_goal_type: metadata.goalType,
+      p_target_distance_km: metadata.targetDistanceKm,
+      p_experience: metadata.experienceLevel,
+      p_min_days: metadata.minDaysPerWeek,
+      p_max_days: metadata.maxDaysPerWeek,
+      p_purpose: metadata.purpose,
+      p_coach_notes: metadata.coachNotes,
     });
     if (error) throw new Error(error.message);
     return data as UUID;

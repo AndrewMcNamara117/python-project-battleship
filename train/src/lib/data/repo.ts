@@ -17,6 +17,8 @@ import type {
 import type {
   AssignmentConflict,
   AssignmentPreview,
+  ExtractionMetadata,
+  ExtractionPreview,
   ProgramTemplate,
   ProgramTemplateBlock,
   ProgramTemplateDetail,
@@ -282,6 +284,17 @@ export interface IronMilesRepo {
 
   /** "16 Week Marathon — Intermediate" into "— High Volume", structure and all. */
   duplicateProgramTemplate(id: UUID, name?: string): Promise<UUID>;
+
+  /**
+   * Save a live athlete programme back out as a reusable template.
+   *
+   * A snapshot, independent from the moment it exists: later edits to the
+   * athlete's programme do not reach it, and later edits to it do not reach
+   * the athlete. What was prescribed travels; what the athlete actually did
+   * stays with the athlete.
+   */
+  previewProgrammeExtraction(programId: UUID): Promise<ExtractionPreview>;
+  extractProgrammeTemplate(programId: UUID, metadata: ExtractionMetadata): Promise<UUID>;
 
   /** Prescribed against intended, week by week. */
   getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]>;

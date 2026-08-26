@@ -16,8 +16,9 @@
     "test:duplication": "node e2e/duplication.mjs",
     "test:library": "node e2e/library.mjs",
     "test:programme": "node e2e/programme.mjs",
+    "test:extraction": "node e2e/extraction.mjs",
     "_comment:e2e": "Demo state lives in the server process, so order matters: loop drives the athlete-coach loop from a clean seed and must run first.",
-    "test:e2e:all": "node e2e/loop.mjs && node e2e/guards.mjs && node e2e/duplication.mjs && node e2e/library.mjs && node e2e/programme.mjs"
+    "test:e2e:all": "node e2e/loop.mjs && node e2e/guards.mjs && node e2e/duplication.mjs && node e2e/library.mjs && node e2e/programme.mjs && node e2e/extraction.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

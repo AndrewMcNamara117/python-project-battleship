@@ -28,6 +28,7 @@ import { totalScore } from '@/lib/domain/forge-score';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { CoachNoteForm, CheckInResponder } from './CoachControls';
 import { SessionEditor } from './SessionEditor';
+import { SaveAsTemplate } from '@/components/programme/SaveAsTemplate';
 import { CoachingContextControl } from './PhaseControl';
 import { AthleteContext } from '@/components/forge/AthleteContext';
 
@@ -62,6 +63,10 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     ]);
 
   const race = goal?.raceId ? await repo.getRace(goal.raceId) : null;
+
+  // what saving this programme as a template would produce, read before the
+  // coach is offered the action at all
+  const extraction = program ? await repo.previewProgrammeExtraction(program.id) : null;
   const buckets = buildWeekBuckets(scheduled, completed, strength, 12, today);
   const week = scheduled.filter((w) => w.date >= weekStart && w.date <= weekEnd);
   const blockAdherence = adherence(scheduled, addDays(weekStart, -7 * 11), weekEnd, today);
@@ -164,6 +169,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                 .filter((w) => w.date >= addDays(today, -7))
                 .slice(0, 24)}
             />
+            {extraction && <SaveAsTemplate preview={extraction} athleteId={id} />}
           </Reveal>
 
           <Reveal delay={0.06}>

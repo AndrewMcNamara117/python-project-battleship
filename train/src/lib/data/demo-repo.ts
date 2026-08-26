@@ -41,7 +41,8 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
-import { FORGE_POINTS , weekdayList } from '@/lib/domain/types';
+import { FORGE_POINTS, weekdayList } from '@/lib/domain/types';
+import type { Weekday } from '@/lib/domain/types';
 import type {
   BlockWithWeeks,
   ProgramBlock,
@@ -61,6 +62,9 @@ import type {
 import type {
   AssignmentConflict,
   AssignmentPreview,
+  ExtractionMetadata,
+  ExtractionNote,
+  ExtractionPreview,
   ProgramTemplate,
   ProgramTemplateBlock,
   ProgramTemplateDetail,
@@ -69,6 +73,7 @@ import type {
   TemplateWeekVolume,
 } from '@/lib/domain/programme-template';
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
+import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import type {
   IronMilesRepo,
   LibraryKind,
@@ -1684,6 +1689,275 @@ export class DemoRepo implements IronMilesRepo {
     }
 
     return program.id;
+  }
+
+  /* ---- saving a live programme back out as a template ---- */
+
+  /**
+   * The same three dispositions im_session_disposition applies.
+   *
+   * A rest day stays a rest day. A session that still matches the library
+   * item it came from becomes a slot pointing at it. Anything else is a
+   * workout definition and earns its own library entry.
+   */
+  private dispositionOf(session: ScheduledWorkout): 'rest' | 'library' | 'promote' {
+    if (session.type === 'rest') return 'rest';
+
+    if (session.sourceWorkoutTemplateId) {
+      const src = this.workoutTemplates.find((w) => w.id === session.sourceWorkoutTemplateId);
+      if (!src) return 'promote';
+      const differs =
+        session.type !== src.type ||
+        session.basis !== src.basis ||
+        session.intensity !== src.intensity ||
+        session.hrZone !== src.hrZone ||
+        (session.warmUp ?? '') !== (src.warmUp ?? '') ||
+        (session.mainSet ?? '') !== (src.mainSet ?? '') ||
+        (session.coolDown ?? '') !== (src.coolDown ?? '');
+      return differs ? 'promote' : 'library';
+    }
+
+    if (session.sourceStrengthTemplateId) {
+      return this.strengthTemplates.some((x) => x.id === session.sourceStrengthTemplateId) ? 'library' : 'promote';
+    }
+
+    return 'promote';
+  }
+
+  private extractionSessions(programId: UUID) {
+    const weeks = this.weeks.filter((w) => w.programId === programId);
+    const weekIds = new Set(weeks.map((w) => w.id));
+    return dataset().scheduled.filter((s) => s.programWeekId && weekIds.has(s.programWeekId));
+  }
+
+  async previewProgrammeExtraction(programId: UUID): Promise<ExtractionPreview> {
+    const program = dataset().programs.find((p) => p.id === programId);
+    const notes: ExtractionNote[] = [];
+    const add = (severity: ExtractionNote['severity'], kind: ExtractionNote['kind'], detail: string, count = 0) =>
+      notes.push({ severity, kind, detail, count });
+
+    if (!program) {
+      add('block', 'programme', 'That programme no longer exists.');
+      return buildExtractionPreview({
+        programId, programName: '', athleteName: '', blockCount: 0, weekCount: 0,
+        sessions: [], goalEventType: null, notes,
+      });
+    }
+
+    const blocks = this.blocks.filter((b) => b.programId === programId);
+    const weeks = this.weeks.filter((w) => w.programId === programId);
+    const sessions = this.extractionSessions(programId);
+
+    if (!weeks.length) {
+      add('block', 'structure', 'This programme has no weeks, so there is no shape to save.');
+    } else if (!sessions.length) {
+      add('block', 'structure', 'This programme has no sessions attached to its weeks.');
+    } else {
+      add('info', 'structure',
+        `${blocks.length} block(s), ${weeks.length} week(s) and ${sessions.length} session(s) will be saved.`,
+        sessions.length);
+
+      const rest = sessions.filter((s) => s.type === 'rest').length;
+      if (rest) add('info', 'rest', `${rest} prescribed rest day(s) are kept as rest days.`, rest);
+
+      const promote = sessions.filter((s) => this.dispositionOf(s) === 'promote').length;
+      if (promote) {
+        add('warn', 'promote',
+          `${promote} session(s) are not in your library, or have been changed beyond what a slot can hold. ` +
+          'Each becomes a new private session in your workout library so the template can point at it.',
+          promote);
+      }
+
+      const done = dataset().scheduled.filter((s) => s.programId === programId && s.status !== 'scheduled').length;
+      if (done) {
+        add('info', 'execution',
+          `${done} session(s) have been completed, missed or moved. The template takes what was prescribed, ` +
+          'never what happened.', done);
+      }
+
+      const noteCount =
+        dataset().scheduled.filter((s) => s.programId === programId && s.coachNote).length +
+        weeks.filter((w) => w.notes).length;
+      if (noteCount) {
+        add('warn', 'notes',
+          `${noteCount} coach note(s) on weeks and sessions will not be copied — they usually refer to this athlete.`,
+          noteCount);
+      }
+
+      const noVolume = weeks.filter((w) => w.targetVolumeKm == null).length;
+      if (noVolume) {
+        add('info', 'volume',
+          `${noVolume} week(s) have no intended volume set, so the template will not carry one for them.`,
+          noVolume);
+      }
+    }
+
+    const profile = await this.getProfile(program.athleteId);
+    const goal = await this.getPrimaryGoal(program.athleteId);
+
+    return buildExtractionPreview({
+      programId,
+      programName: program.name,
+      athleteName: profile?.fullName ?? 'This athlete',
+      blockCount: blocks.length,
+      weekCount: weeks.length,
+      sessions: sessions.map((s) => ({ date: s.date, type: s.type, weekId: s.programWeekId! })),
+      goalEventType: goal?.eventType ?? null,
+      notes,
+    });
+  }
+
+  async extractProgrammeTemplate(programId: UUID, metadata: ExtractionMetadata): Promise<UUID> {
+    const preview = await this.previewProgrammeExtraction(programId);
+    const blocking = preview.notes.find((n) => n.severity === 'block');
+    if (blocking) throw new Error(blocking.detail);
+    if ((metadata.visibility as string) === 'system') {
+      throw new Error('A saved programme belongs to the coach who saved it, not to Iron Miles.');
+    }
+    if (!metadata.name.trim()) throw new Error('Give the template a name.');
+
+    const now = new Date().toISOString();
+    const templateId = uid('pt');
+    const weeks = this.weeks.filter((w) => w.programId === programId);
+
+    this.programTemplates.push({
+      id: templateId,
+      ownerId: DEMO_COACH_ID,
+      visibility: metadata.visibility,
+      name: metadata.name.trim(),
+      goalType: metadata.goalType ?? 'general_endurance',
+      weeks: Math.max(weeks.length, 1),
+      description: metadata.purpose ?? '',
+      purpose: metadata.purpose,
+      coachNotes: metadata.coachNotes,
+      discipline: metadata.discipline,
+      targetDistanceKm: metadata.targetDistanceKm,
+      experienceLevel: metadata.experienceLevel,
+      minDaysPerWeek: metadata.minDaysPerWeek ?? preview.minDaysPerWeek,
+      maxDaysPerWeek: metadata.maxDaysPerWeek ?? preview.maxDaysPerWeek,
+      tags: [],
+      archivedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as ProgramTemplateItem);
+
+    // one promoted library item per distinct session, however many weeks use it
+    const promoted = new Map<string, UUID>();
+
+    for (const b of this.blocks.filter((x) => x.programId === programId).sort((a, c) => a.blockIndex - c.blockIndex)) {
+      const block: ProgramTemplateBlock = {
+        id: uid('ptb'),
+        programTemplateId: templateId,
+        blockIndex: b.blockIndex,
+        name: b.name,
+        phase: b.phase,
+        focus: b.focus,
+        // block notes stay with the athlete
+        description: null,
+        createdAt: now,
+      };
+      this.templateBlocks.push(block);
+
+      for (const w of weeks.filter((x) => x.blockId === b.id).sort((a, c) => a.weekIndex - c.weekIndex)) {
+        const week: ProgramTemplateWeek = {
+          id: uid('ptw'),
+          programTemplateId: templateId,
+          blockId: block.id,
+          weekIndex: w.weekIndex,
+          templateWeekNo: w.programWeekNo,
+          targetVolumeKm: w.targetVolumeKm,
+          isRecoveryWeek: w.isRecoveryWeek,
+          focus: w.focus,
+          notes: null,
+          createdAt: now,
+        };
+        this.templateWeeks.push(week);
+
+        const inWeek = dataset().scheduled
+          .filter((s) => s.programWeekId === w.id)
+          .sort((a, c) => a.date.localeCompare(c.date) || a.slot - c.slot);
+
+        for (const session of inWeek) {
+          const weekday = (((new Date(session.date).getUTCDay() + 6) % 7) + 1) as Weekday;
+          const disposition = this.dispositionOf(session);
+
+          if (disposition === 'rest') {
+            this.templateSlots.push({
+              id: uid('pts'), programTemplateId: templateId, templateWeekId: week.id,
+              weekday, slot: session.slot, workoutTemplateId: null, strengthTemplateId: null,
+              isRest: true, isOptional: false,
+              label: session.name === 'Rest' ? null : session.name,
+              notes: null, distanceKm: null, durationMinutes: null, rpeTarget: null,
+            });
+            continue;
+          }
+
+          if (disposition === 'library') {
+            const src = this.workoutTemplates.find((x) => x.id === session.sourceWorkoutTemplateId);
+            this.templateSlots.push({
+              id: uid('pts'), programTemplateId: templateId, templateWeekId: week.id,
+              weekday, slot: session.slot,
+              workoutTemplateId: session.sourceWorkoutTemplateId ?? null,
+              strengthTemplateId: session.sourceStrengthTemplateId ?? null,
+              isRest: false, isOptional: false,
+              // only record an override where it actually differs
+              label: src && session.name === src.name ? null : session.name,
+              notes: null,
+              distanceKm: src && session.distanceKm === src.distanceKm ? null : session.distanceKm,
+              durationMinutes:
+                src && session.durationMinutes === src.durationMinutes ? null : session.durationMinutes,
+              rpeTarget: src && session.rpeTarget === src.rpeTarget ? null : session.rpeTarget,
+            });
+            continue;
+          }
+
+          const key = [
+            session.name, session.type, session.basis, session.intensity, session.distanceKm,
+            session.durationMinutes, session.hrZone, session.rpeTarget,
+            session.warmUp, session.mainSet, session.coolDown,
+          ].join('|');
+
+          let libraryId = promoted.get(key);
+          if (!libraryId) {
+            const created = await this.saveWorkoutTemplate({
+              ownerId: DEMO_COACH_ID,
+              visibility: metadata.visibility,
+              name: session.name,
+              category: 'custom' as never,
+              type: session.type as never,
+              basis: session.basis as never,
+              intensity: session.intensity as never,
+              distanceKm: session.distanceKm,
+              durationMinutes: session.durationMinutes,
+              paceMinSecKm: null,
+              paceMaxSecKm: null,
+              hrZone: session.hrZone,
+              rpeTarget: session.rpeTarget,
+              warmUp: session.warmUp,
+              mainSet: session.mainSet,
+              coolDown: session.coolDown,
+              purpose: session.notes,
+              coachNotes: null,
+              notes: null,
+              tags: [],
+              archivedAt: null,
+            }, (await this.listComponents(session.id)).map(({ id: _id, scheduledWorkoutId: _s, athleteId: _a, position: _p, ...rest }) => rest));
+            libraryId = created.id;
+            promoted.set(key, libraryId);
+          }
+
+          this.templateSlots.push({
+            id: uid('pts'), programTemplateId: templateId, templateWeekId: week.id,
+            weekday, slot: session.slot,
+            workoutTemplateId: libraryId, strengthTemplateId: null,
+            isRest: false, isOptional: false,
+            label: null, notes: null, distanceKm: null, durationMinutes: null, rpeTarget: null,
+          });
+        }
+      }
+    }
+
+    return templateId;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

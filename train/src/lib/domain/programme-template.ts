@@ -179,3 +179,48 @@ export interface AssignmentPreview {
 }
 
 export const isBlocking = (c: AssignmentConflict) => c.severity === 'block';
+
+/**
+ * Saving a live programme back out as a template.
+ *
+ * Severities read the same way they do at assignment: `block` means it cannot
+ * be done, `warn` means the coach should know before they decide, and `info`
+ * is what will happen. Nothing here is resolved automatically.
+ */
+export interface ExtractionNote {
+  severity: 'block' | 'warn' | 'info';
+  kind: 'programme' | 'authorisation' | 'structure' | 'rest' | 'promote' | 'execution' | 'notes' | 'race' | 'volume';
+  detail: string;
+  count: number;
+}
+
+/** The metadata a coach fills in while saving. */
+export interface ExtractionMetadata {
+  name: string;
+  visibility: 'private' | 'shared';
+  discipline: Discipline;
+  goalType: string | null;
+  targetDistanceKm: number | null;
+  experienceLevel: string | null;
+  minDaysPerWeek: number | null;
+  maxDaysPerWeek: number | null;
+  purpose: string | null;
+  coachNotes: string | null;
+}
+
+/** What the coach reads before saving: the shape, and what will not travel. */
+export interface ExtractionPreview {
+  programId: UUID;
+  programName: string;
+  athleteName: string;
+  blocks: number;
+  weeks: number;
+  sessions: number;
+  restDays: number;
+  /** Days a week the programme actually trains, read off what was built. */
+  minDaysPerWeek: number | null;
+  maxDaysPerWeek: number | null;
+  notes: ExtractionNote[];
+  /** Suggested metadata, which the coach can overwrite. */
+  suggested: ExtractionMetadata;
+}

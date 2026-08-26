@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
 import { assignProgramme } from '@/app/actions/programme-templates';
 import type { AssignmentPreview } from '@/lib/domain/programme-template';
@@ -25,9 +26,19 @@ export function AssignmentReview({ preview }: { preview: AssignmentPreview }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
   const blockers = preview.conflicts.filter((c) => c.severity === 'block');
   const warnings = preview.conflicts.filter((c) => c.severity === 'warn');
+
+  // Replacing prescribed training is not the same as assigning into an empty
+  // calendar, so it is not the same click. The coach ticks a box that names
+  // what goes and what stays.
+  const replacing = preview.conflicts.find((c) => c.kind === 'replacing');
+  const keeping = preview.conflicts.find((c) => c.kind === 'history_kept');
+  const needsConfirmation = Boolean(replacing);
+  const ready = blockers.length === 0 && (!needsConfirmation || confirmed);
+  const coachingWarnings = warnings.filter((c) => c.kind !== 'replacing' && c.kind !== 'history_kept');
 
   const assign = () =>
     startTransition(async () => {
@@ -51,17 +62,17 @@ export function AssignmentReview({ preview }: { preview: AssignmentPreview }) {
         </Panel>
       )}
 
-      {warnings.length > 0 && (
+      {coachingWarnings.length > 0 && (
         <Panel className="border-hairline-strong p-5">
           <p className="im-micro text-status-missed">
-            {warnings.length} thing{warnings.length === 1 ? '' : 's'} to weigh
+            {coachingWarnings.length} thing{coachingWarnings.length === 1 ? '' : 's'} to weigh
           </p>
           <p className="mt-2 max-w-[62ch] text-[12px] leading-relaxed text-ink-tertiary">
             None of these stop the assignment, and none of them have been acted on. Nothing has been moved or
             dropped to make the programme fit.
           </p>
           <ul className="mt-4 space-y-2.5">
-            {warnings.map((c, i) => (
+            {warnings.filter((c) => c.kind !== 'replacing' && c.kind !== 'history_kept').map((c, i) => (
               <li key={i} className="border-l border-hairline-strong pl-3 text-[13px] leading-relaxed text-ink-body">
                 {c.detail}
               </li>
@@ -180,12 +191,38 @@ export function AssignmentReview({ preview }: { preview: AssignmentPreview }) {
         </div>
       </Panel>
 
+      {needsConfirmation && blockers.length === 0 && (
+        <Panel className="border-status-missed/40 p-5">
+          <p className="im-micro text-status-missed">This replaces prescribed training</p>
+          <ul className="mt-3 space-y-2">
+            <li className="text-[13px] leading-relaxed text-ink">{replacing!.detail}</li>
+            {keeping && <li className="text-[13px] leading-relaxed text-ink">{keeping.detail}</li>}
+            {!keeping && (
+              <li className="text-[13px] leading-relaxed text-ink-secondary">
+                Nothing on those dates has been completed, so nothing is being kept.
+              </li>
+            )}
+          </ul>
+          <div className="mt-5 border-t border-hairline pt-4">
+            <Checkbox
+              label={`Replace ${preview.athleteName}'s scheduled sessions from ${formatDayMonth(preview.startDate)}`}
+              description="Completed training is never removed. Replaced prescriptions stay in the session's history."
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+            />
+          </div>
+        </Panel>
+      )}
+
       <div className="flex flex-wrap items-center gap-4">
-        <Button disabled={pending || blockers.length > 0} onClick={assign}>
-          {pending ? 'Assigning…' : 'Assign programme'}
+        <Button disabled={pending || !ready} onClick={assign}>
+          {pending ? 'Assigning…' : needsConfirmation ? 'Replace and assign' : 'Assign programme'}
         </Button>
         {blockers.length > 0 && (
           <p className="text-[12px] text-ink-tertiary">Fix what is listed above first.</p>
+        )}
+        {blockers.length === 0 && needsConfirmation && !confirmed && (
+          <p className="text-[12px] text-ink-tertiary">Confirm the replacement above to continue.</p>
         )}
       </div>
 
