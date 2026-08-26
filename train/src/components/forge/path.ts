@@ -112,13 +112,20 @@ export function routePath(seed = 1, segments = 5): string {
   return smoothPath(pts, 0.3);
 }
 
-/** Bar geometry for the accumulating-load variant. */
+/**
+ * Bar geometry for the accumulating-load variant.
+ *
+ * Bar width is capped relative to the slot as well as gapped. Without the cap,
+ * a short series stretched across a wide container renders as slabs rather than
+ * as a measurement — six bars across a full-width panel is the case that broke.
+ */
 export function bars(values: number[], gap = 26): { x: number; y: number; w: number; h: number }[] {
   if (!values.length) return [];
   const { min, max } = extent([0, ...values]);
   const span = max - min;
   const slot = VB / values.length;
-  const w = Math.max(1.5, slot * (1 - gap / 100));
+  const MAX_BAR = 6.5; // user units — roughly a bar's worth at a typical card width
+  const w = Math.max(1.5, Math.min(slot * (1 - gap / 100), MAX_BAR));
   const inset = (slot - w) / 2;
 
   return values.map((v, i) => {

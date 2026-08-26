@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { Reveal } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
@@ -33,7 +33,7 @@ export default async function BillingPage() {
       />
 
       <div className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start">
-        <Reveal>
+        <Rise>
           <Panel edge className="p-6 sm:p-8">
             <PanelHeader
               label="Current plan"
@@ -93,10 +93,10 @@ export default async function BillingPage() {
               )}
             </div>
           </Panel>
-        </Reveal>
+        </Rise>
 
         <div className="space-y-5">
-          <Reveal delay={0.06}>
+          <Rise delay={60}>
             <Panel className="p-6">
               <PanelHeader label="What's included" />
               <ul className="mt-5 space-y-3">
@@ -108,9 +108,9 @@ export default async function BillingPage() {
                 ))}
               </ul>
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.1}>
+          <Rise delay={100}>
             <Panel className="p-6">
               <PanelHeader label="Pausing and cancelling" />
               <p className="mt-4 text-[13px] leading-relaxed text-muted">
@@ -122,7 +122,7 @@ export default async function BillingPage() {
                 conversation, and your data is still yours to export.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
         </div>
       </div>
     </AppPage>

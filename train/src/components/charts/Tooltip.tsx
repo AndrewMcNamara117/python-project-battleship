@@ -25,7 +25,7 @@ export function ChartTooltip({
   return (
     <div className="im-panel im-panel-raised min-w-[150px] px-3 py-2.5">
       {label != null && (
-        <p className="im-micro mb-2 text-muted">
+        <p className="im-micro mb-2 text-ink-secondary">
           {labelFormatter ? labelFormatter(String(label)) : String(label)}
         </p>
       )}
@@ -38,9 +38,9 @@ export function ChartTooltip({
                 className="inline-block size-2 rounded-[1px]"
                 style={{ background: r.color }}
               />
-              <span className="text-[11px] text-muted">{r.name}</span>
+              <span className="text-[11px] text-ink-secondary">{r.name}</span>
             </span>
-            <span className="im-mono text-[12px] font-bold text-white">
+            <span className="im-mono text-[12px] font-bold text-ink-body">
               {formatter && typeof r.value === 'number'
                 ? formatter(r.value, String(r.name))
                 : String(r.value ?? '—')}

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { ForgeMessageCard } from '@/components/app/ForgeMessageCard';
-import { Reveal } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
@@ -54,11 +54,11 @@ export default async function ForgePage() {
 
       <div className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
         <div className="space-y-5">
-          <Reveal>
+          <Rise>
             <ForgeChat />
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.06}>
+          <Rise delay={60}>
             <Panel className="p-6 sm:p-8">
               <PanelHeader label="What FORGE will not do" />
               <ul className="mt-5 space-y-3">
@@ -81,19 +81,19 @@ export default async function ForgePage() {
                 That path is not optional and cannot be turned off.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
         </div>
 
         <div className="space-y-5">
-          <Reveal delay={0.04}>
+          <Rise delay={40}>
             <ForgeMessageCard message={daily} />
-          </Reveal>
-          <Reveal delay={0.08}>
+          </Rise>
+          <Rise delay={80}>
             <ForgeMessageCard message={weekly} />
-          </Reveal>
+          </Rise>
 
           {ctx.todaySessions.filter((s) => s.type !== 'rest').length > 0 && (
-            <Reveal delay={0.12}>
+            <Rise delay={120}>
               <Panel className="p-6">
                 <PanelHeader label="Today's session, explained" />
                 <ul className="mt-5 space-y-5">
@@ -107,7 +107,7 @@ export default async function ForgePage() {
                     ))}
                 </ul>
               </Panel>
-            </Reveal>
+            </Rise>
           )}
         </div>
       </div>

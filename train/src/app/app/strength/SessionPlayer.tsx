@@ -16,12 +16,32 @@ interface SetKey {
 }
 
 /**
- * Strength session player.
+ * STRENGTH SESSION PLAYER — built for runners, not for a gym floor.
  *
  * One exercise on screen at a time, sets ticked as they are done, a rest timer
- * that starts itself, and RPE captured per set. Progress is saved to the server
- * as sets complete, so closing the app mid-session loses nothing.
+ * that starts itself, and RPE captured per set. Progress saves to the server as
+ * sets complete, so closing the app mid-session loses nothing.
+ *
+ * What makes it a runner's tool rather than a generic tracker: every exercise
+ * states what it does for your running before it states how to perform it, load
+ * is optional because most of this work is not loaded, and the reserve
+ * instruction is always visible — an endurance athlete lifting to failure has
+ * misunderstood the session.
  */
+
+/** What this movement does for running. Stated before the cues, not after. */
+const MOVEMENT_PURPOSE: Record<string, string> = {
+  squat: 'Drive and control through the whole stride.',
+  hinge: 'Hamstrings and glutes — the engine behind push-off.',
+  lunge: 'Single-leg strength. Running is a series of single-leg landings.',
+  push: 'Ankle and foot stiffness. Where free speed lives.',
+  pull: 'Posture under fatigue, and the back half of a long run.',
+  carry: 'Trunk stability when the legs stop helping.',
+  core: 'Keeps the hips level when everything else is tired.',
+  plyometric: 'Elastic return — the same effort, more distance.',
+  mobility: 'Range you can actually use at pace.',
+  rehab: 'Prescribed to keep you on the road.',
+};
 export function SessionPlayer({
   template,
   exercises,
@@ -111,7 +131,7 @@ export function SessionPlayer({
   if (!block || !exercise) {
     return (
       <Panel className="p-8">
-        <p className="text-[14px] text-muted">This template has no exercises yet.</p>
+        <p className="text-[14px] text-ink-secondary">This template has no exercises yet.</p>
       </Panel>
     );
   }
@@ -125,9 +145,9 @@ export function SessionPlayer({
             <PanelHeader label={`${template.name} · ${doneSets} of ${totalSets} sets`} />
             {complete && <Badge tone="green">Complete</Badge>}
           </div>
-          <div className="mt-4 h-px w-full bg-line-2">
+          <div className="mt-4 h-px w-full bg-steel">
             <motion.div
-              className="h-px bg-green"
+              className="h-px bg-mint"
               initial={false}
               animate={{ width: `${totalSets ? (doneSets / totalSets) * 100 : 0}%` }}
               transition={{ duration: reduced ? 0 : 0.5, ease: [0.22, 1, 0.36, 1] }}
@@ -145,12 +165,22 @@ export function SessionPlayer({
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
             <Panel edge className="p-7 sm:p-8">
-              <p className="im-micro">
-                Exercise {index + 1} of {template.blocks.length}
-              </p>
-              <h2 className="im-display mt-3 text-[clamp(1.5rem,3.4vw,2.1rem)]">{exercise.name}</h2>
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p className="im-micro">
+                  Exercise {index + 1} of {template.blocks.length}
+                </p>
+                <p className="im-micro text-[9px] capitalize">{exercise.category}</p>
+              </div>
+              <h2 className="im-display im-display-tight mt-3 text-[clamp(1.5rem,3.4vw,2.1rem)] text-ink">
+                {exercise.name}
+              </h2>
+              {MOVEMENT_PURPOSE[exercise.category] && (
+                <p className="mt-4 border-l-2 border-steel pl-4 text-[14px] leading-relaxed text-ink-body">
+                  {MOVEMENT_PURPOSE[exercise.category]}
+                </p>
+              )}
 
-              <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-line pt-6 sm:grid-cols-4">
+              <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-hairline pt-6 sm:grid-cols-4">
                 <Metric label="Sets" value={String(block.sets)} />
                 <Metric label="Reps" value={block.reps} />
                 {block.tempo && <Metric label="Tempo" value={block.tempo} />}
@@ -159,7 +189,7 @@ export function SessionPlayer({
               </dl>
 
               {/* video slot — labelled honestly rather than embedding a broken frame */}
-              <div className="mt-7 flex aspect-video items-center justify-center border border-line bg-iron-2">
+              <div className="mt-7 flex aspect-video items-center justify-center border border-hairline bg-slate">
                 {exercise.videoUrl ? (
                   <iframe
                     src={exercise.videoUrl}
@@ -174,12 +204,12 @@ export function SessionPlayer({
               </div>
 
               {exercise.cues.length > 0 && (
-                <div className="mt-7 border-t border-line pt-6">
+                <div className="mt-7 border-t border-hairline pt-6">
                   <p className="im-micro">Coaching cues</p>
                   <ul className="mt-3 space-y-2">
                     {exercise.cues.map((c) => (
-                      <li key={c} className="flex gap-3 text-[14px] leading-relaxed text-white">
-                        <span aria-hidden className="mt-2.5 block h-px w-4 shrink-0 bg-green" />
+                      <li key={c} className="flex gap-3 text-[14px] leading-relaxed text-ink-body">
+                        <span aria-hidden className="mt-2.5 block h-px w-4 shrink-0 bg-mint" />
                         {c}
                       </li>
                     ))}
@@ -188,13 +218,18 @@ export function SessionPlayer({
               )}
 
               {block.notes && (
-                <p className="mt-5 border-l-2 border-green bg-green/5 px-5 py-3.5 text-[13px] leading-relaxed">
+                <p className="mt-5 border-l-2 border-mint bg-mint/5 px-5 py-3.5 text-[13px] leading-relaxed text-ink-body">
                   {block.notes}
                 </p>
               )}
 
+              <p className="mt-5 text-[12px] leading-relaxed text-ink-tertiary">
+                Leave two reps in reserve on every set. This session exists to make the running
+                possible — it is not the session to find a maximum in.
+              </p>
+
               {/* ---- sets ---- */}
-              <div className="mt-8 border-t border-line pt-7">
+              <div className="mt-8 border-t border-hairline pt-7">
                 <p className="im-micro">Mark each set as you finish it</p>
                 <ul className="mt-4 space-y-2.5">
                   {Array.from({ length: block.sets }, (_, i) => {
@@ -208,8 +243,8 @@ export function SessionPlayer({
                           onClick={() => toggleSet({ exerciseId: block.exerciseId, setIndex: i }, block.rpeTarget)}
                           className={`flex w-full items-center justify-between gap-4 rounded-xs border px-5 py-3.5 text-left transition-colors ${
                             done
-                              ? 'border-green bg-green/10 text-white'
-                              : 'border-line-2 text-muted hover:border-line-2 hover:text-white'
+                              ? 'border-mint bg-mint/10 text-ink-body'
+                              : 'border-hairline-strong text-ink-secondary hover:border-hairline-strong hover:text-ink-body'
                           }`}
                         >
                           <span className="text-[13px] font-bold uppercase tracking-[0.12em]">
@@ -225,7 +260,7 @@ export function SessionPlayer({
                 </ul>
               </div>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
+              <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-hairline pt-6">
                 <Button variant="quiet" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
                   Previous
                 </Button>
@@ -239,7 +274,7 @@ export function SessionPlayer({
               </div>
 
               {status && (
-                <p role="status" className="mt-4 text-[12px] font-bold text-green">
+                <p role="status" className="mt-4 text-[12px] font-bold text-mint">
                   {status}
                 </p>
               )}
@@ -254,7 +289,7 @@ export function SessionPlayer({
           <PanelHeader label="Rest timer" />
           <p
             className={`im-mono mt-5 text-[clamp(2.4rem,6vw,3rem)] font-extrabold leading-none ${
-              restLeft === 0 ? 'text-green' : ''
+              restLeft === 0 ? 'text-mint' : ''
             }`}
             role="timer"
             aria-live="polite"
@@ -273,7 +308,7 @@ export function SessionPlayer({
               </Button>
             )}
           </div>
-          <p className="mt-4 text-[11px] leading-relaxed text-muted-2">
+          <p className="mt-4 text-[11px] leading-relaxed text-ink-tertiary">
             Starts on its own when you tick a set with a prescribed rest.
           </p>
         </Panel>
@@ -323,11 +358,11 @@ export function SessionPlayer({
                     type="button"
                     onClick={() => setIndex(i)}
                     className={`flex w-full items-center justify-between gap-3 py-1.5 text-left text-[13px] transition-colors ${
-                      i === index ? 'text-green' : 'text-muted hover:text-white'
+                      i === index ? 'text-mint' : 'text-ink-secondary hover:text-ink-body'
                     }`}
                   >
                     <span className="truncate">{ex?.name ?? 'Exercise'}</span>
-                    <span className="im-mono shrink-0 text-[11px] text-muted-2">
+                    <span className="im-mono shrink-0 text-[11px] text-ink-tertiary">
                       {setsDone}/{b.sets}
                     </span>
                   </button>
@@ -345,7 +380,7 @@ function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="im-micro">{label}</dt>
-      <dd className="im-mono mt-2 text-[14px] font-extrabold">{value}</dd>
+      <dd className="im-mono mt-2 text-[15px] font-extrabold text-ink">{value}</dd>
     </div>
   );
 }

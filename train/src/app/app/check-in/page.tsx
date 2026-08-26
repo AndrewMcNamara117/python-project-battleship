@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { ForgeMessageCard } from '@/components/app/ForgeMessageCard';
 import { WellbeingSmallMultiples } from '@/components/charts/TrainingCharts';
-import { Reveal } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
@@ -49,11 +49,11 @@ export default async function CheckInPage() {
         </div>
 
         <div className="space-y-5">
-          <Reveal>
+          <Rise>
             <ForgeMessageCard message={summary} />
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.06}>
+          <Rise delay={60}>
             <Panel className="p-6">
               <PanelHeader label="How this is used" />
               <p className="mt-4 text-[13px] leading-relaxed text-muted">
@@ -66,10 +66,10 @@ export default async function CheckInPage() {
                 replaces seeing someone qualified.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
 
           {ctx.checkins.length > 0 && (
-            <Reveal delay={0.1}>
+            <Rise delay={100}>
               <Panel className="p-6">
                 <PanelHeader label="Recent check-ins" />
                 <ul className="mt-4 space-y-4">
@@ -98,21 +98,21 @@ export default async function CheckInPage() {
                   ))}
                 </ul>
               </Panel>
-            </Reveal>
+            </Rise>
           )}
         </div>
       </div>
 
       {ctx.checkins.length > 1 && (
         <section className="mt-12">
-          <Reveal>
+          <Rise>
             <Panel className="p-6 sm:p-8">
               <PanelHeader label="Your trends" />
               <div className="mt-8">
                 <WellbeingSmallMultiples data={wellbeingSeries(ctx.checkins)} />
               </div>
             </Panel>
-          </Reveal>
+          </Rise>
         </section>
       )}
     </AppPage>

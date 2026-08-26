@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
@@ -48,11 +48,11 @@ export default async function CommunityPage() {
         <div className="space-y-5">
           <section>
             <h2 className="im-micro">Coming up</h2>
-            <RevealGroup className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4">
               {events.map((e) => {
                 const full = e.capacity != null && e.attendingCount >= e.capacity && !e.attending;
                 return (
-                  <RevealItem key={e.id}>
+                  <Rise key={e.id}>
                     <Panel hover className="p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0">
@@ -85,17 +85,17 @@ export default async function CommunityPage() {
                         </div>
                       </div>
                     </Panel>
-                  </RevealItem>
+                  </Rise>
                 );
               })}
-            </RevealGroup>
+            </div>
           </section>
 
           <section className="pt-6">
             <h2 className="im-micro">From the club</h2>
-            <RevealGroup className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4">
               {posts.map((p) => (
-                <RevealItem key={p.id}>
+                <Rise key={p.id}>
                   <Panel className="p-6">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <Badge tone={p.kind === 'milestone' ? 'green' : 'neutral'}>
@@ -120,14 +120,14 @@ export default async function CommunityPage() {
                       </div>
                     )}
                   </Panel>
-                </RevealItem>
+                </Rise>
               ))}
-            </RevealGroup>
+            </div>
           </section>
         </div>
 
         <div className="space-y-5">
-          <Reveal>
+          <Rise>
             <Panel className="p-6">
               <PanelHeader label="Race calendar" />
               <ul className="mt-5 space-y-4">
@@ -144,9 +144,9 @@ export default async function CommunityPage() {
                 {!upcomingRaces.length && <p className="text-[13px] text-muted">Nothing on the calendar yet.</p>}
               </ul>
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.06}>
+          <Rise delay={60}>
             <Panel className="p-6">
               <PanelHeader label="Your training group" />
               <p className="mt-4 text-[14px] leading-relaxed text-muted">
@@ -160,7 +160,7 @@ export default async function CommunityPage() {
                 Open the leaderboard
               </Link>
             </Panel>
-          </Reveal>
+          </Rise>
         </div>
       </div>
     </AppPage>

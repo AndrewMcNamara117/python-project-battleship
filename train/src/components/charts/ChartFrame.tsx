@@ -25,7 +25,7 @@ export function ChartFrame({
       <figcaption className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
           <h3 className="im-micro">{title}</h3>
-          {note && <p className="mt-1.5 text-[11px] text-muted-2">{note}</p>}
+          {note && <p className="mt-1.5 text-[11px] text-ink-tertiary">{note}</p>}
         </div>
         {legend}
       </figcaption>
@@ -55,7 +55,7 @@ export function LegendKey({
                 : { width: 8, height: 10, background: i.color, borderRadius: 2 }
             }
           />
-          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-secondary">
             {i.label}
           </span>
         </li>

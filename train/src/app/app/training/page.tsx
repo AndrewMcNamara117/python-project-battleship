@@ -1,118 +1,234 @@
 import type { Metadata } from 'next';
-import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { WorkoutCard } from '@/components/app/WorkoutCard';
-import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
-import { RouteLine } from '@/components/motion/RouteLine';
-import { Badge } from '@/components/ui/Badge';
-import { Panel, PanelHeader } from '@/components/ui/Panel';
+import { AppPage } from '@/components/app/PageHeader';
+import { AppHeader, SectionHeading } from '@/components/forge/AppHeader';
+import { EmptyState } from '@/components/forge/EmptyState';
+import { ForgeLine } from '@/components/forge/ForgeLine';
+import { IntensityScale } from '@/components/forge/IntensityScale';
+import { SessionCard } from '@/components/forge/SessionCard';
+import { SessionGlyph } from '@/components/forge/SessionGlyph';
+import { Rise } from '@/components/motion/Rise';
+import { StatusTag, sessionLabel, sessionTone } from '@/components/ui/StatusTag';
+import { ButtonLink } from '@/components/ui/Button';
+import { Panel } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
 import { getRepo } from '@/lib/data';
-import { addDays, daysBetween, formatDistance, formatDayMonth } from '@/lib/domain/dates';
-import { explainSession } from '@/lib/forge/assistant';
-import { INTENSITY_LABELS, WORKOUT_TYPE_LABELS } from '@/lib/domain/types';
+import { isRun } from '@/lib/domain/analytics';
+import {
+  addDays,
+  daysBetween,
+  formatDayMonth,
+  formatDistance,
+  formatMinutes,
+  formatPaceRange,
+  WEEKDAY_LABELS,
+  weekdayIndex,
+} from '@/lib/domain/dates';
+import { WORKOUT_TYPE_LABELS } from '@/lib/domain/types';
 
 export const metadata: Metadata = { title: 'Endurance' };
 
+/**
+ * ENDURANCE — the running programme.
+ *
+ * Structured so a session is the unit of attention, not a row in a list. The
+ * next prescribed run gets the full card treatment; everything after it is a
+ * legible queue that still carries type, intensity and the numbers to hold.
+ *
+ * The block header states where the athlete is in the programme, because a
+ * session means something different in week 3 than in week 19 — and that
+ * context is the difference between a training system and a workout list.
+ */
 export default async function TrainingPage() {
   const ctx = await loadAthleteContext();
   const repo = await getRepo();
   const program = await repo.getProgram(ctx.session.userId);
 
-  const upcoming = await repo.listScheduled(
-    ctx.session.userId,
-    ctx.today,
-    addDays(ctx.today, 21),
-  );
-  const upcomingRuns = upcoming.filter((w) => w.type !== 'strength' && w.type !== 'rest');
+  const upcoming = await repo.listScheduled(ctx.session.userId, ctx.today, addDays(ctx.today, 28));
+  const runs = upcoming.filter((w) => isRun(w.type) || w.type === 'brick' || w.type === 'cross_training');
+  const [next, ...queue] = runs;
 
-  const weeksElapsed = program ? Math.max(0, Math.floor(daysBetween(program.startDate, ctx.today) / 7)) : 0;
+  const units = ctx.profile.units;
+  const weeksElapsed = program
+    ? Math.max(0, Math.floor(daysBetween(program.startDate, ctx.today) / 7))
+    : 0;
   const weeksTotal = program ? Math.ceil(daysBetween(program.startDate, program.endDate) / 7) : 0;
+  const blockProgress = weeksTotal ? Math.min(1, (weeksElapsed + 1) / weeksTotal) : 0;
+
+  const volumeSeries = ctx.buckets.map((b) => b.actualKm);
+  const longRunSeries = ctx.buckets.map((b) => b.longestRunKm);
 
   return (
     <AppPage>
-      <PageHeader
+      <AppHeader
         eyebrow="Endurance programme"
         title={program?.name ?? 'Your programme'}
         lead={
           program
-            ? `Week ${weeksElapsed + 1} of ${weeksTotal}. Written by ${ctx.coach?.fullName ?? 'your coach'} and adjusted every week off what you log.`
+            ? `Written by ${ctx.coach?.fullName ?? 'your coach'} and adjusted every week off what you log.`
             : 'No active programme yet. Your coach writes the first block after onboarding.'
         }
-        action={
-          program ? <Badge tone="green">{program.status === 'active' ? 'Active' : program.status}</Badge> : undefined
+        figure={
+          program ? { value: `${weeksElapsed + 1}/${weeksTotal}`, label: 'weeks into the block' } : undefined
         }
       />
 
+      {/* ---- where the block is ---- */}
       {program && (
-        <Reveal>
-          <Panel className="mt-8 p-7">
-            <PanelHeader label="Block progress" />
-            <div className="mt-5 flex items-baseline justify-between gap-4">
-              <p className="im-mono text-[13px] text-muted">
+        <Rise>
+          <Panel className="mt-7 p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+              <SectionHeading label="Block progress" />
+              <p className="im-mono text-[11px] tracking-[0.12em] text-ink-secondary">
                 {formatDayMonth(program.startDate)} → {formatDayMonth(program.endDate)}
               </p>
-              <p className="im-mono text-[13px] font-bold text-green">
-                {weeksTotal ? Math.round(((weeksElapsed + 1) / weeksTotal) * 100) : 0}%
-              </p>
             </div>
-            <div className="mt-4 h-px w-full bg-line-2">
+            <div className="mt-4 h-px w-full bg-steel">
               <div
-                className="h-px bg-green"
-                style={{ width: `${weeksTotal ? Math.min(100, ((weeksElapsed + 1) / weeksTotal) * 100) : 0}%` }}
+                className="h-px bg-mint transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                style={{ width: `${blockProgress * 100}%` }}
               />
             </div>
-            <RouteLine className="mt-8 h-16 w-full" />
+
+            <div className="mt-7 grid gap-x-8 gap-y-7 sm:grid-cols-2">
+              <div className="min-w-0">
+                <SectionHeading label="Weekly volume" />
+                <ForgeLine
+                  variant="load"
+                  data={volumeSeries}
+                  label="Weekly volume"
+                  unit={units === 'metric' ? 'km' : 'mi'}
+                  className="mt-3.5 w-full"
+                  height={46}
+                />
+              </div>
+              <div className="min-w-0">
+                <SectionHeading label="Long-run progression" />
+                <ForgeLine
+                  variant="elevation"
+                  data={longRunSeries}
+                  label="Longest run each week"
+                  unit={units === 'metric' ? 'km' : 'mi'}
+                  className="mt-3.5 w-full"
+                  height={46}
+                  delay={120}
+                />
+              </div>
+            </div>
           </Panel>
-        </Reveal>
+        </Rise>
       )}
 
-      <section className="mt-10">
-        <h2 className="im-micro">Next three weeks</h2>
-        <RevealGroup className="mt-5 space-y-4">
-          {upcomingRuns.slice(0, 12).map((w) => (
-            <RevealItem key={w.id}>
-              <Panel hover className="flex flex-wrap items-center gap-x-6 gap-y-4 p-5">
-                <div className="min-w-[110px]">
-                  <p className="im-micro">{formatDayMonth(w.date)}</p>
-                  <p className="mt-1.5 text-[11px] uppercase tracking-[0.14em] text-muted-2">
-                    {WORKOUT_TYPE_LABELS[w.type]}
-                  </p>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-bold">{w.name}</p>
-                  {w.mainSet && <p className="mt-1.5 text-[12px] leading-relaxed text-muted">{w.mainSet}</p>}
-                </div>
-                <div className="im-mono flex shrink-0 gap-5 text-[12px]">
-                  {w.distanceKm != null && (
-                    <span className="text-white">{formatDistance(w.distanceKm, ctx.profile.units)}</span>
+      {/* ---- the next session, at full weight ---- */}
+      <section className="mt-9">
+        <SectionHeading
+          label="Next session"
+          action={
+            next ? (
+              <span className="im-mono text-[11px] tracking-[0.12em] text-ink-secondary">
+                {next.date === ctx.today
+                  ? 'Today'
+                  : `${WEEKDAY_LABELS[weekdayIndex(next.date)]} · ${formatDayMonth(next.date)}`}
+              </span>
+            ) : undefined
+          }
+        />
+        <div className="mt-4">
+          {next ? (
+            <Rise>
+              <SessionCard workout={next} units={units} size="lead">
+                <div className="flex flex-wrap gap-3">
+                  {next.date === ctx.today && (
+                    <ButtonLink href="/app/today">Open today</ButtonLink>
                   )}
-                  <Badge tone={w.intensity === 'hard' || w.intensity === 'max' ? 'green' : 'neutral'}>
-                    {INTENSITY_LABELS[w.intensity]}
-                  </Badge>
+                  <ButtonLink href="/app/calendar" variant="ghost">
+                    See it in the calendar
+                  </ButtonLink>
                 </div>
-              </Panel>
-            </RevealItem>
-          ))}
-          {!upcomingRuns.length && (
-            <Panel className="p-7">
-              <p className="text-[14px] text-muted">No endurance sessions scheduled in the next three weeks.</p>
-            </Panel>
+              </SessionCard>
+            </Rise>
+          ) : (
+            <EmptyState
+              title="Nothing prescribed."
+              body="No endurance sessions are scheduled in the next four weeks. Your coach assigns the next block from their programme builder."
+              action={
+                <ButtonLink href="/app/coach" variant="ghost">
+                  Message your coach
+                </ButtonLink>
+              }
+            />
           )}
-        </RevealGroup>
+        </div>
       </section>
 
-      {ctx.todaySessions.some((s) => s.type !== 'rest' && s.type !== 'strength') && (
-        <section className="mt-12">
-          <h2 className="im-micro">Today in detail</h2>
-          <div className="mt-5">
-            {ctx.todaySessions
-              .filter((s) => s.type !== 'rest' && s.type !== 'strength')
-              .map((w) => (
-                <WorkoutCard key={w.id} workout={w} units={ctx.profile.units}>
-                  <p className="text-[14px] leading-relaxed text-muted">{explainSession(w)}</p>
-                </WorkoutCard>
-              ))}
-          </div>
+      {/* ---- the queue ---- */}
+      {queue.length > 0 && (
+        <section className="mt-10">
+          <SectionHeading
+            label="Coming up"
+            action={
+              <span className="im-mono text-[10px] uppercase tracking-[0.16em] text-ink-tertiary">
+                Next four weeks
+              </span>
+            }
+          />
+          <ul className="mt-4 space-y-3">
+            {queue.slice(0, 14).map((w, i) => (
+              <Rise key={w.id} delay={Math.min(i * 25, 200)}>
+                <Panel hover className="flex flex-wrap items-center gap-x-6 gap-y-4 p-4 sm:p-5">
+                  <div className="flex w-[104px] shrink-0 items-center gap-3">
+                    <SessionGlyph type={w.type} status={w.status} className="shrink-0" />
+                    <div className="min-w-0">
+                      <p className="im-mono text-[11px] font-bold text-ink">{formatDayMonth(w.date)}</p>
+                      <p className="im-micro mt-1 text-[9px]">{WEEKDAY_LABELS[weekdayIndex(w.date)]}</p>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold text-ink-body">{w.name}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.14em] text-ink-secondary">
+                      {WORKOUT_TYPE_LABELS[w.type]}
+                    </p>
+                    {w.mainSet && (
+                      <p className="mt-2 max-w-[62ch] text-[12px] leading-relaxed text-ink-secondary">
+                        {w.mainSet}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
+                    <dl className="im-mono flex gap-5 text-[12px]">
+                      {w.distanceKm != null && (
+                        <div>
+                          <dt className="im-micro text-[9px]">Distance</dt>
+                          <dd className="mt-1 font-bold text-ink">
+                            {formatDistance(w.distanceKm, units)}
+                          </dd>
+                        </div>
+                      )}
+                      {w.durationMinutes != null && (
+                        <div>
+                          <dt className="im-micro text-[9px]">Time</dt>
+                          <dd className="mt-1 font-bold text-ink">
+                            {formatMinutes(w.durationMinutes)}
+                          </dd>
+                        </div>
+                      )}
+                      {w.paceRange && (
+                        <div className="hidden xl:block">
+                          <dt className="im-micro text-[9px]">Pace</dt>
+                          <dd className="mt-1 font-bold text-ink">
+                            {formatPaceRange(w.paceRange, units)}
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                    <IntensityScale intensity={w.intensity} showLabel={false} />
+                    <StatusTag tone={sessionTone(w.status)}>{sessionLabel(w.status)}</StatusTag>
+                  </div>
+                </Panel>
+              </Rise>
+            ))}
+          </ul>
         </section>
       )}
     </AppPage>

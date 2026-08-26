@@ -12,17 +12,20 @@
  * Where four measures must be compared (wellbeing), we facet into small
  * multiples rather than invent three more hues.
  */
+import { ACCENT, INK, LINE, STATUS, SURFACE } from '@/lib/tokens';
+
 export const CHART = {
-  surface: '#0a0b0b',
-  accent: '#2dff8a',
-  accentDim: '#1f9e5a',
-  reference: '#5d625f',
-  grid: 'rgba(238,238,238,0.075)',
-  axisText: '#5d625f',
-  labelText: '#8b918d',
-  ink: '#eeeeee',
-  warn: '#ffb648',
-  alert: '#ff6b5a',
+  surface: SURFACE.charcoal,
+  accent: ACCENT.mint,
+  accentDim: ACCENT.mintDim,
+  /** Prescribed / target marks sit in steel — recessive by design, not a second hue. */
+  reference: SURFACE.steel,
+  grid: LINE.hairline,
+  axisText: INK.secondary,
+  labelText: INK.secondary,
+  ink: INK.body,
+  warn: STATUS.inProgress,
+  alert: STATUS.missed,
 } as const;
 
 /** Fixed mark specs — thin marks, hairline chrome, air around everything. */

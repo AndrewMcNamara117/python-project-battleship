@@ -50,7 +50,7 @@ export function LogSessionForm({
 
       <div className="flex items-baseline justify-between gap-4">
         <p className="im-micro">{done ? 'Update your log' : 'Log this session'}</p>
-        {done && <span className="im-micro text-green">Completed</span>}
+        {done && <span className="im-micro text-mint">Completed</span>}
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -85,7 +85,7 @@ export function LogSessionForm({
       </div>
 
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-secondary">
           How hard did it feel?
         </p>
         <div className="mt-3">
@@ -98,7 +98,7 @@ export function LogSessionForm({
           />
         </div>
         {workout.rpeTarget != null && (
-          <p className="mt-2.5 text-[12px] text-muted-2">Prescribed RPE was {workout.rpeTarget}.</p>
+          <p className="mt-2.5 text-[12px] text-ink-tertiary">Prescribed RPE was {workout.rpeTarget}.</p>
         )}
       </div>
 
@@ -106,13 +106,13 @@ export function LogSessionForm({
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted transition-colors hover:text-green"
+        className="text-[10px] font-bold uppercase tracking-[0.2em] text-ink-secondary transition-colors hover:text-mint"
       >
         {expanded ? 'Fewer details' : 'Add heart rate, soreness and notes'}
       </button>
 
       {expanded && (
-        <div className="space-y-7 border-t border-line pt-7">
+        <div className="space-y-7 border-t border-hairline pt-7">
           <div className="grid gap-6 sm:grid-cols-2">
             <Field label="Average HR" error={result?.fieldErrors?.averageHeartRate}>
               {(p) => <Input name="averageHeartRate" type="number" min={30} max={240} inputMode="numeric" {...p} />}
@@ -123,7 +123,7 @@ export function LogSessionForm({
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">Soreness after</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-secondary">Soreness after</p>
             <div className="mt-3">
               <ScaleInput
                 value={soreness}
@@ -136,7 +136,7 @@ export function LogSessionForm({
           </div>
 
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">Session rating</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-secondary">Session rating</p>
             <div className="mt-3 flex gap-2">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -146,15 +146,15 @@ export function LogSessionForm({
                   onClick={() => setRating(n)}
                   className={`h-11 flex-1 rounded-xs border text-[12px] font-bold transition-colors ${
                     rating === n
-                      ? 'border-green bg-green text-green-deep'
-                      : 'border-line-2 text-muted hover:text-white'
+                      ? 'border-mint bg-mint text-mint-deep'
+                      : 'border-hairline-strong text-ink-secondary hover:text-ink-body'
                   }`}
                 >
                   {n}
                 </button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-muted-2">
+            <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-ink-tertiary">
               1 = fell apart · 5 = felt unstoppable
             </p>
           </div>
@@ -170,7 +170,7 @@ export function LogSessionForm({
       {result && (
         <p
           role="status"
-          className={`text-[13px] font-bold ${result.ok ? 'text-green' : 'text-alert'}`}
+          className={`text-[13px] font-bold ${result.ok ? 'text-mint' : 'text-status-missed'}`}
         >
           {result.message}
         </p>

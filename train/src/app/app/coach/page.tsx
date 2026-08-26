@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { Reveal } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge, Dot } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
@@ -34,7 +34,7 @@ export default async function CoachPage() {
       />
 
       <div className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
-        <Reveal>
+        <Rise>
           <Panel className="flex flex-col p-6 sm:p-8">
             <PanelHeader label="Conversation" />
 
@@ -86,10 +86,10 @@ export default async function CoachPage() {
               )}
             </div>
           </Panel>
-        </Reveal>
+        </Rise>
 
         <div className="space-y-5">
-          <Reveal delay={0.06}>
+          <Rise delay={60}>
             <Panel className="p-6">
               <PanelHeader label="Notes shared with you" />
               <ul className="mt-5 space-y-4">
@@ -108,9 +108,9 @@ export default async function CoachPage() {
                 not return them to you.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.1}>
+          <Rise delay={100}>
             <Panel className="p-6">
               <PanelHeader label="Check-in responses" />
               <ul className="mt-5 space-y-5">
@@ -130,7 +130,7 @@ export default async function CoachPage() {
                 )}
               </ul>
             </Panel>
-          </Reveal>
+          </Rise>
         </div>
       </div>
     </AppPage>

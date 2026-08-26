@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { Reveal } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
@@ -42,19 +42,19 @@ export default async function ProfilePage() {
 
       <div className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
         <div className="space-y-5">
-          <Reveal>
+          <Rise>
             <ProfileSettings profile={ctx.profile} />
-          </Reveal>
-          <Reveal delay={0.06}>
+          </Rise>
+          <Rise delay={60}>
             <PrivacyControls profile={ctx.profile} />
-          </Reveal>
-          <Reveal delay={0.1}>
+          </Rise>
+          <Rise delay={100}>
             <DataControls email={ctx.profile.email} />
-          </Reveal>
+          </Rise>
         </div>
 
         <div className="space-y-5">
-          <Reveal delay={0.04}>
+          <Rise delay={40}>
             <Panel className="p-6">
               <PanelHeader label="Target race" />
               {ctx.race || ctx.goal ? (
@@ -75,9 +75,9 @@ export default async function ProfilePage() {
                 <p className="mt-4 text-[14px] text-muted">No goal set yet.</p>
               )}
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.08}>
+          <Rise delay={80}>
             <Panel className="p-6">
               <PanelHeader
                 label="Subscription"
@@ -112,9 +112,9 @@ export default async function ProfilePage() {
                 <p className="mt-5 text-[14px] text-muted">No active subscription.</p>
               )}
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.12}>
+          <Rise delay={120}>
             <Panel className="p-6">
               <PanelHeader label="Connected apps" />
               <ul className="mt-5 space-y-3.5">
@@ -137,9 +137,9 @@ export default async function ProfilePage() {
                 one thing that works than five that half do.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
 
-          <Reveal delay={0.16}>
+          <Rise delay={160}>
             <Panel className="p-6">
               <PanelHeader label="Consent" />
               <p className="mt-4 text-[13px] leading-relaxed text-muted">
@@ -155,7 +155,7 @@ export default async function ProfilePage() {
                 the data. Deleting your account above does both.
               </p>
             </Panel>
-          </Reveal>
+          </Rise>
         </div>
       </div>
     </AppPage>

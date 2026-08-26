@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { StatCard } from '@/components/app/StatCard';
-import { RevealGroup, RevealItem } from '@/components/motion/Reveal';
+import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
@@ -38,17 +38,17 @@ export default async function LeaderboardPage() {
         lead="A score built on turning up, not on going furthest."
       />
 
-      <RevealGroup className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <RevealItem>
+      <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <Rise>
           <StatCard label="Forge Score" value={ctx.stats.forgeTotal} note={`Tier: ${ctx.stats.tier.name}`} meter={ctx.stats.tier.progress} />
-        </RevealItem>
-        <RevealItem>
+        </Rise>
+        <Rise>
           <StatCard label="This week" value={ctx.stats.forgeWeek} suffix=" pts" />
-        </RevealItem>
-        <RevealItem>
+        </Rise>
+        <Rise>
           <StatCard label="This month" value={ctx.stats.forgeMonth} suffix=" pts" />
-        </RevealItem>
-        <RevealItem>
+        </Rise>
+        <Rise>
           <StatCard
             label="Week streak"
             value={ctx.stats.streakWeeks}
@@ -58,8 +58,8 @@ export default async function LeaderboardPage() {
                 : 'Top tier reached'
             }
           />
-        </RevealItem>
-      </RevealGroup>
+        </Rise>
+      </div>
 
       <div className="mt-10">
         <LeaderboardTabs
