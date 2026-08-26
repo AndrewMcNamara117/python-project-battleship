@@ -62,3 +62,26 @@ export async function requireCoach(): Promise<Session> {
   }
   return session;
 }
+
+/**
+ * A coach, and specifically this athlete's coach.
+ *
+ * Row-level security enforces the same rule in Postgres, but an action that
+ * takes an athleteId from the client must not rely on the database alone:
+ * demo mode has no RLS, an admin client bypasses it, and a policy gap becomes a
+ * silent hole rather than a refused request. Defence in depth is the point —
+ * this is the second lock, not the only one.
+ *
+ * Admins pass, because an admin is authorised over every athlete by definition.
+ */
+export async function requireCoachOf(
+  athleteId: string,
+): Promise<{ session: Session; authorised: true } | { session: Session; authorised: false }> {
+  const session = await requireCoach();
+  if (session.role === 'admin') return { session, authorised: true };
+
+  const { getRepo } = await import('@/lib/data');
+  const repo = await getRepo();
+  const roster = await repo.listAthletesForCoach(session.userId);
+  return { session, authorised: roster.some((a) => a.id === athleteId) };
+}

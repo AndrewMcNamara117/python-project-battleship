@@ -375,6 +375,98 @@ describe('intake', () => {
   });
 });
 
+/* ---------------- the coaching relationship gates writes ---------------- */
+
+describe('coach notes require the coaching relationship', () => {
+  it('a coach cannot write a note about an athlete they do not coach', async () => {
+    // Regression: the original policy checked coach_id = auth.uid() only, so any
+    // coach could author a private note about any athlete in the system.
+    const refused = await t.expectRefused(
+      otherCoach,
+      `insert into coach_notes (athlete_id, coach_id, body, visibility)
+       values ($1, $2, 'intrusion', 'private')`,
+      [athlete, otherCoach],
+    );
+    assert.ok(refused, 'expected the note to be refused');
+
+    const { rows } = await t.asService('select body from coach_notes where athlete_id = $1', [athlete]);
+    assert.ok(!rows.some((r) => r.body === 'intrusion'), 'no note should have been written');
+  });
+
+  it('a coach cannot forge authorship to reach an athlete they do not coach', async () => {
+    const refused = await t.expectRefused(
+      otherCoach,
+      `insert into coach_notes (athlete_id, coach_id, body, visibility)
+       values ($1, $2, 'spoofed author', 'private')`,
+      [athlete, coach],
+    );
+    assert.ok(refused, 'expected the spoofed authorship to be refused');
+  });
+
+  it('the athlete\u2019s own coach can still write', async () => {
+    const { rows } = await t.asUser(
+      coach,
+      `insert into coach_notes (athlete_id, coach_id, body, visibility)
+       values ($1, $2, 'legitimate note', 'private') returning id`,
+      [athlete, coach],
+    );
+    assert.equal(rows.length, 1);
+  });
+});
+
+/* ---------------- the athlete model ---------------- */
+
+describe('athlete profile fields', () => {
+  it('training days are constrained to real weekdays', async () => {
+    const refused = await t.expectRefused(
+      athlete,
+      `update profiles set available_training_days = array[0,9]::smallint[] where id = $1`,
+      [athlete],
+    );
+    assert.ok(refused, 'expected weekday 0 and 9 to be rejected');
+  });
+
+  it('an athlete can set their own availability and coaching context', async () => {
+    await t.asUser(
+      athlete,
+      `update profiles
+          set available_training_days = array[1,3,5,7]::smallint[],
+              current_weekly_km = 42.5,
+              injury_notes = 'left calf tight after long runs'
+        where id = $1`,
+      [athlete],
+    );
+    const { rows } = await t.asService(
+      'select available_training_days, current_weekly_km, injury_notes from profiles where id = $1',
+      [athlete],
+    );
+    assert.deepEqual(rows[0].available_training_days, [1, 3, 5, 7]);
+    assert.equal(Number(rows[0].current_weekly_km), 42.5);
+    assert.match(rows[0].injury_notes, /calf/);
+  });
+
+  it('an athlete cannot edit another athlete\u2019s injury notes', async () => {
+    await t.asUser(athlete, `update profiles set injury_notes = 'tampered' where id = $1`, [otherAthlete]);
+    const { rows } = await t.asService('select injury_notes from profiles where id = $1', [otherAthlete]);
+    assert.notEqual(rows[0].injury_notes, 'tampered');
+  });
+
+  it('a linked coach can read the athlete\u2019s coaching context', async () => {
+    const { rows } = await t.asUser(
+      coach,
+      'select current_weekly_km, injury_notes, available_training_days from profiles where id = $1',
+      [athlete],
+    );
+    assert.equal(rows.length, 1);
+    assert.match(rows[0].injury_notes ?? '', /calf/);
+  });
+
+  it('an unlinked coach cannot', async () => {
+    const { rows } = await t.asUser(otherCoach, 'select injury_notes from profiles where id = $1', [athlete]);
+    assert.equal(rows.length, 0);
+  });
+});
+
 /* ---------------- privacy ---------------- */
 
 describe('privacy', () => {

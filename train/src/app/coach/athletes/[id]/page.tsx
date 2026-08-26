@@ -28,6 +28,8 @@ import { totalScore } from '@/lib/domain/forge-score';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { CoachNoteForm, CheckInResponder } from './CoachControls';
 import { SessionEditor } from './SessionEditor';
+import { CoachingContextControl } from './PhaseControl';
+import { AthleteContext } from '@/components/forge/AthleteContext';
 
 export const metadata: Metadata = { title: 'Athlete' };
 
@@ -214,6 +216,20 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
         </div>
 
         <div className="min-w-0 space-y-5">
+          <Reveal delay={0.02}>
+            <AthleteContext
+              profile={profile}
+              units={profile.units}
+              control={
+                <CoachingContextControl
+                  athleteId={id}
+                  phase={profile.trainingPhase}
+                  experience={profile.experienceLevel}
+                />
+              }
+            />
+          </Reveal>
+
           <Reveal delay={0.04}>
             <Panel className="p-6">
               <PanelHeader label="Goal" />

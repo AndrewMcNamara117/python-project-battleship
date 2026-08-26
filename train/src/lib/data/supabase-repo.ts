@@ -33,6 +33,8 @@ import type { IronMilesRepo } from './repo';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
+
 /**
  * Postgres-backed implementation. Every call goes through a request-scoped
  * client carrying the user's JWT, so row-level security — not this file — is
@@ -74,6 +76,16 @@ export class SupabaseRepo implements IronMilesRepo {
     healthDataConsentAt: r.health_data_consent_at,
     leaderboardOptIn: r.leaderboard_opt_in,
     forgeAssistantEnabled: r.forge_assistant_enabled,
+    experienceLevel: r.experience_level ?? null,
+    trainingPhase: r.training_phase ?? null,
+    preferredTrainingDays: r.preferred_training_days ?? [],
+    availableTrainingDays: r.available_training_days ?? [],
+    typicalSessionMinutes: r.typical_session_minutes ?? null,
+    currentWeeklyKm: r.current_weekly_km == null ? null : Number(r.current_weekly_km),
+    gymAccess: r.gym_access ?? null,
+    equipment: r.equipment ?? [],
+    injuryNotes: r.injury_notes ?? null,
+    limitationsNotes: r.limitations_notes ?? null,
   });
 
   private toScheduled = (r: any): ScheduledWorkout => ({
@@ -231,6 +243,16 @@ export class SupabaseRepo implements IronMilesRepo {
     if (patch.forgeAssistantEnabled !== undefined) row.forge_assistant_enabled = patch.forgeAssistantEnabled;
     if (patch.healthDataConsentAt !== undefined) row.health_data_consent_at = patch.healthDataConsentAt;
     if (patch.onboardedAt !== undefined) row.onboarded_at = patch.onboardedAt;
+    if (patch.experienceLevel !== undefined) row.experience_level = patch.experienceLevel;
+    if (patch.trainingPhase !== undefined) row.training_phase = patch.trainingPhase;
+    if (patch.preferredTrainingDays !== undefined) row.preferred_training_days = patch.preferredTrainingDays;
+    if (patch.availableTrainingDays !== undefined) row.available_training_days = patch.availableTrainingDays;
+    if (patch.typicalSessionMinutes !== undefined) row.typical_session_minutes = patch.typicalSessionMinutes;
+    if (patch.currentWeeklyKm !== undefined) row.current_weekly_km = patch.currentWeeklyKm;
+    if (patch.gymAccess !== undefined) row.gym_access = patch.gymAccess;
+    if (patch.equipment !== undefined) row.equipment = patch.equipment;
+    if (patch.injuryNotes !== undefined) row.injury_notes = patch.injuryNotes;
+    if (patch.limitationsNotes !== undefined) row.limitations_notes = patch.limitationsNotes;
 
     const { data, error } = await this.db.from('profiles').update(row).eq('id', userId).select('*').single();
     if (error) throw new Error(error.message);
@@ -296,6 +318,9 @@ export class SupabaseRepo implements IronMilesRepo {
       forgeAssistantEnabled: data.preferences.forgeAssistantEnabled,
       healthDataConsentAt: now,
       onboardedAt: now,
+      // onboarding answers land in real columns, not only the JSONB blob, so
+      // the coach dashboard can query them
+      ...profileFieldsFromOnboarding(data),
     });
 
     if (data.goal.raceDate) {

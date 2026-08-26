@@ -292,6 +292,16 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     healthDataConsentAt: '2024-01-08T09:00:00.000Z',
     leaderboardOptIn: false,
     forgeAssistantEnabled: true,
+    experienceLevel: null,
+    trainingPhase: null,
+    preferredTrainingDays: [],
+    availableTrainingDays: [],
+    typicalSessionMinutes: null,
+    currentWeeklyKm: null,
+    gymAccess: null,
+    equipment: [],
+    injuryNotes: null,
+    limitationsNotes: null,
   };
 
   const profiles: Profile[] = [
@@ -311,6 +321,18 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       healthDataConsentAt: '2024-06-03T09:00:00.000Z',
       leaderboardOptIn: true,
       forgeAssistantEnabled: true,
+      experienceLevel: (i === 0 ? 'experienced' : 'developing') as Profile['experienceLevel'],
+      trainingPhase: (i === 0 ? 'build' : 'base') as Profile['trainingPhase'],
+      // Mon/Tue/Wed/Thu/Fri/Sat/Sun as ISO numbers — the demo week trains all seven
+      preferredTrainingDays: [1, 2, 3, 4, 5, 6, 7] as Profile['preferredTrainingDays'],
+      availableTrainingDays: [1, 2, 3, 4, 5, 6, 7] as Profile['availableTrainingDays'],
+      typicalSessionMinutes: i === 0 ? 75 : 55,
+      currentWeeklyKm: i === 0 ? 59 : 32,
+      gymAccess: (i === 0 ? 'full_gym' : 'home_gym') as Profile['gymAccess'],
+      equipment: i === 0 ? ['Barbell', 'Dumbbells', 'Bench', 'Box or step'] : ['Dumbbells'],
+      injuryNotes:
+        i === 0 ? 'Left calf tightens after long runs. Eases within a day.' : null,
+      limitationsNotes: null,
     })),
   ];
 

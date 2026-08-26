@@ -12,6 +12,52 @@ export type ISOTimestamp = string;
 export type Role = 'athlete' | 'coach' | 'admin';
 export type Units = 'metric' | 'imperial';
 
+/** Where an athlete is starting from. Set at onboarding, adjustable by the coach. */
+export type ExperienceLevel = 'beginner' | 'developing' | 'experienced' | 'competitive';
+
+export const EXPERIENCE_LABELS: Record<ExperienceLevel, string> = {
+  beginner: 'Beginner',
+  developing: 'Developing',
+  experienced: 'Experienced',
+  competitive: 'Competitive',
+};
+
+/**
+ * Where the athlete is in their training cycle.
+ *
+ * Coach-settable today. When programme blocks land, a block carries its own
+ * phase and this becomes the cached current value rather than the source of
+ * truth — the column stays, its authority moves.
+ */
+export type TrainingPhase = 'base' | 'build' | 'sharpen' | 'race' | 'recover' | 'off';
+
+export const PHASE_LABELS: Record<TrainingPhase, string> = {
+  base: 'Base',
+  build: 'Build',
+  sharpen: 'Sharpen',
+  race: 'Race',
+  recover: 'Recover',
+  off: 'Off-season',
+};
+
+export const PHASE_INTENT: Record<TrainingPhase, string> = {
+  base: 'Build the foundation. Volume over intensity.',
+  build: 'Increase volume and intensity together.',
+  sharpen: 'Refine fitness. Peak and perform.',
+  race: 'Execute the plan. Own the day.',
+  recover: 'Rest. Adapt. Come back stronger.',
+  off: 'Away from structured training.',
+};
+
+/** ISO weekday, 1 = Monday. Matches the database check constraint. */
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export const WEEKDAY_SHORT: Record<Weekday, string> = {
+  1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
+};
+
+export type GymAccess = 'full_gym' | 'home_gym' | 'bodyweight' | 'none';
+
 /* ---------------- identity ---------------- */
 
 export interface Profile {
@@ -32,6 +78,28 @@ export interface Profile {
   leaderboardOptIn: boolean;
   /** Coach can silence the automated assistant per athlete. */
   forgeAssistantEnabled: boolean;
+
+  /* ---- coaching context ----
+     Promoted out of the onboarding JSONB blob so the coach dashboard can
+     actually query, sort and flag on it. An athlete's availability and injury
+     history being invisible to the person coaching them was the problem. */
+
+  experienceLevel: ExperienceLevel | null;
+  trainingPhase: TrainingPhase | null;
+  /** Days the athlete would choose to train. */
+  preferredTrainingDays: Weekday[];
+  /** Days they can actually train. The programme is built against these. */
+  availableTrainingDays: Weekday[];
+  typicalSessionMinutes: number | null;
+  currentWeeklyKm: number | null;
+  gymAccess: GymAccess | null;
+  equipment: string[];
+  /**
+   * Athlete-reported, in their own words. Coaching context only — never a
+   * clinical record and never used to infer a diagnosis.
+   */
+  injuryNotes: string | null;
+  limitationsNotes: string | null;
 }
 
 export interface CoachAthleteLink {

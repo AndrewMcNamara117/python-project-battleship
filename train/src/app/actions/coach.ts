@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireCoach } from '@/lib/auth';
+import { requireCoach, requireCoachOf } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
 import { messageSchema } from '@/lib/validation/schemas';
-import type { ScheduledWorkout } from '@/lib/domain/types';
+import type { ExperienceLevel, ScheduledWorkout, TrainingPhase } from '@/lib/domain/types';
 import { PROGRAM_TEMPLATES, WORKOUT_TEMPLATES } from '@/data/workout-library';
 import { STRENGTH_TEMPLATES } from '@/data/strength-library';
 import { addDays, startOfWeek, toISODate } from '@/lib/domain/dates';
@@ -20,7 +20,9 @@ export async function addCoachNote(
   body: string,
   visibility: 'private' | 'shared',
 ): Promise<Result> {
-  const session = await requireCoach();
+  const { session, authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const text = body.trim();
   if (text.length < 2) return { ok: false, message: 'Write something first.' };
 
@@ -36,7 +38,9 @@ export async function respondToCheckIn(
   athleteId: string,
   response: string,
 ): Promise<Result> {
-  const session = await requireCoach();
+  const { session, authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const text = response.trim();
   if (text.length < 2) return { ok: false, message: 'Write a response first.' };
 
@@ -49,7 +53,9 @@ export async function respondToCheckIn(
 }
 
 export async function messageAthlete(athleteId: string, formData: FormData): Promise<Result> {
-  const session = await requireCoach();
+  const { session, authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const parsed = messageSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) return { ok: false, message: 'Write something first.' };
 
@@ -69,15 +75,10 @@ export async function messageAthlete(athleteId: string, formData: FormData): Pro
 
 /** Coach edits to a prescribed session. The athlete cannot reach this path. */
 export async function updateScheduledWorkout(workout: ScheduledWorkout): Promise<Result> {
-  const session = await requireCoach();
+  const { authorised } = await requireCoachOf(workout.athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const repo = await getRepo();
-
-  // a coach may only edit sessions for an athlete they actually coach
-  const roster = await repo.listAthletesForCoach(session.userId);
-  if (!roster.some((a) => a.id === workout.athleteId)) {
-    return { ok: false, message: 'That athlete is not on your roster.' };
-  }
-
   const existing = await repo.getScheduled(workout.id);
   if (existing && existing.athleteId !== workout.athleteId) {
     return { ok: false, message: 'That session belongs to a different athlete.' };
@@ -99,14 +100,10 @@ export async function deleteScheduledWorkout(
   workoutId: string,
   athleteId: string,
 ): Promise<Result> {
-  const session = await requireCoach();
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const repo = await getRepo();
-
-  const roster = await repo.listAthletesForCoach(session.userId);
-  if (!roster.some((a) => a.id === athleteId)) {
-    return { ok: false, message: 'That athlete is not on your roster.' };
-  }
-
   const existing = await repo.getScheduled(workoutId);
   if (!existing || existing.athleteId !== athleteId) {
     return { ok: false, message: 'Session not found.' };
@@ -157,7 +154,9 @@ export async function decideApplication(
  * finding the automated messages unhelpful should not have to argue with them.
  */
 export async function setForgeEnabled(athleteId: string, enabled: boolean): Promise<Result> {
-  await requireCoach();
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const repo = await getRepo();
   await repo.updateProfile(athleteId, { forgeAssistantEnabled: enabled });
   revalidatePath(`/coach/athletes/${athleteId}`);
@@ -181,7 +180,9 @@ export async function assignProgramTemplate(
   templateId: string,
   startDateInput: string,
 ): Promise<Result> {
-  const session = await requireCoach();
+  const { session, authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const repo = await getRepo();
 
   const template = PROGRAM_TEMPLATES.find((t) => t.id === templateId);
@@ -274,7 +275,9 @@ export async function cloneWeek(
   sourceWeekStart: string,
   targetWeekStart: string,
 ): Promise<Result> {
-  await requireCoach();
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
   const repo = await getRepo();
 
   const source = await repo.listScheduled(athleteId, sourceWeekStart, addDays(sourceWeekStart, 6));
@@ -299,4 +302,28 @@ export async function cloneWeek(
 
   revalidatePath(`/coach/athletes/${athleteId}`);
   return { ok: true, message: `Copied ${source.length} sessions to the week of ${targetWeekStart}.` };
+}
+
+/**
+ * Set an athlete's coaching context.
+ *
+ * The coach owns experience level and training phase; the athlete owns their
+ * own availability and what they report about their body. That split is
+ * deliberate — a coach reclassifying an athlete is a coaching decision, a coach
+ * editing what the athlete said about their calf is not.
+ */
+export async function setAthleteCoachingContext(
+  athleteId: string,
+  patch: { experienceLevel?: ExperienceLevel | null; trainingPhase?: TrainingPhase | null },
+): Promise<Result> {
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
+  const repo = await getRepo();
+  await repo.updateProfile(athleteId, patch);
+
+  revalidatePath(`/coach/athletes/${athleteId}`);
+  revalidatePath('/coach/athletes');
+  revalidatePath('/app');
+  return { ok: true, message: 'Updated.' };
 }

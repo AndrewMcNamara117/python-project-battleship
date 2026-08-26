@@ -102,6 +102,26 @@ export async function rescheduleSession(scheduledWorkoutId: string, toDate: stri
   if (scheduled.status === 'completed') {
     return { ok: false, message: 'Completed sessions stay where they happened.' };
   }
+
+  // Move rules. The coach owns the shape of the week; an athlete may shuffle
+  // within it, not redesign it. Without these an athlete could drag a session
+  // months out and silently erase it from their block.
+  const today = toISODate(new Date());
+  if (toDate < today) {
+    return { ok: false, message: 'You cannot move a session into the past.' };
+  }
+  if (startOfWeek(toDate) !== startOfWeek(scheduled.date)) {
+    return {
+      ok: false,
+      message: 'Sessions move within their own week. Ask your coach to change the week itself.',
+    };
+  }
+
+  const existing = await repo.listScheduled(session.userId, toDate, toDate);
+  if (existing.some((w) => w.status === 'completed')) {
+    return { ok: false, message: 'That day already has a completed session on it.' };
+  }
+
   await repo.moveScheduled(scheduledWorkoutId, toDate);
   revalidatePath('/app/calendar');
   return { ok: true, message: 'Moved.' };

@@ -70,7 +70,7 @@ export async function createTestDatabase({ verbose = false } = {}) {
 
   await run(AUTH_SHIM, 'auth shim');
 
-  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_acceptance.sql']) {
+  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_acceptance.sql', '0004_athlete_model.sql']) {
     const sql = readFileSync(join(MIGRATIONS, file), 'utf8');
     await run(sql, file);
     if (verbose) console.log(`  applied ${file}`);

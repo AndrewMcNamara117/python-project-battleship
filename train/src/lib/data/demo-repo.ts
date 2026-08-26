@@ -2,6 +2,7 @@ import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, typ
 import { addDays, startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
 import { parseTimeToSeconds } from '@/lib/domain/dates';
+import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
 import type {
   AcceptanceOutcome,
   Achievement,
@@ -123,6 +124,7 @@ export class DemoRepo implements IronMilesRepo {
       p.leaderboardOptIn = data.preferences.leaderboardOptIn;
       p.forgeAssistantEnabled = data.preferences.forgeAssistantEnabled;
       p.healthDataConsentAt = new Date().toISOString();
+      Object.assign(p, profileFieldsFromOnboarding(data));
     }
 
     // The Supabase adapter records the athlete's goal here, so this one must
@@ -584,6 +586,16 @@ export class DemoRepo implements IronMilesRepo {
         healthDataConsentAt: null,
         leaderboardOptIn: false,
         forgeAssistantEnabled: true,
+        experienceLevel: null,
+        trainingPhase: null,
+        preferredTrainingDays: [],
+        availableTrainingDays: [],
+        typicalSessionMinutes: null,
+        currentWeeklyKm: null,
+        gymAccess: null,
+        equipment: [],
+        injuryNotes: null,
+        limitationsNotes: null,
       });
     }
 
