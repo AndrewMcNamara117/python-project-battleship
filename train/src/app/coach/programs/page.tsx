@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
 import { PROGRAM_TEMPLATES } from '@/data/workout-library';
 import { loadCoachContext } from '@/lib/coach-data';
-import { addDays, startOfWeek } from '@/lib/domain/dates';
+import { addDays, formatDayMonth, startOfWeek } from '@/lib/domain/dates';
+import { getRepo } from '@/lib/data';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { ProgramBuilder, WeekCloner } from './ProgramBuilder';
 
@@ -13,8 +14,28 @@ export const metadata: Metadata = { title: 'Programmes' };
 
 export default async function ProgramsPage() {
   const ctx = await loadCoachContext();
+  const repo = await getRepo();
   const athletes = ctx.athletes.map((a) => ({ id: a.profile.id, name: a.profile.fullName }));
   const nextMonday = addDays(startOfWeek(ctx.today), 7);
+
+  // real weeks per athlete, so the coach picks a week rather than typing a date
+  const weeksByAthlete: Record<string, { id: string; label: string }[]> = {};
+  for (const a of ctx.athletes) {
+    const program = await repo.getProgram(a.profile.id);
+    if (!program) {
+      weeksByAthlete[a.profile.id] = [];
+      continue;
+    }
+    const blocks = await repo.listBlocks(program.id);
+    weeksByAthlete[a.profile.id] = blocks.flatMap((b) =>
+      b.weeks.map((w) => ({
+        id: w.id,
+        label: `Week ${w.programWeekNo} · ${b.name} · ${formatDayMonth(w.startDate)}${
+          w.isRecoveryWeek ? ' · step-back' : ''
+        }`,
+      })),
+    );
+  }
 
   return (
     <AppPage>
@@ -29,7 +50,11 @@ export default async function ProgramsPage() {
           <ProgramBuilder athletes={athletes} defaultStart={nextMonday} />
         </Reveal>
         <Reveal delay={0.06}>
-          <WeekCloner athletes={athletes} defaultStart={startOfWeek(ctx.today)} />
+          <WeekCloner
+            athletes={athletes}
+            weeksByAthlete={weeksByAthlete}
+            defaultStart={addDays(startOfWeek(ctx.today), 7)}
+          />
         </Reveal>
       </div>
 

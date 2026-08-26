@@ -283,6 +283,8 @@ export type SessionStatus = 'scheduled' | 'completed' | 'missed' | 'rescheduled'
 export interface ScheduledWorkout extends WorkoutPrescription {
   id: UUID;
   programId: UUID | null;
+  /** The week this session belongs to. Membership, not inference from the date. */
+  programWeekId: UUID | null;
   athleteId: UUID;
   date: ISODate;
   /** Ordering within a day — some days carry a run and a strength session. */
@@ -291,6 +293,11 @@ export interface ScheduledWorkout extends WorkoutPrescription {
   coachNote: string | null;
   strengthTemplateId: UUID | null;
   raceId: UUID | null;
+  /** Where this session came from, once libraries land in Slice 3. */
+  sourceWorkoutTemplateId: UUID | null;
+  sourceStrengthTemplateId: UUID | null;
+  /** Advances only on prescription changes — never when an athlete completes. */
+  prescriptionRevision: number;
   createdAt: ISOTimestamp;
 }
 

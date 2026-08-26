@@ -11,7 +11,8 @@
     "test": "node --experimental-strip-types --test \"src/**/*.test.ts\" \"supabase/test/*.test.mjs\"",
     "test:rls": "node --test supabase/test/rls.test.mjs",
     "test:e2e": "node e2e/loop.mjs",
-    "test:guards": "node e2e/guards.mjs"
+    "test:guards": "node e2e/guards.mjs",
+    "test:duplication": "node e2e/duplication.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

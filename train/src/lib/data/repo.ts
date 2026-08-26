@@ -1,4 +1,12 @@
 import type {
+  BlockWithWeeks,
+  ProgramBlock,
+  ProgramWeek,
+  SessionComponent,
+  SessionComponentDraft,
+  SessionRevision,
+} from '@/lib/domain/programme';
+import type {
   AcceptanceOutcome,
   Achievement,
   CheckIn,
@@ -122,6 +130,46 @@ export interface IronMilesRepo {
 
   /* programmes */
   createProgram(program: Omit<Program, 'id' | 'createdAt'>): Promise<Program>;
+
+  /* ---- programme structure: block → week → session → component ---- */
+
+  listBlocks(programId: UUID): Promise<BlockWithWeeks[]>;
+  createBlock(block: Omit<ProgramBlock, 'id' | 'createdAt'>): Promise<ProgramBlock>;
+  updateBlock(blockId: UUID, patch: Partial<ProgramBlock>): Promise<void>;
+  deleteBlock(blockId: UUID): Promise<void>;
+
+  createWeek(week: Omit<ProgramWeek, 'id' | 'createdAt'>): Promise<ProgramWeek>;
+  updateWeek(weekId: UUID, patch: Partial<ProgramWeek>): Promise<void>;
+  /** The week a date falls in, for attaching a session to its place. */
+  findWeekByDate(programId: UUID, date: ISODate): Promise<ProgramWeek | null>;
+
+  listComponents(scheduledWorkoutId: UUID): Promise<SessionComponent[]>;
+  /** Replaces the session's components wholesale — position is the order. */
+  saveComponents(
+    scheduledWorkoutId: UUID,
+    athleteId: UUID,
+    components: SessionComponentDraft[],
+  ): Promise<SessionComponent[]>;
+
+  /* ---- duplication. Set-based, one call each. ---- */
+
+  /** Copy a week's prescription onto a target Monday. Returns the target week. */
+  duplicateWeek(sourceWeekId: UUID, targetStart: ISODate, targetBlockId?: UUID): Promise<UUID>;
+  /** Copy a whole block — every week, session and component. */
+  duplicateBlock(sourceBlockId: UUID, targetStart: ISODate, name?: string): Promise<UUID>;
+  /** Hand an existing programme's whole structure to another athlete. */
+  assignProgramToAthlete(
+    sourceProgramId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    name?: string,
+  ): Promise<UUID>;
+
+  /* ---- prescription history ---- */
+
+  listSessionRevisions(scheduledWorkoutId: UUID): Promise<SessionRevision[]>;
+  /** What the coach originally wrote, whatever has happened since. */
+  getOriginalPrescription(scheduledWorkoutId: UUID): Promise<Record<string, unknown> | null>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;

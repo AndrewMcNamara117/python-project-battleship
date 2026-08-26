@@ -1,5 +1,5 @@
 import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, type DemoDataset } from '@/data/demo-seed';
-import { addDays, startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
+import { addDays, daysBetween, startOfMonth, startOfWeek, toISODate, weekdayIndex } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
 import { parseTimeToSeconds } from '@/lib/domain/dates';
 import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
@@ -33,6 +33,14 @@ import type {
   UUID,
 } from '@/lib/domain/types';
 import { FORGE_POINTS } from '@/lib/domain/types';
+import type {
+  BlockWithWeeks,
+  ProgramBlock,
+  ProgramWeek,
+  SessionComponent,
+  SessionComponentDraft,
+  SessionRevision,
+} from '@/lib/domain/programme';
 import type { IronMilesRepo } from './repo';
 
 /**
@@ -632,6 +640,292 @@ export class DemoRepo implements IronMilesRepo {
     const row: Program = { ...program, id: uid('prog'), createdAt: new Date().toISOString() };
     d.programs.push(row);
     return clone(row);
+  }
+
+  /* ================= programme structure =================
+     The demo adapter mirrors the database semantics, including the audit
+     trail: a demo that quietly skipped history would hide exactly the bug the
+     history exists to prevent. ================================================ */
+
+  /** Blocks and weeks live in the dataset so they rebuild with it each day. */
+  private get blocks(): ProgramBlock[] {
+    return dataset().blocks;
+  }
+  private get weeks(): ProgramWeek[] {
+    return dataset().weeks;
+  }
+  private components: SessionComponent[] = [];
+  private revisions: SessionRevision[] = [];
+
+  /** Mirrors the Postgres trigger. Called wherever a session changes. */
+  private snapshot(
+    session: ScheduledWorkout | { id: UUID; athleteId: UUID },
+    kind: SessionRevision['kind'],
+    changedBy: UUID | null = null,
+  ) {
+    const existing = this.revisions.filter((r) => r.scheduledWorkoutId === session.id);
+    this.revisions.push({
+      id: uid('rev'),
+      scheduledWorkoutId: session.id,
+      athleteId: session.athleteId,
+      revision: existing.length + 1,
+      kind,
+      changedBy,
+      changedAt: new Date().toISOString(),
+      session: clone(session) as unknown as Record<string, unknown>,
+      components: clone(
+        this.components.filter((c) => c.scheduledWorkoutId === session.id),
+      ) as unknown as Record<string, unknown>[],
+      note: null,
+    });
+  }
+
+  async listBlocks(programId: UUID): Promise<BlockWithWeeks[]> {
+    return clone(
+      this.blocks
+        .filter((b) => b.programId === programId)
+        .sort((a, b) => a.blockIndex - b.blockIndex)
+        .map((b) => ({
+          ...b,
+          weeks: this.weeks
+            .filter((w) => w.blockId === b.id)
+            .sort((x, y) => x.startDate.localeCompare(y.startDate)),
+        })),
+    );
+  }
+
+  async createBlock(block: Omit<ProgramBlock, 'id' | 'createdAt'>): Promise<ProgramBlock> {
+    const row: ProgramBlock = { ...block, id: uid('blk'), createdAt: new Date().toISOString() };
+    this.blocks.push(row);
+    return clone(row);
+  }
+
+  async updateBlock(blockId: UUID, patch: Partial<ProgramBlock>): Promise<void> {
+    const b = this.blocks.find((x) => x.id === blockId);
+    if (b) Object.assign(b, patch, { id: b.id });
+  }
+
+  async deleteBlock(blockId: UUID): Promise<void> {
+    const weekIds = this.weeks.filter((w) => w.blockId === blockId).map((w) => w.id);
+    const d = dataset();
+    for (let i = d.scheduled.length - 1; i >= 0; i--) {
+      if (weekIds.includes(d.scheduled[i].programWeekId ?? '')) {
+        this.snapshot(d.scheduled[i], 'deleted');
+        d.scheduled.splice(i, 1);
+      }
+    }
+    const ds = dataset();
+    ds.weeks = ds.weeks.filter((w) => w.blockId !== blockId);
+    ds.blocks = ds.blocks.filter((b) => b.id !== blockId);
+  }
+
+  async createWeek(week: Omit<ProgramWeek, 'id' | 'createdAt'>): Promise<ProgramWeek> {
+    if (weekdayIndex(week.startDate) !== 0) throw new Error('A training week starts on a Monday');
+    const row: ProgramWeek = { ...week, id: uid('wk'), createdAt: new Date().toISOString() };
+    this.weeks.push(row);
+    return clone(row);
+  }
+
+  async updateWeek(weekId: UUID, patch: Partial<ProgramWeek>): Promise<void> {
+    const w = this.weeks.find((x) => x.id === weekId);
+    if (w) Object.assign(w, patch, { id: w.id });
+  }
+
+  async findWeekByDate(programId: UUID, date: ISODate): Promise<ProgramWeek | null> {
+    const start = startOfWeek(date);
+    return clone(this.weeks.find((w) => w.programId === programId && w.startDate === start) ?? null);
+  }
+
+  async listComponents(scheduledWorkoutId: UUID): Promise<SessionComponent[]> {
+    return clone(
+      this.components
+        .filter((c) => c.scheduledWorkoutId === scheduledWorkoutId)
+        .sort((a, b) => a.position - b.position),
+    );
+  }
+
+  async saveComponents(
+    scheduledWorkoutId: UUID,
+    athleteId: UUID,
+    components: SessionComponentDraft[],
+  ): Promise<SessionComponent[]> {
+    this.components = this.components.filter((c) => c.scheduledWorkoutId !== scheduledWorkoutId);
+    const rows = components.map((c, i) => ({
+      ...c,
+      position: i,
+      id: uid('cmp'),
+      scheduledWorkoutId,
+      athleteId,
+    }));
+    this.components.push(...rows);
+
+    const session = dataset().scheduled.find((w) => w.id === scheduledWorkoutId);
+    if (session) this.snapshot(session, 'edited');
+    return clone(rows);
+  }
+
+  /* ---- duplication ---- */
+
+  async duplicateWeek(sourceWeekId: UUID, targetStart: ISODate, targetBlockId?: UUID): Promise<UUID> {
+    if (weekdayIndex(targetStart) !== 0) throw new Error('A training week starts on a Monday');
+    const src = this.weeks.find((w) => w.id === sourceWeekId);
+    if (!src) throw new Error('Source week not found');
+
+    let target = this.weeks.find((w) => w.programId === src.programId && w.startDate === targetStart);
+    if (!target) {
+      const blockId = targetBlockId ?? src.blockId;
+      target = await this.createWeek({
+        blockId,
+        programId: src.programId,
+        athleteId: src.athleteId,
+        weekIndex: this.weeks.filter((w) => w.blockId === blockId).length,
+        programWeekNo: this.weeks.filter((w) => w.programId === src.programId).length + 1,
+        startDate: targetStart,
+        targetVolumeKm: src.targetVolumeKm,
+        focus: src.focus,
+        notes: src.notes,
+        isRecoveryWeek: src.isRecoveryWeek,
+      });
+      // createWeek pushed a clone; take the live row back
+      target = this.weeks[this.weeks.length - 1];
+    }
+
+    const d = dataset();
+    const offset = daysBetween(src.startDate, targetStart);
+    for (const s of d.scheduled.filter((x) => x.programWeekId === sourceWeekId)) {
+      const date = addDays(s.date, offset);
+      const copy: ScheduledWorkout = {
+        ...clone(s),
+        id: uid('sw'),
+        date,
+        programWeekId: target.id,
+        // a copy is a plan again, whatever happened to the original
+        status: 'scheduled',
+        createdAt: new Date().toISOString(),
+      };
+      const clash = d.scheduled.findIndex((x) => x.athleteId === copy.athleteId && x.date === date && x.slot === copy.slot);
+      if (clash >= 0) d.scheduled[clash] = copy;
+      else d.scheduled.push(copy);
+
+      this.components = this.components.filter((c) => c.scheduledWorkoutId !== copy.id);
+      this.components.push(
+        ...this.components
+          .filter((c) => c.scheduledWorkoutId === s.id)
+          .map((c) => ({ ...clone(c), id: uid('cmp'), scheduledWorkoutId: copy.id })),
+      );
+      this.snapshot(copy, 'created');
+    }
+    return target.id;
+  }
+
+  async duplicateBlock(sourceBlockId: UUID, targetStart: ISODate, name?: string): Promise<UUID> {
+    const src = this.blocks.find((b) => b.id === sourceBlockId);
+    if (!src) throw new Error('Source block not found');
+
+    const block = await this.createBlock({
+      programId: src.programId,
+      athleteId: src.athleteId,
+      blockIndex: this.blocks.filter((b) => b.programId === src.programId).length,
+      name: name ?? `${src.name} (copy)`,
+      phase: src.phase,
+      focus: src.focus,
+      notes: src.notes,
+    });
+
+    const weeks = this.weeks
+      .filter((w) => w.blockId === sourceBlockId)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    if (!weeks.length) return block.id;
+
+    const offset = daysBetween(weeks[0].startDate, targetStart);
+    for (const w of weeks) {
+      await this.duplicateWeek(w.id, addDays(w.startDate, offset), block.id);
+    }
+    return block.id;
+  }
+
+  async assignProgramToAthlete(
+    sourceProgramId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    name?: string,
+  ): Promise<UUID> {
+    const d = dataset();
+    const src = d.programs.find((p) => p.id === sourceProgramId);
+    if (!src) throw new Error('Source programme not found');
+    if (weekdayIndex(startDate) !== 0) throw new Error('A programme starts on a Monday');
+
+    const offset = daysBetween(src.startDate, startDate);
+    const program = await this.createProgram({
+      athleteId,
+      coachId: src.coachId,
+      templateId: src.templateId,
+      goalId: null,
+      name: name ?? src.name,
+      startDate,
+      endDate: addDays(src.endDate, offset),
+      status: 'active',
+    });
+
+    for (const b of this.blocks.filter((x) => x.programId === sourceProgramId)) {
+      const block = await this.createBlock({
+        programId: program.id,
+        athleteId,
+        blockIndex: b.blockIndex,
+        name: b.name,
+        phase: b.phase,
+        focus: b.focus,
+        notes: b.notes,
+      });
+
+      for (const w of this.weeks.filter((x) => x.blockId === b.id)) {
+        const week = await this.createWeek({
+          blockId: block.id,
+          programId: program.id,
+          athleteId,
+          weekIndex: w.weekIndex,
+          programWeekNo: w.programWeekNo,
+          startDate: addDays(w.startDate, offset),
+          targetVolumeKm: w.targetVolumeKm,
+          focus: w.focus,
+          notes: w.notes,
+          isRecoveryWeek: w.isRecoveryWeek,
+        });
+
+        for (const s of d.scheduled.filter((x) => x.programWeekId === w.id)) {
+          const copy: ScheduledWorkout = {
+            ...clone(s),
+            id: uid('sw'),
+            athleteId,
+            programId: program.id,
+            programWeekId: week.id,
+            date: addDays(s.date, offset),
+            status: 'scheduled',
+            createdAt: new Date().toISOString(),
+          };
+          d.scheduled.push(copy);
+          this.snapshot(copy, 'created');
+        }
+      }
+    }
+    return program.id;
+  }
+
+  /* ---- prescription history ---- */
+
+  async listSessionRevisions(scheduledWorkoutId: UUID): Promise<SessionRevision[]> {
+    return clone(
+      this.revisions
+        .filter((r) => r.scheduledWorkoutId === scheduledWorkoutId)
+        .sort((a, b) => a.revision - b.revision),
+    );
+  }
+
+  async getOriginalPrescription(scheduledWorkoutId: UUID): Promise<Record<string, unknown> | null> {
+    const first = this.revisions
+      .filter((r) => r.scheduledWorkoutId === scheduledWorkoutId)
+      .sort((a, b) => a.revision - b.revision)[0];
+    return first ? clone(first.session) : null;
   }
 
   /* ---------- privacy ---------- */

@@ -226,6 +226,7 @@ export async function assignProgramTemplate(
       await repo.saveScheduled({
         id: `sw-${athleteId}-${date}-0`,
         programId: program.id,
+        programWeekId: null,
         athleteId,
         date,
         slot: 0,
@@ -246,6 +247,9 @@ export async function assignProgramTemplate(
         coachNote: null,
         strengthTemplateId: strengthTemplate?.id ?? null,
         raceId: null,
+        sourceWorkoutTemplateId: null,
+        sourceStrengthTemplateId: null,
+        prescriptionRevision: 1,
         createdAt: new Date().toISOString(),
       });
     }
@@ -269,40 +273,89 @@ export async function assignProgramTemplate(
   };
 }
 
-/** Copy one week's prescription forward. The bulk edit coaches actually use. */
-export async function cloneWeek(
+/**
+ * Copy one week's prescription forward.
+ *
+ * Set-based and executed in the database — a week of eight sessions and their
+ * components is one call, not thirty. That is what keeps a roster of fifty
+ * athletes from becoming administrative work.
+ */
+export async function duplicateWeek(
   athleteId: string,
-  sourceWeekStart: string,
+  sourceWeekId: string,
   targetWeekStart: string,
 ): Promise<Result> {
   const { authorised } = await requireCoachOf(athleteId);
   if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
 
   const repo = await getRepo();
-
-  const source = await repo.listScheduled(athleteId, sourceWeekStart, addDays(sourceWeekStart, 6));
-  if (!source.length) return { ok: false, message: 'That week has nothing in it to copy.' };
-
-  const offset = Math.round(
-    (new Date(`${targetWeekStart}T00:00:00Z`).getTime() - new Date(`${sourceWeekStart}T00:00:00Z`).getTime()) /
-      86_400_000,
-  );
-
-  for (const w of source) {
-    const date = addDays(w.date, offset);
-    await repo.saveScheduled({
-      ...w,
-      id: `sw-${athleteId}-${date}-${w.slot}`,
-      date,
-      // a copied week is a plan again, whatever happened in the original
-      status: 'scheduled',
-      createdAt: new Date().toISOString(),
-    });
+  try {
+    await repo.duplicateWeek(sourceWeekId, targetWeekStart);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Could not copy that week.' };
   }
 
   revalidatePath(`/coach/athletes/${athleteId}`);
-  return { ok: true, message: `Copied ${source.length} sessions to the week of ${targetWeekStart}.` };
+  revalidatePath('/app');
+  revalidatePath('/app/calendar');
+  return { ok: true, message: `Week copied to ${targetWeekStart}.` };
 }
+
+/** Copy an entire block — every week, session and component in one call. */
+export async function duplicateBlock(
+  athleteId: string,
+  sourceBlockId: string,
+  targetStart: string,
+  name?: string,
+): Promise<Result> {
+  const { authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
+  const repo = await getRepo();
+  try {
+    await repo.duplicateBlock(sourceBlockId, targetStart, name);
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : 'Could not copy that block.' };
+  }
+
+  revalidatePath(`/coach/athletes/${athleteId}`);
+  revalidatePath('/app');
+  revalidatePath('/app/training');
+  return { ok: true, message: `Block copied, starting ${targetStart}.` };
+}
+
+/**
+ * Hand an existing programme's whole structure to another athlete.
+ *
+ * The lever that makes a large roster tractable: write a block once, give it to
+ * everyone it suits, then edit per athlete. Both athletes must be on the
+ * calling coach's roster.
+ */
+export async function assignProgramToAthlete(
+  sourceProgramId: string,
+  targetAthleteId: string,
+  startDate: string,
+  name?: string,
+): Promise<Result> {
+  const { authorised } = await requireCoachOf(targetAthleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
+  const repo = await getRepo();
+  try {
+    await repo.assignProgramToAthlete(sourceProgramId, targetAthleteId, startDate, name);
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : 'Could not assign that programme.',
+    };
+  }
+
+  revalidatePath(`/coach/athletes/${targetAthleteId}`);
+  revalidatePath('/coach/athletes');
+  revalidatePath('/app');
+  return { ok: true, message: 'Programme assigned.' };
+}
+
 
 /**
  * Set an athlete's coaching context.

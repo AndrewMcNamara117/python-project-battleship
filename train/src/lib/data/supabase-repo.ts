@@ -29,6 +29,14 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
+import type {
+  BlockWithWeeks,
+  ProgramBlock,
+  ProgramWeek,
+  SessionComponent,
+  SessionComponentDraft,
+  SessionRevision,
+} from '@/lib/domain/programme';
 import type { IronMilesRepo } from './repo';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -91,6 +99,7 @@ export class SupabaseRepo implements IronMilesRepo {
   private toScheduled = (r: any): ScheduledWorkout => ({
     id: r.id,
     programId: r.program_id,
+    programWeekId: r.program_week_id ?? null,
     athleteId: r.athlete_id,
     date: r.date,
     slot: r.slot,
@@ -114,12 +123,16 @@ export class SupabaseRepo implements IronMilesRepo {
     coachNote: r.coach_note,
     strengthTemplateId: r.strength_template_id,
     raceId: r.race_id,
+    sourceWorkoutTemplateId: r.source_workout_template_id ?? null,
+    sourceStrengthTemplateId: r.source_strength_template_id ?? null,
+    prescriptionRevision: r.prescription_revision ?? 1,
     createdAt: r.created_at,
   });
 
   private fromScheduled = (w: ScheduledWorkout) => ({
     id: w.id,
     program_id: w.programId,
+    program_week_id: w.programWeekId,
     athlete_id: w.athleteId,
     date: w.date,
     slot: w.slot,
@@ -141,6 +154,8 @@ export class SupabaseRepo implements IronMilesRepo {
     coach_note: w.coachNote,
     strength_template_id: w.strengthTemplateId,
     race_id: w.raceId,
+    source_workout_template_id: w.sourceWorkoutTemplateId,
+    source_strength_template_id: w.sourceStrengthTemplateId,
   });
 
   private toCompleted = (r: any): CompletedWorkout => ({
@@ -1016,6 +1031,282 @@ export class SupabaseRepo implements IronMilesRepo {
       status: data.status,
       createdAt: data.created_at,
     };
+  }
+
+  /* ================= programme structure ================= */
+
+  private toBlock = (r: any): ProgramBlock => ({
+    id: r.id,
+    programId: r.program_id,
+    athleteId: r.athlete_id,
+    blockIndex: r.block_index,
+    name: r.name,
+    phase: r.phase ?? null,
+    focus: r.focus ?? null,
+    notes: r.notes ?? null,
+    createdAt: r.created_at,
+  });
+
+  private toWeek = (r: any): ProgramWeek => ({
+    id: r.id,
+    blockId: r.block_id,
+    programId: r.program_id,
+    athleteId: r.athlete_id,
+    weekIndex: r.week_index,
+    programWeekNo: r.program_week_no,
+    startDate: r.start_date,
+    targetVolumeKm: r.target_volume_km == null ? null : Number(r.target_volume_km),
+    focus: r.focus ?? null,
+    notes: r.notes ?? null,
+    isRecoveryWeek: r.is_recovery_week,
+    createdAt: r.created_at,
+  });
+
+  private toComponent = (r: any): SessionComponent => ({
+    id: r.id,
+    scheduledWorkoutId: r.scheduled_workout_id,
+    athleteId: r.athlete_id,
+    position: r.position,
+    kind: r.kind,
+    label: r.label ?? null,
+    notes: r.notes ?? null,
+    repeats: r.repeats ?? null,
+    rpeTarget: r.rpe_target ?? null,
+    distanceKm: r.distance_km == null ? null : Number(r.distance_km),
+    durationSeconds: r.duration_seconds ?? null,
+    paceMinSecPerKm: r.pace_min_sec_km ?? null,
+    paceMaxSecPerKm: r.pace_max_sec_km ?? null,
+    hrZone: r.hr_zone ?? null,
+    recoverySeconds: r.recovery_seconds ?? null,
+    recoveryDescription: r.recovery_description ?? null,
+    strengthExerciseId: r.strength_exercise_id ?? null,
+    sets: r.sets ?? null,
+    reps: r.reps ?? null,
+    loadPrescription: r.load_prescription ?? null,
+    tempo: r.tempo ?? null,
+    restSeconds: r.rest_seconds ?? null,
+  });
+
+  private fromComponent = (c: SessionComponentDraft, sessionId: UUID, athleteId: UUID) => ({
+    scheduled_workout_id: sessionId,
+    athlete_id: athleteId,
+    position: c.position,
+    kind: c.kind,
+    label: c.label,
+    notes: c.notes,
+    repeats: c.repeats,
+    rpe_target: c.rpeTarget,
+    distance_km: c.distanceKm,
+    duration_seconds: c.durationSeconds,
+    pace_min_sec_km: c.paceMinSecPerKm,
+    pace_max_sec_km: c.paceMaxSecPerKm,
+    hr_zone: c.hrZone,
+    recovery_seconds: c.recoverySeconds,
+    recovery_description: c.recoveryDescription,
+    strength_exercise_id: c.strengthExerciseId,
+    sets: c.sets,
+    reps: c.reps,
+    load_prescription: c.loadPrescription,
+    tempo: c.tempo,
+    rest_seconds: c.restSeconds,
+  });
+
+  async listBlocks(programId: UUID): Promise<BlockWithWeeks[]> {
+    const [blocks, weeks] = await Promise.all([
+      this.rows(
+        this.db.from('program_blocks').select('*').eq('program_id', programId).order('block_index'),
+        this.toBlock,
+      ),
+      this.rows(
+        this.db.from('program_weeks').select('*').eq('program_id', programId).order('start_date'),
+        this.toWeek,
+      ),
+    ]);
+    return blocks.map((b) => ({ ...b, weeks: weeks.filter((w) => w.blockId === b.id) }));
+  }
+
+  async createBlock(block: Omit<ProgramBlock, 'id' | 'createdAt'>): Promise<ProgramBlock> {
+    const { data, error } = await this.db
+      .from('program_blocks')
+      .insert({
+        program_id: block.programId,
+        athlete_id: block.athleteId,
+        block_index: block.blockIndex,
+        name: block.name,
+        phase: block.phase,
+        focus: block.focus,
+        notes: block.notes,
+      })
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toBlock(data);
+  }
+
+  async updateBlock(blockId: UUID, patch: Partial<ProgramBlock>): Promise<void> {
+    const row: Record<string, unknown> = {};
+    if (patch.name !== undefined) row.name = patch.name;
+    if (patch.phase !== undefined) row.phase = patch.phase;
+    if (patch.focus !== undefined) row.focus = patch.focus;
+    if (patch.notes !== undefined) row.notes = patch.notes;
+    if (patch.blockIndex !== undefined) row.block_index = patch.blockIndex;
+    const { error } = await this.db.from('program_blocks').update(row).eq('id', blockId);
+    if (error) throw new Error(error.message);
+  }
+
+  async deleteBlock(blockId: UUID): Promise<void> {
+    // cascades to weeks and their sessions; the prescription history survives
+    const { error } = await this.db.from('program_blocks').delete().eq('id', blockId);
+    if (error) throw new Error(error.message);
+  }
+
+  async createWeek(week: Omit<ProgramWeek, 'id' | 'createdAt'>): Promise<ProgramWeek> {
+    const { data, error } = await this.db
+      .from('program_weeks')
+      .insert({
+        block_id: week.blockId,
+        program_id: week.programId,
+        athlete_id: week.athleteId,
+        week_index: week.weekIndex,
+        program_week_no: week.programWeekNo,
+        start_date: week.startDate,
+        target_volume_km: week.targetVolumeKm,
+        focus: week.focus,
+        notes: week.notes,
+        is_recovery_week: week.isRecoveryWeek,
+      })
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toWeek(data);
+  }
+
+  async updateWeek(weekId: UUID, patch: Partial<ProgramWeek>): Promise<void> {
+    const row: Record<string, unknown> = {};
+    if (patch.targetVolumeKm !== undefined) row.target_volume_km = patch.targetVolumeKm;
+    if (patch.focus !== undefined) row.focus = patch.focus;
+    if (patch.notes !== undefined) row.notes = patch.notes;
+    if (patch.isRecoveryWeek !== undefined) row.is_recovery_week = patch.isRecoveryWeek;
+    const { error } = await this.db.from('program_weeks').update(row).eq('id', weekId);
+    if (error) throw new Error(error.message);
+  }
+
+  findWeekByDate(programId: UUID, date: ISODate) {
+    return this.one(
+      this.db
+        .from('program_weeks')
+        .select('*')
+        .eq('program_id', programId)
+        .lte('start_date', date)
+        .order('start_date', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      this.toWeek,
+    );
+  }
+
+  listComponents(scheduledWorkoutId: UUID) {
+    return this.rows(
+      this.db
+        .from('session_components')
+        .select('*')
+        .eq('scheduled_workout_id', scheduledWorkoutId)
+        .order('position'),
+      this.toComponent,
+    );
+  }
+
+  async saveComponents(
+    scheduledWorkoutId: UUID,
+    athleteId: UUID,
+    components: SessionComponentDraft[],
+  ): Promise<SessionComponent[]> {
+    // replace wholesale: position is the order, and a partial update would
+    // leave orphaned positions behind
+    const { error: clearError } = await this.db
+      .from('session_components')
+      .delete()
+      .eq('scheduled_workout_id', scheduledWorkoutId);
+    if (clearError) throw new Error(clearError.message);
+
+    if (!components.length) return [];
+
+    const { data, error } = await this.db
+      .from('session_components')
+      .insert(components.map((c, i) => this.fromComponent({ ...c, position: i }, scheduledWorkoutId, athleteId)))
+      .select('*');
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(this.toComponent);
+  }
+
+  /* ---- duplication: one round trip each ---- */
+
+  async duplicateWeek(sourceWeekId: UUID, targetStart: ISODate, targetBlockId?: UUID): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_duplicate_week', {
+      p_source_week: sourceWeekId,
+      p_target_start: targetStart,
+      p_target_block: targetBlockId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  async duplicateBlock(sourceBlockId: UUID, targetStart: ISODate, name?: string): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_duplicate_block', {
+      p_source_block: sourceBlockId,
+      p_target_start: targetStart,
+      p_name: name ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  async assignProgramToAthlete(
+    sourceProgramId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    name?: string,
+  ): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_assign_program', {
+      p_source_program: sourceProgramId,
+      p_athlete: athleteId,
+      p_start: startDate,
+      p_name: name ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  /* ---- prescription history ---- */
+
+  listSessionRevisions(scheduledWorkoutId: UUID) {
+    return this.rows(
+      this.db
+        .from('session_revisions')
+        .select('*')
+        .eq('scheduled_workout_id', scheduledWorkoutId)
+        .order('revision'),
+      (r: any): SessionRevision => ({
+        id: r.id,
+        scheduledWorkoutId: r.scheduled_workout_id,
+        athleteId: r.athlete_id,
+        revision: r.revision,
+        kind: r.kind,
+        changedBy: r.changed_by ?? null,
+        changedAt: r.changed_at,
+        session: r.session ?? {},
+        components: r.components ?? [],
+        note: r.note ?? null,
+      }),
+    );
+  }
+
+  async getOriginalPrescription(scheduledWorkoutId: UUID): Promise<Record<string, unknown> | null> {
+    const { data, error } = await this.db.rpc('im_original_prescription', {
+      p_session_id: scheduledWorkoutId,
+    });
+    if (error) throw new Error(error.message);
+    return (data as Record<string, unknown> | null) ?? null;
   }
 
   async createApplication(

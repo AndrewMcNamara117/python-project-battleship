@@ -1,5 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -70,7 +70,11 @@ export async function createTestDatabase({ verbose = false } = {}) {
 
   await run(AUTH_SHIM, 'auth shim');
 
-  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_acceptance.sql', '0004_athlete_model.sql']) {
+  // every migration, in order, read from disk — so a new one is never missed
+  const files = readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+  for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS, file), 'utf8');
     await run(sql, file);
     if (verbose) console.log(`  applied ${file}`);

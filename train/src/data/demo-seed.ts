@@ -4,6 +4,7 @@ import {
   toISODate,
   weekdayIndex,
 } from '@/lib/domain/dates';
+import type { ProgramBlock, ProgramWeek } from '@/lib/domain/programme';
 import type {
   Achievement,
   CheckIn,
@@ -74,6 +75,8 @@ export interface DemoDataset {
   races: Race[];
   goals: Goal[];
   programs: Program[];
+  blocks: ProgramBlock[];
+  weeks: ProgramWeek[];
   scheduled: ScheduledWorkout[];
   completed: CompletedWorkout[];
   strengthSessions: StrengthSession[];
@@ -413,6 +416,60 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     },
   ];
 
+  /* ---- programme structure: blocks and weeks, as the schema models them ---- */
+  // Four blocks across the 26-week window, so the demo shows the same shape a
+  // real programme has rather than a flat run of dates.
+  const BLOCK_PLAN: { name: string; phase: Program['status'] extends never ? never : ProgramBlock['phase']; weeks: number }[] = [
+    { name: 'Base', phase: 'base', weeks: 8 },
+    { name: 'Build', phase: 'build', weeks: 8 },
+    { name: 'Sharpen', phase: 'sharpen', weeks: 7 },
+    { name: 'Race', phase: 'race', weeks: 4 },
+  ];
+
+  const blocks: ProgramBlock[] = [];
+  const weeks: ProgramWeek[] = [];
+  {
+    let weekCursor = -HISTORY_WEEKS;
+    let weekNo = 1;
+    BLOCK_PLAN.forEach((plan, blockIndex) => {
+      const block: ProgramBlock = {
+        id: `blk-${blockIndex}`,
+        programId: 'prog-connemara',
+        athleteId: DEMO_ATHLETE_ID,
+        blockIndex,
+        name: plan.name,
+        phase: plan.phase,
+        focus: null,
+        notes: null,
+        createdAt: '2024-11-04T10:00:00.000Z',
+      };
+      blocks.push(block);
+
+      for (let i = 0; i < plan.weeks; i++) {
+        const start = addDays(currentWeek, weekCursor * 7);
+        weeks.push({
+          id: `wk-${weekNo}`,
+          blockId: block.id,
+          programId: 'prog-connemara',
+          athleteId: DEMO_ATHLETE_ID,
+          weekIndex: i,
+          programWeekNo: weekNo,
+          startDate: start,
+          targetVolumeKm: null,
+          focus: null,
+          notes: null,
+          // every fourth week steps back, matching the volume curve above
+          isRecoveryWeek: mod(weekCursor, 4) === 2,
+          createdAt: '2024-11-04T10:00:00.000Z',
+        });
+        weekCursor += 1;
+        weekNo += 1;
+      }
+    });
+  }
+  const weekIdFor = (date: ISODate) =>
+    weeks.find((w) => date >= w.startDate && date < addDays(w.startDate, 7))?.id ?? null;
+
   /* schedule, logs, strength, forge ledger */
   const scheduled: ScheduledWorkout[] = [];
   const completed: CompletedWorkout[] = [];
@@ -452,6 +509,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       scheduled.push({
         id,
         programId: 'prog-connemara',
+        programWeekId: weekIdFor(date),
         athleteId: DEMO_ATHLETE_ID,
         date,
         slot: 0,
@@ -474,6 +532,9 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
         coachNote: spec.coachNote,
         strengthTemplateId: spec.strengthTemplateId,
         raceId: null,
+        sourceWorkoutTemplateId: null,
+        sourceStrengthTemplateId: null,
+        prescriptionRevision: 1,
         createdAt: '2024-11-04T10:00:00.000Z',
       });
 
@@ -864,6 +925,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     races,
     goals,
     programs,
+    blocks,
+    weeks,
     scheduled,
     completed,
     strengthSessions,
