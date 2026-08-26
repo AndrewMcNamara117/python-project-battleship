@@ -29,6 +29,7 @@ import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { CoachNoteForm, CheckInResponder } from './CoachControls';
 import { SessionEditor } from './SessionEditor';
 import { SaveAsTemplate } from '@/components/programme/SaveAsTemplate';
+import { WeekAdaptation } from '@/components/adaptation/WeekAdaptation';
 import { CoachingContextControl } from './PhaseControl';
 import { AthleteContext } from '@/components/forge/AthleteContext';
 
@@ -67,6 +68,21 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
   // what saving this programme as a template would produce, read before the
   // coach is offered the action at all
   const extraction = program ? await repo.previewProgrammeExtraction(program.id) : null;
+
+  // the week the coach would actually be adapting: the one containing today,
+  // or the next one if the programme has not started
+  const blocks = program ? await repo.listBlocks(program.id) : [];
+  const allWeeks = blocks.flatMap((b) => b.weeks);
+  const currentWeek =
+    allWeeks.find((w) => today >= w.startDate && today < addDays(w.startDate, 7)) ??
+    allWeeks.find((w) => w.startDate > today) ??
+    null;
+  const [weekSessions, checkInContext] = currentWeek
+    ? await Promise.all([
+        repo.getWeekAdaptationContext(currentWeek.id),
+        repo.getCheckInContext(id),
+      ])
+    : [[], null];
   const buckets = buildWeekBuckets(scheduled, completed, strength, 12, today);
   const week = scheduled.filter((w) => w.date >= weekStart && w.date <= weekEnd);
   const blockAdherence = adherence(scheduled, addDays(weekStart, -7 * 11), weekEnd, today);
@@ -171,6 +187,19 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
             />
             {extraction && <SaveAsTemplate preview={extraction} athleteId={id} />}
           </Reveal>
+
+          {currentWeek && weekSessions.length > 0 && (
+            <Reveal delay={0.055}>
+              <WeekAdaptation
+                athleteId={id}
+                weekStart={currentWeek.startDate}
+                weekNo={currentWeek.programWeekNo}
+                sessions={weekSessions}
+                checkIn={checkInContext}
+                programmeEnd={program!.endDate}
+              />
+            </Reveal>
+          )}
 
           <Reveal delay={0.06}>
             <Panel className="p-6 sm:p-8">

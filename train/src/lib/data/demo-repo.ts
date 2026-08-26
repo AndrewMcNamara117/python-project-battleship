@@ -735,6 +735,19 @@ export class DemoRepo implements IronMilesRepo {
    * original prescription. Postgres does this from an AFTER trigger; this has
    * to match, or the same session reads differently in the two adapters.
    */
+  /**
+   * Make sure a session has its original prescription on record.
+   *
+   * Sessions that came from the demo seed were never inserted through this
+   * adapter, so they have no 'created' revision the way a real one does. The
+   * first time a coach changes one, the state it is in *now* is the original —
+   * so it is recorded before the change, not after.
+   */
+  private ensureBaseline(session: ScheduledWorkout) {
+    if (this.revisions.some((r) => r.scheduledWorkoutId === session.id)) return;
+    this.snapshot(session, 'created', null);
+  }
+
   private snapshot(
     session: ScheduledWorkout | { id: UUID; athleteId: UUID },
     kind: SessionRevision['kind'],
@@ -2053,6 +2066,7 @@ export class DemoRepo implements IronMilesRepo {
       );
     }
 
+    this.ensureBaseline(session);
     session.date = date;
     session.slot = target;
     session.programWeekId = this.weekContaining(session.programId, date) ?? session.programWeekId;
@@ -2070,6 +2084,9 @@ export class DemoRepo implements IronMilesRepo {
 
     const blocker = this.adaptationBlocker(first) ?? this.adaptationBlocker(second);
     if (blocker) throw new Error(blocker);
+
+    this.ensureBaseline(first);
+    this.ensureBaseline(second);
 
     const from = { date: first.date, slot: first.slot, week: first.programWeekId };
     first.date = second.date;
@@ -2151,6 +2168,7 @@ export class DemoRepo implements IronMilesRepo {
         .filter((p) => p.action === 'move')
         .sort((a, b) => (days > 0 ? b.w.date.localeCompare(a.w.date) : a.w.date.localeCompare(b.w.date)));
       for (const p of order) {
+        this.ensureBaseline(p.w);
         p.w.date = p.toDate;
         p.w.programWeekId = this.weekContaining(p.w.programId, p.toDate) ?? p.w.programWeekId;
         this.snapshot(p.w, 'moved', DEMO_COACH_ID);
@@ -2209,6 +2227,7 @@ export class DemoRepo implements IronMilesRepo {
       }
 
       if (apply) {
+        this.ensureBaseline(w);
         w.distanceKm = next;
         this.snapshot(w, 'edited', DEMO_COACH_ID);
       }
