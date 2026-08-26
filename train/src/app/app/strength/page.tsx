@@ -3,15 +3,37 @@ import { AppPage } from '@/components/app/PageHeader';
 import { AppHeader, SectionHeading } from '@/components/forge/AppHeader';
 import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
-import { Panel, PanelHeader } from '@/components/ui/Panel';
-import { STRENGTH_EXERCISES, STRENGTH_TEMPLATES, strengthTemplateById } from '@/data/strength-library';
+import { Panel } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
 import { getRepo } from '@/lib/data';
 import { addDays, formatDayMonth } from '@/lib/domain/dates';
-import { STRENGTH_CATEGORY_LABELS } from '@/lib/domain/types';
+import type { SessionComponent } from '@/lib/domain/programme';
+import type { StrengthExercise, StrengthSetPrescription, StrengthTemplate } from '@/lib/domain/types';
 import { SessionPlayer } from './SessionPlayer';
 
 export const metadata: Metadata = { title: 'Strength' };
+
+/**
+ * The session an athlete plays is their own copy, not the coach's template.
+ *
+ * It is built from the components saved against this scheduled session, so a
+ * coach reworking the template in their library changes nothing here. What the
+ * athlete was given is what the athlete sees.
+ */
+function toPrescriptions(components: SessionComponent[]): StrengthSetPrescription[] {
+  return components
+    .filter((c) => c.kind === 'exercise')
+    .map((c, i) => ({
+      exerciseId: c.strengthExerciseId ?? c.id,
+      order: i,
+      sets: c.sets ?? 3,
+      reps: c.reps ?? '8',
+      tempo: c.tempo,
+      restSeconds: c.restSeconds,
+      rpeTarget: c.rpeTarget,
+      notes: c.notes,
+    }));
+}
 
 export default async function StrengthPage() {
   const ctx = await loadAthleteContext();
@@ -23,9 +45,39 @@ export default async function StrengthPage() {
     upcoming.find((w) => w.type === 'strength' && w.date === ctx.today) ??
     upcoming.find((w) => w.type === 'strength');
 
-  const template = target?.strengthTemplateId
-    ? strengthTemplateById(target.strengthTemplateId)
-    : STRENGTH_TEMPLATES[0];
+  const upcomingStrength = upcoming.filter((w) => w.type === 'strength');
+
+  const componentsBySession = new Map<string, SessionComponent[]>();
+  await Promise.all(
+    upcomingStrength.map(async (w) => componentsBySession.set(w.id, await repo.listComponents(w.id))),
+  );
+
+  const targetComponents = target ? (componentsBySession.get(target.id) ?? []) : [];
+  const blocks = toPrescriptions(targetComponents);
+
+  // the movements this session actually names — an athlete can read these and
+  // nothing else in the library
+  const exercises = (
+    await Promise.all(
+      [...new Set(targetComponents.map((c) => c.strengthExerciseId).filter(Boolean))].map((id) =>
+        repo.getStrengthExercise(id as string),
+      ),
+    )
+  ).filter(Boolean) as unknown as StrengthExercise[];
+
+  const template: StrengthTemplate | null =
+    target && blocks.length
+      ? {
+          id: target.id,
+          name: target.name,
+          category: 'foundation',
+          description: target.mainSet ?? '',
+          estimatedMinutes: target.durationMinutes ?? 45,
+          blocks,
+          ownerId: null,
+          isShared: false,
+        }
+      : null;
 
   const existing = target
     ? (await repo.listStrengthSessions(ctx.session.userId, target.date, target.date)).find(
@@ -33,7 +85,6 @@ export default async function StrengthPage() {
       )
     : undefined;
 
-  const upcomingStrength = upcoming.filter((w) => w.type === 'strength');
   const doneThisBlock = ctx.buckets.reduce((a, b) => a + b.strengthCompleted, 0);
   const plannedThisBlock = ctx.buckets.reduce((a, b) => a + b.strengthPlanned, 0);
 
@@ -46,24 +97,31 @@ export default async function StrengthPage() {
         figure={{ value: `${doneThisBlock}/${plannedThisBlock}`, label: 'sessions this block' }}
       />
 
-      {template && (
+      {template ? (
         <div className="mt-8">
           <SessionPlayer
             template={template}
-            exercises={STRENGTH_EXERCISES}
+            exercises={exercises}
             scheduledWorkoutId={target?.id ?? null}
             date={target?.date ?? ctx.today}
             initialLogs={existing?.logs ?? []}
             initialComplete={existing?.status === 'completed'}
           />
         </div>
+      ) : (
+        <Panel className="mt-8 p-8">
+          <p className="text-[14px] leading-relaxed text-ink-secondary">
+            No strength session prescribed yet. Your coach adds these to your calendar — when one is
+            scheduled, it opens here.
+          </p>
+        </Panel>
       )}
 
       <section className="mt-12">
         <SectionHeading label="Scheduled strength" />
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           {upcomingStrength.map((w) => {
-            const tpl = w.strengthTemplateId ? strengthTemplateById(w.strengthTemplateId) : null;
+            const count = (componentsBySession.get(w.id) ?? []).filter((c) => c.kind === 'exercise').length;
             return (
               <Rise key={w.id}>
                 <Panel hover className="p-6">
@@ -74,9 +132,10 @@ export default async function StrengthPage() {
                     </Badge>
                   </div>
                   <h3 className="mt-4 text-[15px] font-bold">{w.name}</h3>
-                  {tpl && (
+                  {count > 0 && (
                     <p className="mt-2 text-[12px] leading-relaxed text-ink-secondary">
-                      {tpl.blocks.length} exercises · about {tpl.estimatedMinutes} minutes
+                      {count} exercises
+                      {w.durationMinutes ? ` · about ${w.durationMinutes} minutes` : ''}
                     </p>
                   )}
                 </Panel>
@@ -89,32 +148,6 @@ export default async function StrengthPage() {
             </Panel>
           )}
         </div>
-      </section>
-
-      <section className="mt-12">
-        <SectionHeading label="Template library" />
-        <Rise>
-          <Panel className="mt-5 p-6 sm:p-8">
-            <PanelHeader
-              label="Available templates"
-              action={<span className="text-[11px] text-ink-tertiary">Your coach assigns these</span>}
-            />
-            <ul className="mt-6 space-y-5">
-              {STRENGTH_TEMPLATES.map((t) => (
-                <li key={t.id} className="border-b border-hairline pb-5 last:border-b-0 last:pb-0">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-[15px] font-bold">{t.name}</h3>
-                    <Badge tone="neutral">{STRENGTH_CATEGORY_LABELS[t.category]}</Badge>
-                  </div>
-                  <p className="mt-2.5 max-w-[70ch] text-[13px] leading-relaxed text-ink-secondary">{t.description}</p>
-                  <p className="im-mono mt-2.5 text-[11px] tracking-[0.12em] text-ink-tertiary">
-                    {t.blocks.length} exercises · {t.estimatedMinutes} min
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </Rise>
       </section>
     </AppPage>
   );

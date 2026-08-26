@@ -1,4 +1,5 @@
 import {
+  DEMO_PROGRAM_TEMPLATES,
   DEMO_STRENGTH_EXERCISES,
   DEMO_STRENGTH_TEMPLATES,
   DEMO_WORKOUT_TEMPLATES,
@@ -48,6 +49,7 @@ import type {
 } from '@/lib/domain/programme';
 import type {
   LibraryQuery,
+  ProgramTemplateItem,
   StrengthExercise,
   StrengthTemplate,
   WeekVolume,
@@ -1113,8 +1115,9 @@ export class DemoRepo implements IronMilesRepo {
     templateId: UUID,
     athleteId: UUID,
     date: ISODate,
-    slot = 0,
+    slotInput?: number,
   ): Promise<UUID> {
+    const slot = slotInput ?? (kind === 'strength' ? 1 : 0);
     const template =
       kind === 'workout'
         ? this.workoutTemplates.find((t) => t.id === templateId)
@@ -1160,7 +1163,21 @@ export class DemoRepo implements IronMilesRepo {
       createdAt: new Date().toISOString(),
     }) as unknown as ScheduledWorkout;
 
-    d.scheduled.push(session);
+    // a day holds one session per slot: the database has a unique constraint on
+    // (athlete, date, slot) and replaces on conflict, so this has to as well
+    const occupied = d.scheduled.findIndex(
+      (w) => w.athleteId === athleteId && w.date === date && w.slot === slot,
+    );
+    if (occupied >= 0) {
+      const previous = d.scheduled[occupied];
+      this.snapshot(previous, 'edited');
+      session.id = previous.id;
+      session.prescriptionRevision = (previous.prescriptionRevision ?? 1) + 1;
+      d.scheduled[occupied] = session;
+      this.components = this.components.filter((c) => c.scheduledWorkoutId !== session.id);
+    } else {
+      d.scheduled.push(session);
+    }
 
     const copied = clone(template.components ?? []);
     this.components.push(
@@ -1174,6 +1191,16 @@ export class DemoRepo implements IronMilesRepo {
     );
 
     return session.id;
+  }
+
+  private programTemplates: ProgramTemplateItem[] = clone(DEMO_PROGRAM_TEMPLATES);
+
+  async listProgramTemplates(query?: LibraryQuery): Promise<ProgramTemplateItem[]> {
+    return this.filterLibrary(this.programTemplates, query, (t) => [t.description]);
+  }
+
+  async getProgramTemplate(id: UUID): Promise<ProgramTemplateItem | null> {
+    return clone(this.programTemplates.find((t) => t.id === id) ?? null);
   }
 
   async getWeekVolume(weekId: UUID): Promise<WeekVolume> {

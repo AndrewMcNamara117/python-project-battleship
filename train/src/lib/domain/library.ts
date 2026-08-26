@@ -24,7 +24,8 @@ export type Visibility = 'private' | 'shared' | 'system';
 /** What an endurance session is *for*. Broader than its type — how a coach files it. */
 export type WorkoutCategory =
   | 'easy' | 'recovery' | 'long_run' | 'threshold' | 'intervals'
-  | 'hills' | 'tempo' | 'progression' | 'race_specific' | 'race' | 'custom';
+  | 'hills' | 'tempo' | 'progression' | 'race_specific' | 'race'
+  | 'cross_training' | 'mobility' | 'rest' | 'custom';
 
 /** How a movement loads the body. Drives balance checks across a strength week. */
 export type MovementPattern =
@@ -119,4 +120,52 @@ export interface WeekVolume {
   prescribedKm: number;
   targetKm: number | null;
   sessionCount: number;
+}
+
+/** A programme frame: the shape a coach starts a new athlete from. */
+export interface ProgramTemplateItem extends LibraryItem {
+  goalType: string;
+  weeks: number;
+  description: string;
+}
+
+/** Labels for the coach-facing filing categories. */
+export const WORKOUT_CATEGORY_LABELS: Record<WorkoutCategory, string> = {
+  easy: 'Easy',
+  recovery: 'Recovery',
+  long_run: 'Long Run',
+  threshold: 'Threshold',
+  intervals: 'Intervals',
+  hills: 'Hills',
+  tempo: 'Tempo',
+  progression: 'Progression',
+  race_specific: 'Race Specific',
+  race: 'Race',
+  cross_training: 'Cross Training',
+  mobility: 'Mobility',
+  rest: 'Rest',
+  custom: 'Custom',
+};
+
+export const MOVEMENT_PATTERN_LABELS: Record<MovementPattern, string> = {
+  squat: 'Squat',
+  hinge: 'Hinge',
+  push: 'Push',
+  pull: 'Pull',
+  lunge: 'Lunge',
+  calf: 'Calf',
+  core: 'Core',
+  plyometric: 'Plyometric',
+  mobility: 'Mobility',
+  stability: 'Stability',
+  carry: 'Carry',
+  rehab: 'Rehab',
+  other: 'Other',
+};
+
+/** Where an item came from, in the words a coach would use. */
+export function originLabel(item: { visibility: Visibility; ownerId: string | null }, viewerId: string): string {
+  if (item.visibility === 'system') return 'Iron Miles';
+  if (item.ownerId === viewerId) return item.visibility === 'shared' ? 'Yours · shared' : 'Yours';
+  return 'Shared by a coach';
 }

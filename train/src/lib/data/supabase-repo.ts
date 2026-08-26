@@ -39,6 +39,7 @@ import type {
 } from '@/lib/domain/programme';
 import type {
   LibraryQuery,
+  ProgramTemplateItem,
   StrengthExercise,
   StrengthTemplate,
   WeekVolume,
@@ -1695,17 +1696,42 @@ export class SupabaseRepo implements IronMilesRepo {
     templateId: UUID,
     athleteId: UUID,
     date: ISODate,
-    slot = 0,
+    slot?: number,
   ): Promise<UUID> {
     const fn = kind === 'workout' ? 'im_insert_workout_template' : 'im_insert_strength_template';
     const { data, error } = await this.db.rpc(fn, {
       p_template: templateId,
       p_athlete: athleteId,
       p_date: date,
-      p_slot: slot,
+      p_slot: slot ?? (kind === 'strength' ? 1 : 0),
     });
     if (error) throw new Error(error.message);
     return data as UUID;
+  }
+
+  private toProgramTemplate = (r: any): ProgramTemplateItem => ({
+    id: r.id,
+    ownerId: r.owner_id ?? null,
+    visibility: r.visibility,
+    name: r.name,
+    goalType: r.goal_type,
+    weeks: r.weeks,
+    description: r.description ?? '',
+    tags: r.tags ?? [],
+    archivedAt: r.archived_at ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+
+  listProgramTemplates(query?: LibraryQuery) {
+    return this.rows(
+      this.applyLibraryQuery(this.db.from('program_templates').select('*'), query, 'name,description'),
+      this.toProgramTemplate,
+    );
+  }
+
+  getProgramTemplate(id: UUID) {
+    return this.one(this.db.from('program_templates').select('*').eq('id', id).single(), this.toProgramTemplate);
   }
 
   async getWeekVolume(weekId: UUID): Promise<WeekVolume> {

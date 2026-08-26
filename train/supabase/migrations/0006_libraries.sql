@@ -22,9 +22,13 @@ create type im_visibility as enum (
 );
 
 -- ---------- endurance categories ----------
+-- How a coach files a session, which is broader than what it technically is:
+-- a bike hour and a swim are both cross-training however differently they run.
+-- 'custom' is for genuinely bespoke work, not a bucket for anything unmapped.
 create type im_workout_category as enum (
   'easy', 'recovery', 'long_run', 'threshold', 'intervals', 'hills',
-  'tempo', 'progression', 'race_specific', 'race', 'custom'
+  'tempo', 'progression', 'race_specific', 'race',
+  'cross_training', 'mobility', 'rest', 'custom'
 );
 
 -- Movement pattern is a checked text column rather than an enum. A training
@@ -385,12 +389,12 @@ insert into workout_templates (id, owner_id, visibility, name, category, type, b
   ('00000000-0000-4000-8000-000000000007', null, 'system', 'VO2 Intervals', 'intervals', 'intervals', 'time', 'max', 12, 60, null, null, 5, 9, '15 min easy + drills + 4 x 100m strides.', '5 x 3 min hard, 3 min easy jog recovery.', '12 min easy.', null, array['max','time']),
   ('00000000-0000-4000-8000-000000000008', null, 'system', 'Hill Repeats', 'hills', 'hills', 'time', 'hard', 11, 55, null, null, null, 8, '15 min easy to the hill.', '8 x 60s uphill at hard effort. Jog down as recovery.', '12 min easy.', 'Strength in disguise. Tall posture, quick feet.', array['hard','time']),
   ('00000000-0000-4000-8000-000000000009', null, 'system', 'Race Pace', 'race_specific', 'race_pace', 'pace', 'steady', 16, 85, null, null, null, 6, '15 min easy.', '3 x 15 min at goal race pace, 3 min float between.', '10 min easy.', 'Rehearsal, not a test.', array['steady','pace']),
-  ('00000000-0000-4000-8000-000000000010', null, 'system', 'Brick Session', 'custom', 'brick', 'time', 'steady', null, 90, null, null, null, 6, null, '60 min bike at steady effort, straight into 25 min run off the bike.', null, 'The first 10 minutes off the bike always feel wrong. Run through it.', array['steady','time']),
-  ('00000000-0000-4000-8000-000000000011', null, 'system', 'Bike — Endurance', 'custom', 'bike', 'time', 'easy', null, 90, null, null, 2, 4, null, 'Steady aerobic riding. Smooth cadence, 85–95rpm.', null, null, array['easy','time']),
-  ('00000000-0000-4000-8000-000000000012', null, 'system', 'Swim — Technique + Endurance', 'custom', 'swim', 'time', 'steady', null, 45, null, null, null, 5, '400m mixed.', '8 x 100m steady, 20s rest. Focus on catch.', '200m easy.', null, array['steady','time']),
-  ('00000000-0000-4000-8000-000000000013', null, 'system', 'Cross Training', 'custom', 'cross_training', 'time', 'easy', null, 45, null, null, 2, 4, null, 'Low-impact aerobic work — bike, row, elliptical or pool.', null, 'Aerobic stimulus without the pounding.', array['easy','time']),
-  ('00000000-0000-4000-8000-000000000014', null, 'system', 'Mobility', 'custom', 'mobility', 'time', 'recovery', null, 20, null, null, null, 1, null, 'Hips, ankles, thoracic spine. Slow and unhurried.', null, null, array['recovery','time']),
-  ('00000000-0000-4000-8000-000000000015', null, 'system', 'Rest', 'custom', 'rest', 'time', 'rest', null, null, null, null, null, null, null, 'Complete rest. This is a session — treat it like one.', null, 'Adaptation happens here, not in the session you skipped it for.', array['rest','time']),
+  ('00000000-0000-4000-8000-000000000010', null, 'system', 'Brick Session', 'race_specific', 'brick', 'time', 'steady', null, 90, null, null, null, 6, null, '60 min bike at steady effort, straight into 25 min run off the bike.', null, 'The first 10 minutes off the bike always feel wrong. Run through it.', array['steady','time']),
+  ('00000000-0000-4000-8000-000000000011', null, 'system', 'Bike — Endurance', 'cross_training', 'bike', 'time', 'easy', null, 90, null, null, 2, 4, null, 'Steady aerobic riding. Smooth cadence, 85–95rpm.', null, null, array['easy','time']),
+  ('00000000-0000-4000-8000-000000000012', null, 'system', 'Swim — Technique + Endurance', 'cross_training', 'swim', 'time', 'steady', null, 45, null, null, null, 5, '400m mixed.', '8 x 100m steady, 20s rest. Focus on catch.', '200m easy.', null, array['steady','time']),
+  ('00000000-0000-4000-8000-000000000013', null, 'system', 'Cross Training', 'cross_training', 'cross_training', 'time', 'easy', null, 45, null, null, 2, 4, null, 'Low-impact aerobic work — bike, row, elliptical or pool.', null, 'Aerobic stimulus without the pounding.', array['easy','time']),
+  ('00000000-0000-4000-8000-000000000014', null, 'system', 'Mobility', 'mobility', 'mobility', 'time', 'recovery', null, 20, null, null, null, 1, null, 'Hips, ankles, thoracic spine. Slow and unhurried.', null, null, array['recovery','time']),
+  ('00000000-0000-4000-8000-000000000015', null, 'system', 'Rest', 'rest', 'rest', 'time', 'rest', null, null, null, null, null, null, null, 'Complete rest. This is a session — treat it like one.', null, 'Adaptation happens here, not in the session you skipped it for.', array['rest','time']),
   ('00000000-0000-4000-8000-000000000016', null, 'system', 'Race Day', 'race', 'race', 'distance', 'max', null, null, null, null, null, 10, null, 'Execute the plan. Nothing new on race day.', null, 'The work is done. Trust it.', array['max','distance']);
 
 insert into strength_exercises (id, owner_id, visibility, name, category, movement_pattern,
@@ -712,3 +716,16 @@ language sql stable security definer set search_path = public as $$
   where w.id = p_week
     and im_can_read_athlete(w.athlete_id);
 $$;
+
+
+-- Programme templates: the frames a coach starts a new athlete from. Seeded as
+-- system content for the same reason the sessions are — one source, not two.
+insert into program_templates (id, owner_id, visibility, name, goal_type, weeks, description) values
+  ('00000000-0000-4000-8001-000000000001', null, 'system', '5K — Sharpen', '5k', 8, 'Eight weeks around one hard session and one sharpening session per week. Built for someone who already runs three or four times a week.'),
+  ('00000000-0000-4000-8001-000000000002', null, 'system', '10K — Build', '10k', 10, 'Threshold-led ten-week block. Enough volume to hold the pace, enough speed to find it.'),
+  ('00000000-0000-4000-8001-000000000003', null, 'system', 'Half Marathon — Foundation to Start Line', 'half_marathon', 14, 'Fourteen weeks. Long run progression, one quality session, two strength sessions a week throughout.'),
+  ('00000000-0000-4000-8001-000000000004', null, 'system', 'Marathon — The Long Way', 'marathon', 18, 'Eighteen weeks with three build blocks and a three-week taper. Race-pace work lives in the long run, where it belongs.'),
+  ('00000000-0000-4000-8001-000000000005', null, 'system', 'Ultra — Time on Feet', 'ultra', 24, 'Twenty-four weeks built around back-to-back long runs, terrain specificity and durability work. Volume rises slowly and steps back every fourth week.'),
+  ('00000000-0000-4000-8001-000000000006', null, 'system', '70.3 — Three Disciplines', 'triathlon_70_3', 20, 'Twenty weeks balancing swim, bike and run with weekly brick work and triathlon-specific strength.'),
+  ('00000000-0000-4000-8001-000000000007', null, 'system', 'General Endurance', 'general_endurance', 12, 'No start line yet. Aerobic base, consistent strength, and the habit of showing up. The best place to begin.')
+on conflict (id) do nothing;

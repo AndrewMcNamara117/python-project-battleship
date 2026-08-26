@@ -6,23 +6,25 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
-import { PROGRAM_TEMPLATES } from '@/data/workout-library';
+import type { ProgramTemplateItem } from '@/lib/domain/library';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 
 export function ProgramBuilder({
   athletes,
+  templates,
   defaultStart,
 }: {
   athletes: { id: string; name: string }[];
+  templates: ProgramTemplateItem[];
   defaultStart: string;
 }) {
   const [athleteId, setAthleteId] = useState(athletes[0]?.id ?? '');
-  const [templateId, setTemplateId] = useState(PROGRAM_TEMPLATES[0].id);
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [startDate, setStartDate] = useState(defaultStart);
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
 
-  const template = PROGRAM_TEMPLATES.find((t) => t.id === templateId)!;
+  const template = templates.find((t) => t.id === templateId) ?? templates[0];
 
   return (
     <Panel className="p-6 sm:p-8">
@@ -47,7 +49,7 @@ export function ProgramBuilder({
         <Field label="Template">
           {(p) => (
             <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} {...p}>
-              {PROGRAM_TEMPLATES.map((t) => (
+              {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -62,7 +64,7 @@ export function ProgramBuilder({
 
       <div className="mt-6 border-t border-line pt-6">
         <div className="flex flex-wrap items-center gap-3">
-          <Badge tone="neutral">{EVENT_TYPE_LABELS[template.goalType]}</Badge>
+          <Badge tone="neutral">{EVENT_TYPE_LABELS[template.goalType as keyof typeof EVENT_TYPE_LABELS]}</Badge>
           <Badge tone="neutral">{template.weeks} weeks</Badge>
         </div>
         <p className="mt-4 max-w-[70ch] text-[13px] leading-relaxed text-muted">{template.description}</p>

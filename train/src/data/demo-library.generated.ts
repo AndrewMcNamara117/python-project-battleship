@@ -5,7 +5,12 @@
 // that seeds the real database. Demo mode has no Postgres, and a second
 // hand-written copy of these sessions would drift; this one cannot.
 
-import type { StrengthExercise, StrengthTemplate, WorkoutTemplate } from '@/lib/domain/library';
+import type {
+  ProgramTemplateItem,
+  StrengthExercise,
+  StrengthTemplate,
+  WorkoutTemplate,
+} from '@/lib/domain/library';
 
 export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
   {
@@ -18,14 +23,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 4,
     "mainSet": "Steady aerobic riding. Smooth cadence, 85–95rpm.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "cross_training",
     "tags": [
       "easy",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -39,15 +44,15 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 90,
     "rpeTarget": 6,
     "mainSet": "60 min bike at steady effort, straight into 25 min run off the bike.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "race_specific",
     "purpose": "The first 10 minutes off the bike always feel wrong. Run through it.",
     "tags": [
       "steady",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -62,15 +67,15 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 4,
     "mainSet": "Low-impact aerobic work — bike, row, elliptical or pool.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "cross_training",
     "purpose": "Aerobic stimulus without the pounding.",
     "tags": [
       "easy",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -86,7 +91,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 3,
     "mainSet": "Continuous easy running. Conversational the whole way.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "easy",
     "purpose": "If you cannot speak in full sentences, you are going too hard.",
@@ -94,7 +99,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "easy",
       "distance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -111,7 +116,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy to the hill.",
     "mainSet": "8 x 60s uphill at hard effort. Jog down as recovery.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "hills",
     "purpose": "Strength in disguise. Tall posture, quick feet.",
@@ -119,7 +124,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -137,7 +142,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "First 15 minutes deliberately slower than target.",
     "mainSet": "Steady, controlled effort. Practise race-day fuelling.",
     "coolDown": "10 minutes easy walking.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "long_run",
     "purpose": "Fuel early. Start controlled. Finish stronger than you started.",
@@ -145,7 +150,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "easy",
       "distance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -159,14 +164,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 20,
     "rpeTarget": 1,
     "mainSet": "Hips, ankles, thoracic spine. Slow and unhurried.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "mobility",
     "tags": [
       "recovery",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -181,7 +186,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 75,
     "rpeTarget": 6,
     "mainSet": "Three equal thirds: easy, steady, then marathon effort.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "progression",
     "purpose": "Negative split or it does not count.",
@@ -189,7 +194,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "steady",
       "distance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -202,7 +207,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "intensity": "max",
     "rpeTarget": 10,
     "mainSet": "Execute the plan. Nothing new on race day.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "race",
     "purpose": "The work is done. Trust it.",
@@ -210,7 +215,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "max",
       "distance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -227,7 +232,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy.",
     "mainSet": "3 x 15 min at goal race pace, 3 min float between.",
     "coolDown": "10 min easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "race_specific",
     "purpose": "Rehearsal, not a test.",
@@ -235,7 +240,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "steady",
       "pace"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -251,7 +256,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 1,
     "rpeTarget": 2,
     "mainSet": "Very easy. Flat route. Shorter than it feels like it should be.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "recovery",
     "purpose": "The point is blood flow, not fitness.",
@@ -259,7 +264,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "recovery",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -271,15 +276,15 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "basis": "time",
     "intensity": "rest",
     "mainSet": "Complete rest. This is a session — treat it like one.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "rest",
     "purpose": "Adaptation happens here, not in the session you skipped it for.",
     "tags": [
       "rest",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -295,14 +300,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "400m mixed.",
     "mainSet": "8 x 100m steady, 20s rest. Focus on catch.",
     "coolDown": "200m easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
-    "category": "custom",
+    "category": "cross_training",
     "tags": [
       "steady",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -320,14 +325,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + 4 x 20s strides.",
     "mainSet": "25 minutes continuous at comfortably hard. You could hold it for an hour on race day.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "tempo",
     "tags": [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -345,7 +350,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + drills + 4 x 20s strides.",
     "mainSet": "6 x 5 min at threshold, 90s easy jog between.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "threshold",
     "purpose": "Controlled discomfort, not a race. Same pace on the last rep as the first.",
@@ -353,7 +358,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -371,14 +376,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + drills + 4 x 100m strides.",
     "mainSet": "5 x 3 min hard, 3 min easy jog recovery.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "category": "intervals",
     "tags": [
       "max",
       "time"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -411,14 +416,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Barbell",
       "Bench"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -445,14 +450,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Step",
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -481,14 +486,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Box"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "plyometric",
     "isUnilateral": false,
     "tags": [
       "plyometric"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -515,14 +520,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Bench"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": true,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -548,14 +553,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Extend the tempo"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": false,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -584,14 +589,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Dumbbells",
       "Kettlebells"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "carry",
     "isUnilateral": false,
     "tags": [
       "carry"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -622,14 +627,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Kettlebell",
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "squat",
     "isUnilateral": false,
     "tags": [
       "squat"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -653,14 +658,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Elevate the toes"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "mobility",
     "isUnilateral": false,
     "tags": [
       "mobility"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -685,14 +690,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Pause at end range"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "mobility",
     "isUnilateral": true,
     "tags": [
       "mobility"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -722,14 +727,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Box",
       "Dumbbells"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "lunge",
     "isUnilateral": true,
     "tags": [
       "lunge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -756,14 +761,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Partner or anchor"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -789,14 +794,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Lateral pogos"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "plyometric",
     "isUnilateral": false,
     "tags": [
       "plyometric"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -825,14 +830,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Pull-up bar"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "pull",
     "isUnilateral": false,
     "tags": [
       "pull"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -859,14 +864,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Tempo"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -897,14 +902,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Bench",
       "Dumbbells"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "lunge",
     "isUnilateral": true,
     "tags": [
       "lunge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -929,14 +934,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Feet elevated"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": true,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -964,14 +969,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Dumbbell",
       "Bench"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "pull",
     "isUnilateral": false,
     "tags": [
       "pull"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1000,14 +1005,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": true,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1036,14 +1041,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Step"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1074,14 +1079,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Trap bar",
       "Plates"
     ],
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null
   }
@@ -1094,12 +1099,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "foundation",
     "description": "Bilateral strength and posterior chain. The base everything else is built on. Leave two reps in reserve on every set.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "foundation"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1177,12 +1182,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "foundation",
     "description": "Single-leg strength and lateral control. This is the session that keeps you on the road.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "foundation"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1258,12 +1263,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "maintenance",
     "description": "Race week and heavy running weeks. Enough to hold what you built, light enough to leave no trace.",
     "estimatedMinutes": 25,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "maintenance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1315,12 +1320,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "performance",
     "description": "Heavier, faster, lower volume. Run this in a build block when the legs can take it.",
     "estimatedMinutes": 55,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "performance"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1397,12 +1402,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "triathlon_support",
     "description": "Upper-body pulling for the swim, hip strength for the bike, and enough legs to run off it.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "triathlon_support"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1477,12 +1482,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "ultra_prep",
     "description": "Durability for long time on feet — carries, calves and hip stability at volume. Built for the back half of an ultra.",
     "estimatedMinutes": 50,
-    "createdAt": "2026-08-26T11:52:29.570Z",
+    "createdAt": "2026-08-26T12:17:18.283Z",
     "visibility": "system",
     "tags": [
       "ultra_prep"
     ],
-    "updatedAt": "2026-08-26T11:52:29.570Z",
+    "updatedAt": "2026-08-26T12:17:18.283Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1553,3 +1558,97 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     ]
   }
 ] as unknown as StrengthTemplate[];
+
+export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
+  {
+    "id": "00000000-0000-4000-8001-000000000001",
+    "name": "5K — Sharpen",
+    "goalType": "5k",
+    "weeks": 8,
+    "description": "Eight weeks around one hard session and one sharpening session per week. Built for someone who already runs three or four times a week.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000002",
+    "name": "10K — Build",
+    "goalType": "10k",
+    "weeks": 10,
+    "description": "Threshold-led ten-week block. Enough volume to hold the pace, enough speed to find it.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000007",
+    "name": "General Endurance",
+    "goalType": "general_endurance",
+    "weeks": 12,
+    "description": "No start line yet. Aerobic base, consistent strength, and the habit of showing up. The best place to begin.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000003",
+    "name": "Half Marathon — Foundation to Start Line",
+    "goalType": "half_marathon",
+    "weeks": 14,
+    "description": "Fourteen weeks. Long run progression, one quality session, two strength sessions a week throughout.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000004",
+    "name": "Marathon — The Long Way",
+    "goalType": "marathon",
+    "weeks": 18,
+    "description": "Eighteen weeks with three build blocks and a three-week taper. Race-pace work lives in the long run, where it belongs.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000006",
+    "name": "70.3 — Three Disciplines",
+    "goalType": "triathlon_70_3",
+    "weeks": 20,
+    "description": "Twenty weeks balancing swim, bike and run with weekly brick work and triathlon-specific strength.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  },
+  {
+    "id": "00000000-0000-4000-8001-000000000005",
+    "name": "Ultra — Time on Feet",
+    "goalType": "ultra",
+    "weeks": 24,
+    "description": "Twenty-four weeks built around back-to-back long runs, terrain specificity and durability work. Volume rises slowly and steps back every fourth week.",
+    "createdAt": "2026-08-26T12:17:18.283Z",
+    "visibility": "system",
+    "tags": [],
+    "updatedAt": "2026-08-26T12:17:18.283Z",
+    "ownerId": null,
+    "archivedAt": null
+  }
+] as unknown as ProgramTemplateItem[];

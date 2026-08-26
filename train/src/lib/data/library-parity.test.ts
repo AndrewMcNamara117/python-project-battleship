@@ -98,6 +98,29 @@ describe('demo library — parity with the database', () => {
     );
   });
 
+  it('replaces the session already in that slot rather than stacking another', async () => {
+    const repo = anyRepo();
+    const [a, b] = await repo.listWorkoutTemplates();
+    const day = '2026-10-05';
+
+    const first = await repo.insertTemplateIntoProgramme('workout', a.id, DEMO_ATHLETE_ID, day, 0);
+    const second = await repo.insertTemplateIntoProgramme('workout', b.id, DEMO_ATHLETE_ID, day, 0);
+    assert.equal(second, first, 'the slot keeps its identity');
+
+    const onThatDay = await repo.listScheduled(DEMO_ATHLETE_ID, day, day);
+    assert.equal(onThatDay.filter((w) => w.slot === 0).length, 1, 'a slot holds exactly one session');
+    assert.equal(onThatDay.find((w) => w.slot === 0)?.sourceWorkoutTemplateId, b.id, 'the newer one wins');
+  });
+
+  it('puts strength on its own slot so it sits alongside the run', async () => {
+    const repo = anyRepo();
+    const tpl = (await repo.listStrengthTemplates())[0];
+    const day = '2026-10-12';
+    const id = await repo.insertTemplateIntoProgramme('strength', tpl.id, DEMO_ATHLETE_ID, day);
+    const session = await repo.getScheduled(id);
+    assert.equal(session?.slot, 1);
+  });
+
   it('filters by search, category and tag the way the query does', async () => {
     const repo = anyRepo();
     const all = await repo.listWorkoutTemplates();

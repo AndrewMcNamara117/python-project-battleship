@@ -8,6 +8,7 @@ import type {
 } from '@/lib/domain/programme';
 import type {
   LibraryQuery,
+  ProgramTemplateItem,
   StrengthExercise,
   StrengthTemplate,
   WeekVolume,
@@ -226,6 +227,11 @@ export interface IronMilesRepo {
    * Copies the template — the resulting session records where it came from but
    * holds no live link, so editing the template later cannot change training
    * the athlete has already been given.
+   *
+   * A day holds one session per slot. Runs default to slot 0 and strength to
+   * slot 1, so a strength session lands alongside that day's run rather than
+   * on top of it. Prescribing into an occupied slot replaces what is there,
+   * and the replacement is recorded in the session's revision history.
    */
   insertTemplateIntoProgramme(
     kind: 'workout' | 'strength',
@@ -234,6 +240,9 @@ export interface IronMilesRepo {
     date: ISODate,
     slot?: number,
   ): Promise<UUID>;
+
+  listProgramTemplates(query?: LibraryQuery): Promise<ProgramTemplateItem[]>;
+  getProgramTemplate(id: UUID): Promise<ProgramTemplateItem | null>;
 
   /** Prescribed against intended volume, for the mismatch warning. */
   getWeekVolume(weekId: UUID): Promise<WeekVolume>;

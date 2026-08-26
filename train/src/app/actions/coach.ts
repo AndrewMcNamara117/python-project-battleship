@@ -5,8 +5,6 @@ import { requireCoach, requireCoachOf } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
 import { messageSchema } from '@/lib/validation/schemas';
 import type { ExperienceLevel, ScheduledWorkout, TrainingPhase } from '@/lib/domain/types';
-import { PROGRAM_TEMPLATES, WORKOUT_TEMPLATES } from '@/data/workout-library';
-import { STRENGTH_TEMPLATES } from '@/data/strength-library';
 import { addDays, startOfWeek, toISODate } from '@/lib/domain/dates';
 
 export interface Result {
@@ -175,6 +173,14 @@ export async function setForgeEnabled(athleteId: string, enabled: boolean): Prom
  * the athlete's own schedule so the coach can edit one athlete's week without
  * touching anyone else's.
  */
+/**
+ * Assign a programme frame to an athlete.
+ *
+ * Every session is inserted from a library template, so each one carries a
+ * record of where it came from and arrives with its structure already broken
+ * into components. The copy is independent from the moment it lands: editing
+ * the template afterwards cannot reach the athlete's prescribed training.
+ */
 export async function assignProgramTemplate(
   athleteId: string,
   templateId: string,
@@ -185,8 +191,33 @@ export async function assignProgramTemplate(
 
   const repo = await getRepo();
 
-  const template = PROGRAM_TEMPLATES.find((t) => t.id === templateId);
-  if (!template) return { ok: false, message: 'Unknown template.' };
+  const template = await repo.getProgramTemplate(templateId);
+  if (!template) return { ok: false, message: 'That programme template is no longer available.' };
+
+  const [workouts, strengthTemplates] = await Promise.all([
+    repo.listWorkoutTemplates(),
+    repo.listStrengthTemplates(),
+  ]);
+  const byCategory = (category: string) => workouts.find((w) => w.category === category);
+
+  const easy = byCategory('easy');
+  const threshold = byCategory('threshold');
+  const recovery = byCategory('recovery');
+  const long = byCategory('long_run');
+  if (!easy || !threshold || !recovery || !long) {
+    return { ok: false, message: 'The workout library is incomplete — a programme cannot be built from it.' };
+  }
+
+  // Mon–Sun frame. A coach edits from here; nothing about it is prescriptive.
+  const frame: ({ kind: 'workout' | 'strength'; id: string } | null)[] = [
+    { kind: 'workout', id: easy.id },
+    strengthTemplates[0] ? { kind: 'strength', id: strengthTemplates[0].id } : null,
+    { kind: 'workout', id: threshold.id },
+    { kind: 'workout', id: recovery.id },
+    strengthTemplates[1] ? { kind: 'strength', id: strengthTemplates[1].id } : null,
+    { kind: 'workout', id: easy.id },
+    { kind: 'workout', id: long.id },
+  ];
 
   const startDate = startOfWeek(startDateInput || toISODate(new Date()));
   const endDate = addDays(startDate, template.weeks * 7 - 1);
@@ -204,54 +235,45 @@ export async function assignProgramTemplate(
     endDate,
     status: 'active',
   });
-  const easy = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-easy')!;
-  const long = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-long')!;
-  const threshold = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-threshold')!;
-  const recovery = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-recovery')!;
-  const rest = WORKOUT_TEMPLATES.find((w) => w.id === 'wt-rest')!;
 
-  // Mon–Sun frame. A coach edits from here; nothing about it is prescriptive.
-  const frame = [easy, null, threshold, recovery, null, easy, long];
-  const strengthDays = new Set([1, 4]);
+  // Blocks and weeks are rows, not something inferred from dates — the
+  // structure has to exist before sessions can land in it.
+  const block = await repo.createBlock({
+    programId: program.id,
+    athleteId,
+    blockIndex: 0,
+    name: template.name,
+    phase: 'base',
+    focus: null,
+    notes: null,
+  });
+
+  for (let week = 0; week < template.weeks; week++) {
+    await repo.createWeek({
+      blockId: block.id,
+      programId: program.id,
+      athleteId,
+      weekIndex: week,
+      programWeekNo: week + 1,
+      startDate: addDays(startDate, week * 7),
+      targetVolumeKm: null,
+      focus: null,
+      notes: null,
+      // every fourth week steps back — a coaching decision, stated as one
+      isRecoveryWeek: week > 0 && (week + 1) % 4 === 0,
+    });
+  }
 
   for (let week = 0; week < template.weeks; week++) {
     for (let day = 0; day < 7; day++) {
-      const date = addDays(startDate, week * 7 + day);
-      const isStrength = strengthDays.has(day);
-      const source = frame[day] ?? rest;
-      const strengthTemplate = isStrength
-        ? STRENGTH_TEMPLATES[day === 1 ? 0 : 1]
-        : null;
-
-      await repo.saveScheduled({
-        id: `sw-${athleteId}-${date}-0`,
-        programId: program.id,
-        programWeekId: null,
+      const slot = frame[day];
+      if (!slot) continue;
+      await repo.insertTemplateIntoProgramme(
+        slot.kind,
+        slot.id,
         athleteId,
-        date,
-        slot: 0,
-        status: 'scheduled',
-        name: isStrength ? `Strength — ${strengthTemplate?.name ?? 'Session'}` : source.name,
-        type: isStrength ? 'strength' : source.type,
-        basis: source.basis,
-        intensity: isStrength ? 'steady' : source.intensity,
-        distanceKm: isStrength ? null : source.distanceKm,
-        durationMinutes: isStrength ? (strengthTemplate?.estimatedMinutes ?? 45) : source.durationMinutes,
-        paceRange: isStrength ? null : source.paceRange,
-        hrZone: isStrength ? null : source.hrZone,
-        rpeTarget: source.rpeTarget,
-        warmUp: source.warmUp,
-        mainSet: isStrength ? (strengthTemplate?.description ?? null) : source.mainSet,
-        coolDown: source.coolDown,
-        notes: source.notes,
-        coachNote: null,
-        strengthTemplateId: strengthTemplate?.id ?? null,
-        raceId: null,
-        sourceWorkoutTemplateId: null,
-        sourceStrengthTemplateId: null,
-        prescriptionRevision: 1,
-        createdAt: new Date().toISOString(),
-      });
+        addDays(startDate, week * 7 + day),
+      );
     }
   }
 

@@ -234,6 +234,46 @@ describe('template → live session', () => {
   });
 });
 
+describe('one session per slot', () => {
+  it('replaces what is already in the slot, and records the change', async () => {
+    const { rows: [a] } = await t.asService(
+      `select id from workout_templates where visibility='system' and category='easy' limit 1`);
+    const { rows: [b] } = await t.asService(
+      `select id from workout_templates where visibility='system' and category='long_run' limit 1`);
+
+    const day = MON;
+    const first = (await t.asUser(coachA,
+      `select im_insert_workout_template($1,$2,$3::date,6::smallint) id`, [a.id, athlete, day])).rows[0].id;
+    const second = (await t.asUser(coachA,
+      `select im_insert_workout_template($1,$2,$3::date,6::smallint) id`, [b.id, athlete, day])).rows[0].id;
+
+    assert.equal(second, first, 'the slot keeps its identity rather than stacking a second session');
+
+    const { rows } = await t.asService(
+      `select name, source_workout_template_id, prescription_revision
+         from scheduled_workouts where athlete_id=$1 and date=$2::date and slot=6`, [athlete, day]);
+    assert.equal(rows.length, 1, 'a slot holds exactly one session');
+    assert.equal(rows[0].source_workout_template_id, b.id, 'the newer prescription wins');
+    assert.ok(rows[0].prescription_revision > 1, 'and the replacement is a revision, not a silent overwrite');
+
+    const { rows: history } = await t.asService(
+      `select count(*)::int n from session_revisions where scheduled_workout_id=$1`, [first]);
+    assert.ok(history[0].n > 0, 'the athlete can still see what they were originally given');
+  });
+
+  it('puts strength on its own slot so it sits alongside the run', async () => {
+    const { rows: [tpl] } = await t.asService(`select id from strength_templates where visibility='system' limit 1`);
+    const day = MON;
+    await t.asUser(coachA, `select im_insert_strength_template($1,$2,$3::date)`, [tpl.id, athlete, day]);
+    const { rows } = await t.asService(
+      `select slot, type from scheduled_workouts where athlete_id=$1 and date=$2::date order by slot`,
+      [athlete, day]);
+    const strength = rows.find((r) => r.type === 'strength');
+    assert.ok(strength, 'the strength session landed');
+    assert.equal(strength.slot, 1, 'default strength slot is 1');
+  });
+});
+
 describe('strength template → live session', () => {
   it('inserts an ordered strength session with its exercises', async () => {
     const { rows: [tpl] } = await t.asService(`select id from strength_templates where name='Foundation A'`);

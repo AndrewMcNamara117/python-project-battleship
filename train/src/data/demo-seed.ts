@@ -30,7 +30,15 @@ import type {
 } from '@/lib/domain/types';
 import { FORGE_POINTS } from '@/lib/domain/types';
 import { triageCheckIn } from '@/lib/domain/checkin-rules';
-import { strengthTemplateById } from './strength-library';
+import { DEMO_STRENGTH_TEMPLATES } from './demo-library.generated';
+
+/**
+ * The demo athlete's strength days point at the shipped templates by name —
+ * the ids are database uuids now, and a name is what stays readable here.
+ */
+const strengthTemplateNamed = (name: string) => DEMO_STRENGTH_TEMPLATES.find((t) => t.name === name);
+const FOUNDATION_A = strengthTemplateNamed('Foundation A')?.id ?? null;
+const FOUNDATION_B = strengthTemplateNamed('Foundation B')?.id ?? null;
 
 /* ------------------------------------------------------------------
    Deterministic demo dataset.
@@ -163,7 +171,7 @@ function weekPlan(offset: number): DaySpec[] {
       coolDown: null,
       notes: 'Two reps in reserve on every set.',
       coachNote: null,
-      strengthTemplateId: 'st-foundation-a',
+      strengthTemplateId: FOUNDATION_A,
     },
     {
       name: 'Threshold — 6 x 5 min',
@@ -214,7 +222,7 @@ function weekPlan(offset: number): DaySpec[] {
       coolDown: null,
       notes: 'The session that keeps you on the road.',
       coachNote: null,
-      strengthTemplateId: 'st-foundation-b',
+      strengthTemplateId: FOUNDATION_B,
     },
     {
       name: 'Iron Miles Club Run',
@@ -541,7 +549,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       if (status !== 'completed') return;
 
       if (spec.type === 'strength' && spec.strengthTemplateId) {
-        const tpl = strengthTemplateById(spec.strengthTemplateId);
+        const tpl = DEMO_STRENGTH_TEMPLATES.find((t) => t.id === spec.strengthTemplateId);
         strengthSessions.push({
           id: `ss-${date}`,
           athleteId: DEMO_ATHLETE_ID,
@@ -550,11 +558,11 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
           date,
           status: 'completed',
           logs:
-            tpl?.blocks.flatMap((b) =>
-              Array.from({ length: b.sets }, (_, si) => ({
-                exerciseId: b.exerciseId,
+            tpl?.components?.flatMap((b) =>
+              Array.from({ length: b.sets ?? 3 }, (_, si) => ({
+                exerciseId: b.strengthExerciseId ?? '',
                 setIndex: si,
-                reps: Number(b.reps.match(/\d+/)?.[0] ?? 8),
+                reps: Number(b.reps?.match(/\d+/)?.[0] ?? 8),
                 weightKg: null,
                 rpe: Math.round(6 + jitter(r, 1.2)),
                 completed: true,

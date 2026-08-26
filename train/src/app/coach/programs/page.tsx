@@ -3,7 +3,6 @@ import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
 import { Badge } from '@/components/ui/Badge';
 import { Panel } from '@/components/ui/Panel';
-import { PROGRAM_TEMPLATES } from '@/data/workout-library';
 import { loadCoachContext } from '@/lib/coach-data';
 import { addDays, formatDayMonth, startOfWeek } from '@/lib/domain/dates';
 import { getRepo } from '@/lib/data';
@@ -17,6 +16,7 @@ export default async function ProgramsPage() {
   const repo = await getRepo();
   const athletes = ctx.athletes.map((a) => ({ id: a.profile.id, name: a.profile.fullName }));
   const nextMonday = addDays(startOfWeek(ctx.today), 7);
+  const programTemplates = await repo.listProgramTemplates();
 
   // real weeks per athlete, so the coach picks a week rather than typing a date
   const weeksByAthlete: Record<string, { id: string; label: string }[]> = {};
@@ -47,7 +47,7 @@ export default async function ProgramsPage() {
 
       <div className="mt-8 grid gap-5">
         <Reveal>
-          <ProgramBuilder athletes={athletes} defaultStart={nextMonday} />
+          <ProgramBuilder athletes={athletes} templates={programTemplates} defaultStart={nextMonday} />
         </Reveal>
         <Reveal delay={0.06}>
           <WeekCloner
@@ -61,13 +61,13 @@ export default async function ProgramsPage() {
       <section className="mt-12">
         <h2 className="im-micro">Template library</h2>
         <RevealGroup className="mt-5 grid gap-4 md:grid-cols-2">
-          {PROGRAM_TEMPLATES.map((t) => (
+          {programTemplates.map((t) => (
             <RevealItem key={t.id}>
               <Panel hover className="h-full p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <h3 className="im-display text-[1.2rem]">{t.name}</h3>
                   <div className="flex gap-2">
-                    <Badge tone="neutral">{EVENT_TYPE_LABELS[t.goalType]}</Badge>
+                    <Badge tone="neutral">{EVENT_TYPE_LABELS[t.goalType as keyof typeof EVENT_TYPE_LABELS]}</Badge>
                     <Badge tone="green">{t.weeks}w</Badge>
                   </div>
                 </div>

@@ -24,6 +24,7 @@ const q = async (sql) => (await t.asService(sql)).rows;
 const workouts = await q(`select * from workout_templates where visibility='system' order by name`);
 const exercises = await q(`select * from strength_exercises where visibility='system' order by name`);
 const strength = await q(`select * from strength_templates where visibility='system' order by name`);
+const programs = await q(`select * from program_templates where visibility='system' order by weeks`);
 const components = await q(`select * from template_components order by position`);
 
 const byParent = (key, id) => components.filter((c) => c[key] === id).map((c) => {
@@ -38,7 +39,12 @@ const out = `// GENERATED FILE — do not edit.
 // that seeds the real database. Demo mode has no Postgres, and a second
 // hand-written copy of these sessions would drift; this one cannot.
 
-import type { StrengthExercise, StrengthTemplate, WorkoutTemplate } from '@/lib/domain/library';
+import type {
+  ProgramTemplateItem,
+  StrengthExercise,
+  StrengthTemplate,
+  WorkoutTemplate,
+} from '@/lib/domain/library';
 
 export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = ${JSON.stringify(
   workouts.map((w) => ({ ...shape(w), ownerId: null, archivedAt: null, tags: w.tags ?? [], components: byParent('workout_template_id', w.id) })), null, 2)} as unknown as WorkoutTemplate[];
@@ -48,8 +54,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = ${JSON.stringify(
 
 export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = ${JSON.stringify(
   strength.map((s) => ({ ...shape(s), ownerId: null, archivedAt: null, tags: s.tags ?? [], components: byParent('strength_template_id', s.id) })), null, 2)} as unknown as StrengthTemplate[];
+
+export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = ${JSON.stringify(
+  programs.map((p) => ({ ...shape(p), ownerId: null, archivedAt: null, tags: p.tags ?? [] })), null, 2)} as unknown as ProgramTemplateItem[];
 `;
 
 writeFileSync(new URL('../src/data/demo-library.generated.ts', import.meta.url), out);
 await t.close();
-console.log(`wrote ${workouts.length} workouts, ${exercises.length} exercises, ${strength.length} strength templates`);
+console.log(
+  `wrote ${workouts.length} workouts, ${exercises.length} exercises, ` +
+    `${strength.length} strength templates, ${programs.length} programme templates`,
+);
