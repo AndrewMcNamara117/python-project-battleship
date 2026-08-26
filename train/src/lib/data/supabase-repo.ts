@@ -46,9 +46,24 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type {
+  AssignmentConflict,
+  AssignmentPreview,
+  ProgramTemplate,
+  ProgramTemplateBlock,
+  ProgramTemplateDetail,
+  ProgramTemplateSlot,
+  ProgramTemplateWeek,
+  TemplateWeekVolume,
+} from '@/lib/domain/programme-template';
+import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
+import type {
   IronMilesRepo,
   LibraryKind,
+  ProgramTemplateDraft,
   StrengthExerciseDraft,
+  TemplateBlockDraft,
+  TemplateSlotDraft,
+  TemplateWeekDraft,
   StrengthTemplateDraft,
   TemplateComponentDraft,
   WorkoutTemplateDraft,
@@ -1750,6 +1765,310 @@ export class SupabaseRepo implements IronMilesRepo {
     const id = data.user?.id;
     if (!id) throw new Error('You need to be signed in to do that.');
     return id;
+  }
+
+  /* ================= the programme template builder ================= */
+
+  private toTemplateBlock = (r: any): ProgramTemplateBlock => ({
+    id: r.id,
+    programTemplateId: r.program_template_id,
+    blockIndex: r.block_index,
+    name: r.name,
+    phase: r.phase ?? null,
+    focus: r.focus ?? null,
+    description: r.description ?? null,
+    createdAt: r.created_at,
+  });
+
+  private toTemplateWeek = (r: any): ProgramTemplateWeek => ({
+    id: r.id,
+    programTemplateId: r.program_template_id,
+    blockId: r.block_id,
+    weekIndex: r.week_index,
+    templateWeekNo: r.template_week_no,
+    targetVolumeKm: r.target_volume_km == null ? null : Number(r.target_volume_km),
+    isRecoveryWeek: r.is_recovery_week ?? false,
+    focus: r.focus ?? null,
+    notes: r.notes ?? null,
+    createdAt: r.created_at,
+  });
+
+  private toTemplateSlot = (r: any): ProgramTemplateSlot => ({
+    id: r.id,
+    programTemplateId: r.program_template_id,
+    templateWeekId: r.template_week_id,
+    weekday: r.weekday,
+    slot: r.slot,
+    workoutTemplateId: r.workout_template_id ?? null,
+    strengthTemplateId: r.strength_template_id ?? null,
+    isRest: r.is_rest ?? false,
+    isOptional: r.is_optional ?? false,
+    label: r.label ?? null,
+    notes: r.notes ?? null,
+    distanceKm: r.distance_km == null ? null : Number(r.distance_km),
+    durationMinutes: r.duration_minutes ?? null,
+    rpeTarget: r.rpe_target ?? null,
+  });
+
+  private toTemplateVolume = (r: any): TemplateWeekVolume => ({
+    templateWeekNo: r.template_week_no,
+    blockName: r.block_name,
+    phase: r.phase ?? null,
+    isRecoveryWeek: r.is_recovery_week ?? false,
+    targetKm: r.target_km == null ? null : Number(r.target_km),
+    prescribedKm: Number(r.prescribed_km ?? 0),
+    sessionCount: Number(r.session_count ?? 0),
+    restDays: Number(r.rest_days ?? 0),
+    trainingDays: Number(r.training_days ?? 0),
+  });
+
+  async getProgramTemplateDetail(id: UUID): Promise<ProgramTemplateDetail | null> {
+    const template = await this.getProgramTemplateRow(id);
+    if (!template) return null;
+
+    const [blocks, weeks, slots, volume] = await Promise.all([
+      this.rows(
+        this.db.from('program_template_blocks').select('*').eq('program_template_id', id).order('block_index'),
+        this.toTemplateBlock,
+      ),
+      this.rows(
+        this.db.from('program_template_weeks').select('*').eq('program_template_id', id).order('template_week_no'),
+        this.toTemplateWeek,
+      ),
+      this.rows(
+        this.db.from('program_template_slots').select('*').eq('program_template_id', id)
+          .order('weekday').order('slot'),
+        this.toTemplateSlot,
+      ),
+      this.getTemplateVolume(id),
+    ]);
+
+    const slotsByWeek = new Map<UUID, ProgramTemplateSlot[]>();
+    for (const s of slots) {
+      const list = slotsByWeek.get(s.templateWeekId) ?? [];
+      list.push(s);
+      slotsByWeek.set(s.templateWeekId, list);
+    }
+
+    return {
+      ...template,
+      volume,
+      blocks: blocks.map((b) => ({
+        ...b,
+        weeks: weeks
+          .filter((w) => w.blockId === b.id)
+          .map((w) => ({ ...w, slots: slotsByWeek.get(w.id) ?? [] })),
+      })),
+    };
+  }
+
+  private toProgramTemplateFull = (r: any): ProgramTemplate => ({
+    id: r.id,
+    ownerId: r.owner_id ?? null,
+    visibility: r.visibility,
+    name: r.name,
+    description: r.description ?? '',
+    purpose: r.purpose ?? null,
+    coachNotes: r.coach_notes ?? null,
+    discipline: r.discipline ?? 'running',
+    goalType: r.goal_type,
+    targetDistanceKm: r.target_distance_km == null ? null : Number(r.target_distance_km),
+    experienceLevel: r.experience_level ?? null,
+    minDaysPerWeek: r.min_days_per_week ?? null,
+    maxDaysPerWeek: r.max_days_per_week ?? null,
+    weeks: r.weeks,
+    tags: r.tags ?? [],
+    archivedAt: r.archived_at ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+
+  private getProgramTemplateRow(id: UUID) {
+    return this.one(
+      this.db.from('program_templates').select('*').eq('id', id).single(),
+      this.toProgramTemplateFull,
+    );
+  }
+
+  async saveProgramTemplate(template: ProgramTemplateDraft): Promise<ProgramTemplate> {
+    const row: Record<string, unknown> = {
+      owner_id: template.ownerId,
+      visibility: template.visibility,
+      name: template.name,
+      description: template.description,
+      purpose: template.purpose,
+      coach_notes: template.coachNotes,
+      discipline: template.discipline,
+      goal_type: template.goalType,
+      target_distance_km: template.targetDistanceKm,
+      experience_level: template.experienceLevel,
+      min_days_per_week: template.minDaysPerWeek,
+      max_days_per_week: template.maxDaysPerWeek,
+      tags: template.tags,
+      archived_at: template.archivedAt,
+      updated_at: new Date().toISOString(),
+    };
+    // weeks follows the structure once there is one; on create it is the
+    // nominal length the coach typed
+    if (!template.id) row.weeks = template.weeks ?? 1;
+
+    const { data, error } = await this.db
+      .from('program_templates')
+      .upsert(template.id ? { ...row, id: template.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toProgramTemplateFull(data);
+  }
+
+  async saveTemplateBlock(block: TemplateBlockDraft): Promise<ProgramTemplateBlock> {
+    const row: Record<string, unknown> = {
+      program_template_id: block.programTemplateId,
+      block_index: block.blockIndex,
+      name: block.name,
+      phase: block.phase,
+      focus: block.focus,
+      description: block.description,
+    };
+    const { data, error } = await this.db
+      .from('program_template_blocks')
+      .upsert(block.id ? { ...row, id: block.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toTemplateBlock(data);
+  }
+
+  async deleteTemplateBlock(blockId: UUID): Promise<void> {
+    const { count, error: countError } = await this.db
+      .from('program_template_weeks')
+      .select('id', { count: 'exact', head: true })
+      .eq('block_id', blockId);
+    if (countError) throw new Error(countError.message);
+    if (count) {
+      throw new Error(
+        `This block still holds ${count} week(s). Remove them first, or delete the weeks you no longer want.`,
+      );
+    }
+    const { error } = await this.db.from('program_template_blocks').delete().eq('id', blockId);
+    if (error) throw new Error(error.message);
+  }
+
+  async saveTemplateWeek(week: TemplateWeekDraft): Promise<ProgramTemplateWeek> {
+    const row: Record<string, unknown> = {
+      program_template_id: week.programTemplateId,
+      block_id: week.blockId,
+      week_index: week.weekIndex,
+      template_week_no: week.templateWeekNo,
+      target_volume_km: week.targetVolumeKm,
+      is_recovery_week: week.isRecoveryWeek,
+      focus: week.focus,
+      notes: week.notes,
+    };
+    const { data, error } = await this.db
+      .from('program_template_weeks')
+      .upsert(week.id ? { ...row, id: week.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toTemplateWeek(data);
+  }
+
+  async deleteTemplateWeek(weekId: UUID): Promise<void> {
+    const { error } = await this.db.from('program_template_weeks').delete().eq('id', weekId);
+    if (error) throw new Error(error.message);
+  }
+
+  async saveTemplateSlot(slot: TemplateSlotDraft): Promise<ProgramTemplateSlot> {
+    const row: Record<string, unknown> = {
+      program_template_id: slot.programTemplateId,
+      template_week_id: slot.templateWeekId,
+      weekday: slot.weekday,
+      slot: slot.slot,
+      workout_template_id: slot.workoutTemplateId,
+      strength_template_id: slot.strengthTemplateId,
+      is_rest: slot.isRest,
+      is_optional: slot.isOptional,
+      label: slot.label,
+      notes: slot.notes,
+      distance_km: slot.distanceKm,
+      duration_minutes: slot.durationMinutes,
+      rpe_target: slot.rpeTarget,
+    };
+    const { data, error } = await this.db
+      .from('program_template_slots')
+      .upsert(slot.id ? { ...row, id: slot.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toTemplateSlot(data);
+  }
+
+  async deleteTemplateSlot(slotId: UUID): Promise<void> {
+    const { error } = await this.db.from('program_template_slots').delete().eq('id', slotId);
+    if (error) throw new Error(error.message);
+  }
+
+  async getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]> {
+    const { data, error } = await this.db.rpc('im_template_week_volume', { p_template: templateId });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(this.toTemplateVolume);
+  }
+
+  async getAssignmentConflicts(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+  ): Promise<AssignmentConflict[]> {
+    const { data, error } = await this.db.rpc('im_template_conflicts', {
+      p_template: templateId,
+      p_athlete: athleteId,
+      p_start: startDate,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as AssignmentConflict[];
+  }
+
+  async previewAssignment(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+  ): Promise<AssignmentPreview> {
+    const [template, profile, conflicts, weeks, goal, program, slots] = await Promise.all([
+      this.getProgramTemplateRow(templateId),
+      this.getProfile(athleteId),
+      this.getAssignmentConflicts(templateId, athleteId, startDate),
+      this.getTemplateVolume(templateId),
+      this.getPrimaryGoal(athleteId),
+      this.getProgram(athleteId),
+      this.rows(
+        this.db.from('program_template_slots').select('*').eq('program_template_id', templateId),
+        this.toTemplateSlot,
+      ),
+    ]);
+    if (!template) throw new Error('That programme template is no longer available.');
+
+    const race = goal?.raceId ? await this.getRace(goal.raceId) : null;
+    return buildAssignmentPreview({
+      template, profile, conflicts, weeks, goal, race, program, slots, startDate,
+    });
+  }
+
+  async assignProgramTemplate(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    options?: { name?: string; goalId?: UUID },
+  ): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_instantiate_program_template', {
+      p_template: templateId,
+      p_athlete: athleteId,
+      p_start: startDate,
+      p_name: options?.name ?? null,
+      p_goal: options?.goalId ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

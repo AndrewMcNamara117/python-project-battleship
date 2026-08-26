@@ -15,6 +15,16 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type {
+  AssignmentConflict,
+  AssignmentPreview,
+  ProgramTemplate,
+  ProgramTemplateBlock,
+  ProgramTemplateDetail,
+  ProgramTemplateSlot,
+  ProgramTemplateWeek,
+  TemplateWeekVolume,
+} from '@/lib/domain/programme-template';
+import type {
   AcceptanceOutcome,
   Achievement,
   CheckIn,
@@ -65,6 +75,16 @@ export type StrengthTemplateDraft = Omit<StrengthTemplate, 'id' | 'createdAt' | 
   Partial<Pick<StrengthTemplate, 'id'>>;
 /** Position comes from array order, so callers cannot desynchronise it. */
 export type TemplateComponentDraft = Omit<SessionComponentDraft, 'position'>;
+
+/** A programme template on the way in. */
+export type ProgramTemplateDraft = Omit<ProgramTemplate, 'id' | 'createdAt' | 'updatedAt' | 'weeks'> &
+  Partial<Pick<ProgramTemplate, 'id' | 'weeks'>>;
+export type TemplateBlockDraft = Omit<ProgramTemplateBlock, 'id' | 'createdAt'> &
+  Partial<Pick<ProgramTemplateBlock, 'id'>>;
+export type TemplateWeekDraft = Omit<ProgramTemplateWeek, 'id' | 'createdAt'> &
+  Partial<Pick<ProgramTemplateWeek, 'id'>>;
+export type TemplateSlotDraft = Omit<ProgramTemplateSlot, 'id'> &
+  Partial<Pick<ProgramTemplateSlot, 'id'>>;
 
 export interface IronMilesRepo {
   readonly mode: 'supabase' | 'demo';
@@ -243,6 +263,44 @@ export interface IronMilesRepo {
 
   listProgramTemplates(query?: LibraryQuery): Promise<ProgramTemplateItem[]>;
   getProgramTemplate(id: UUID): Promise<ProgramTemplateItem | null>;
+
+  /* ---- the programme template builder ---- */
+
+  /** The template with every block, week and slot, plus its volume table. */
+  getProgramTemplateDetail(id: UUID): Promise<ProgramTemplateDetail | null>;
+  saveProgramTemplate(template: ProgramTemplateDraft): Promise<ProgramTemplate>;
+
+  saveTemplateBlock(block: TemplateBlockDraft): Promise<ProgramTemplateBlock>;
+  /** Refuses while the block still holds weeks, the way a live block does. */
+  deleteTemplateBlock(blockId: UUID): Promise<void>;
+
+  saveTemplateWeek(week: TemplateWeekDraft): Promise<ProgramTemplateWeek>;
+  deleteTemplateWeek(weekId: UUID): Promise<void>;
+
+  saveTemplateSlot(slot: TemplateSlotDraft): Promise<ProgramTemplateSlot>;
+  deleteTemplateSlot(slotId: UUID): Promise<void>;
+
+  /** Prescribed against intended, week by week. */
+  getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]>;
+
+  /** Everything the coach sees before committing an assignment. */
+  previewAssignment(templateId: UUID, athleteId: UUID, startDate: ISODate): Promise<AssignmentPreview>;
+  /** Just the conflicts, for a live re-check as the coach changes the date. */
+  getAssignmentConflicts(templateId: UUID, athleteId: UUID, startDate: ISODate): Promise<AssignmentConflict[]>;
+
+  /**
+   * Copy the template into the athlete's own programme.
+   *
+   * Refuses only what previewAssignment calls a blocker. Coaching conflicts
+   * are the coach's to weigh, and nothing here resolves one: no session is
+   * moved or dropped to fit an athlete's stated availability.
+   */
+  assignProgramTemplate(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    options?: { name?: string; goalId?: UUID },
+  ): Promise<UUID>;
 
   /** Prescribed against intended volume, for the mismatch warning. */
   getWeekVolume(weekId: UUID): Promise<WeekVolume>;

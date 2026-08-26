@@ -56,6 +56,16 @@ export const WEEKDAY_SHORT: Record<Weekday, string> = {
   1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
 };
 
+export const WEEKDAY_LONG: Record<Weekday, string> = {
+  1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday',
+  5: 'Friday', 6: 'Saturday', 7: 'Sunday',
+};
+
+/** Weekday numbers are ISO everywhere; coaches read names. Matches im_weekday_list. */
+export function weekdayList(days: readonly Weekday[]): string {
+  return [...days].sort((a, b) => a - b).map((d) => WEEKDAY_LONG[d]).join(', ');
+}
+
 export type GymAccess = 'full_gym' | 'home_gym' | 'bodyweight' | 'none';
 
 /* ---------------- identity ---------------- */

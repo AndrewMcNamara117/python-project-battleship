@@ -1,5 +1,8 @@
 import {
   DEMO_PROGRAM_TEMPLATES,
+  DEMO_TEMPLATE_BLOCKS,
+  DEMO_TEMPLATE_SLOTS,
+  DEMO_TEMPLATE_WEEKS,
   DEMO_STRENGTH_EXERCISES,
   DEMO_STRENGTH_TEMPLATES,
   DEMO_WORKOUT_TEMPLATES,
@@ -38,7 +41,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
-import { FORGE_POINTS } from '@/lib/domain/types';
+import { FORGE_POINTS , weekdayList } from '@/lib/domain/types';
 import type {
   BlockWithWeeks,
   ProgramBlock,
@@ -56,9 +59,24 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type {
+  AssignmentConflict,
+  AssignmentPreview,
+  ProgramTemplate,
+  ProgramTemplateBlock,
+  ProgramTemplateDetail,
+  ProgramTemplateSlot,
+  ProgramTemplateWeek,
+  TemplateWeekVolume,
+} from '@/lib/domain/programme-template';
+import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
+import type {
   IronMilesRepo,
   LibraryKind,
+  ProgramTemplateDraft,
   StrengthExerciseDraft,
+  TemplateBlockDraft,
+  TemplateSlotDraft,
+  TemplateWeekDraft,
   StrengthTemplateDraft,
   TemplateComponentDraft,
   WorkoutTemplateDraft,
@@ -84,6 +102,7 @@ function dataset(): DemoDataset {
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+const round1 = (n: number) => Math.round(n * 10) / 10;
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
 /** Which Forge event a completed session earns. */
@@ -1212,6 +1231,416 @@ export class DemoRepo implements IronMilesRepo {
       targetKm: week?.targetVolumeKm ?? null,
       sessionCount: sessions.length,
     };
+  }
+
+  /* ================= the programme template builder ================= */
+
+  private templateBlocks: ProgramTemplateBlock[] = clone(DEMO_TEMPLATE_BLOCKS);
+  private templateWeeks: ProgramTemplateWeek[] = clone(DEMO_TEMPLATE_WEEKS);
+  private templateSlots: ProgramTemplateSlot[] = clone(DEMO_TEMPLATE_SLOTS);
+
+  async getProgramTemplateDetail(id: UUID): Promise<ProgramTemplateDetail | null> {
+    const template = this.programTemplates.find((t) => t.id === id);
+    if (!template) return null;
+    const volume = await this.getTemplateVolume(id);
+
+    return clone({
+      ...(template as unknown as ProgramTemplate),
+      volume,
+      blocks: this.templateBlocks
+        .filter((b) => b.programTemplateId === id)
+        .sort((a, b) => a.blockIndex - b.blockIndex)
+        .map((b) => ({
+          ...b,
+          weeks: this.templateWeeks
+            .filter((w) => w.blockId === b.id)
+            .sort((a, c) => a.weekIndex - c.weekIndex)
+            .map((w) => ({
+              ...w,
+              slots: this.templateSlots
+                .filter((sl) => sl.templateWeekId === w.id)
+                .sort((a, c) => a.weekday - c.weekday || a.slot - c.slot),
+            })),
+        })),
+    });
+  }
+
+  async saveProgramTemplate(template: ProgramTemplateDraft): Promise<ProgramTemplate> {
+    const existing = template.id ? this.programTemplates.find((t) => t.id === template.id) : undefined;
+    if (existing?.visibility === 'system') {
+      throw new Error('System library content cannot be edited. Duplicate it and edit your copy.');
+    }
+    const now = new Date().toISOString();
+    if (existing) {
+      Object.assign(existing, template, { id: existing.id, updatedAt: now });
+      return clone(existing as unknown as ProgramTemplate);
+    }
+    const row = {
+      ...template,
+      id: template.id ?? uid('pt'),
+      weeks: template.weeks ?? 1,
+      createdAt: now,
+      updatedAt: now,
+    } as unknown as ProgramTemplateItem;
+    this.programTemplates.push(row);
+    return clone(row as unknown as ProgramTemplate);
+  }
+
+  /** weeks follows the structure, the way the database trigger keeps it. */
+  private syncTemplateWeeks(templateId: UUID) {
+    const count = this.templateWeeks.filter((w) => w.programTemplateId === templateId).length;
+    const template = this.programTemplates.find((t) => t.id === templateId);
+    if (template && count > 0) {
+      (template as { weeks: number }).weeks = count;
+      template.updatedAt = new Date().toISOString();
+    }
+  }
+
+  async saveTemplateBlock(block: TemplateBlockDraft): Promise<ProgramTemplateBlock> {
+    const existing = block.id ? this.templateBlocks.find((b) => b.id === block.id) : undefined;
+    if (existing) {
+      Object.assign(existing, block, { id: existing.id });
+      return clone(existing);
+    }
+    const row: ProgramTemplateBlock = { ...block, id: block.id ?? uid('ptb'), createdAt: new Date().toISOString() };
+    this.templateBlocks.push(row);
+    return clone(row);
+  }
+
+  async deleteTemplateBlock(blockId: UUID): Promise<void> {
+    const weeks = this.templateWeeks.filter((w) => w.blockId === blockId).length;
+    if (weeks) {
+      throw new Error(
+        `This block still holds ${weeks} week(s). Remove them first, or delete the weeks you no longer want.`,
+      );
+    }
+    this.templateBlocks = this.templateBlocks.filter((b) => b.id !== blockId);
+  }
+
+  async saveTemplateWeek(week: TemplateWeekDraft): Promise<ProgramTemplateWeek> {
+    const existing = week.id ? this.templateWeeks.find((w) => w.id === week.id) : undefined;
+    if (existing) {
+      Object.assign(existing, week, { id: existing.id });
+      return clone(existing);
+    }
+    const row: ProgramTemplateWeek = { ...week, id: week.id ?? uid('ptw'), createdAt: new Date().toISOString() };
+    this.templateWeeks.push(row);
+    this.syncTemplateWeeks(row.programTemplateId);
+    return clone(row);
+  }
+
+  async deleteTemplateWeek(weekId: UUID): Promise<void> {
+    const week = this.templateWeeks.find((w) => w.id === weekId);
+    this.templateSlots = this.templateSlots.filter((s) => s.templateWeekId !== weekId);
+    this.templateWeeks = this.templateWeeks.filter((w) => w.id !== weekId);
+    if (week) this.syncTemplateWeeks(week.programTemplateId);
+  }
+
+  async saveTemplateSlot(slot: TemplateSlotDraft): Promise<ProgramTemplateSlot> {
+    // one session per day per slot, as the database unique index enforces
+    const clash = this.templateSlots.find(
+      (s) => s.templateWeekId === slot.templateWeekId && s.weekday === slot.weekday
+        && s.slot === slot.slot && s.id !== slot.id,
+    );
+    if (clash) this.templateSlots = this.templateSlots.filter((s) => s.id !== clash.id);
+
+    const existing = slot.id ? this.templateSlots.find((s) => s.id === slot.id) : undefined;
+    if (existing) {
+      Object.assign(existing, slot, { id: existing.id });
+      return clone(existing);
+    }
+    const row: ProgramTemplateSlot = { ...slot, id: slot.id ?? uid('pts') };
+    this.templateSlots.push(row);
+    return clone(row);
+  }
+
+  async deleteTemplateSlot(slotId: UUID): Promise<void> {
+    this.templateSlots = this.templateSlots.filter((s) => s.id !== slotId);
+  }
+
+  /** The same rule im_template_week_volume applies: sum the distances. */
+  async getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]> {
+    const blocks = new Map(this.templateBlocks.map((b) => [b.id, b]));
+    return this.templateWeeks
+      .filter((w) => w.programTemplateId === templateId)
+      .sort((a, b) => a.templateWeekNo - b.templateWeekNo)
+      .map((w) => {
+        const slots = this.templateSlots.filter((s) => s.templateWeekId === w.id);
+        const training = slots.filter((s) => !s.isRest);
+        const block = blocks.get(w.blockId);
+        return {
+          templateWeekNo: w.templateWeekNo,
+          blockName: block?.name ?? '',
+          phase: block?.phase ?? null,
+          isRecoveryWeek: w.isRecoveryWeek,
+          targetKm: w.targetVolumeKm,
+          prescribedKm: Number(
+            training
+              .reduce((sum, s) => sum + (s.distanceKm ?? this.workoutDistance(s.workoutTemplateId) ?? 0), 0)
+              .toFixed(1),
+          ),
+          sessionCount: training.length,
+          restDays: slots.filter((s) => s.isRest).length,
+          trainingDays: new Set(training.map((s) => s.weekday)).size,
+        };
+      });
+  }
+
+  private workoutDistance(id: UUID | null): number | null {
+    return id ? (this.workoutTemplates.find((w) => w.id === id)?.distanceKm ?? null) : null;
+  }
+
+  /**
+   * The same rules im_template_conflicts applies.
+   *
+   * Duplicated deliberately rather than shared: in Postgres these are the
+   * authorisation boundary and must be evaluated there. Here they exist so
+   * demo mode shows a coach the same warnings, and the parity tests are what
+   * keep the two honest.
+   */
+  async getAssignmentConflicts(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+  ): Promise<AssignmentConflict[]> {
+    const out: AssignmentConflict[] = [];
+    const block = (kind: AssignmentConflict['kind'], detail: string) =>
+      out.push({ severity: 'block', kind, detail });
+    const warn = (kind: AssignmentConflict['kind'], detail: string) =>
+      out.push({ severity: 'warn', kind, detail });
+
+    const template = this.programTemplates.find((t) => t.id === templateId);
+    const profile = dataset().profiles.find((p) => p.id === athleteId);
+    if (!template) { block('template', 'That programme template is not available to you.'); return out; }
+    if (!profile) { block('athlete', 'That athlete no longer exists.'); return out; }
+    if (template.archivedAt) {
+      block('archived', 'This template is archived. Restore it before assigning it.');
+    }
+
+    const weeks = this.templateWeeks.filter((w) => w.programTemplateId === templateId);
+    const slots = this.templateSlots.filter((s) => s.programTemplateId === templateId);
+    if (!weeks.length) {
+      block('structure', 'This template has no weeks yet. Add a block and at least one week before assigning it.');
+    } else if (!slots.some((s) => !s.isRest)) {
+      block('structure', 'This template prescribes no sessions — only rest days. Add sessions before assigning it.');
+    }
+    if (weekdayIndex(startDate) !== 0) block('start_date', 'A programme starts on a Monday.');
+
+    const needed = [...new Set(slots.filter((s) => !s.isRest).map((s) => s.weekday))].sort((a, b) => a - b);
+    const available = profile.availableTrainingDays ?? [];
+    const preferred = profile.preferredTrainingDays ?? [];
+
+    if (!available.length) {
+      warn('availability', 'This athlete has not told us which days they can train, so nothing can be checked against.');
+    } else if (needed.length) {
+      const unmet = needed.filter((d) => !available.includes(d));
+      if (unmet.length) {
+        warn('availability',
+          `The programme trains on ${weekdayList(unmet)}, which the athlete has not said they are available for.`);
+      }
+      if (needed.length < available.length) {
+        warn('availability',
+          `The athlete is available on ${weekdayList(available)}; the programme only uses ${weekdayList(needed)}.`);
+      }
+    }
+
+    if (preferred.length && needed.length) {
+      const unmet = needed.filter((d) => !preferred.includes(d));
+      if (unmet.length) {
+        warn('preferred_days',
+          `The programme trains on ${weekdayList(unmet)}, outside the athlete's preferred days.`);
+      }
+    }
+
+    const volume = await this.getTemplateVolume(templateId);
+    const busiest = Math.max(0, ...volume.map((v) => v.trainingDays));
+    if (busiest && available.length && busiest > available.length) {
+      warn('frequency', `The heaviest week trains ${busiest} days; the athlete is available ${available.length}.`);
+    }
+
+    for (const v of volume) {
+      if (v.targetKm == null) continue;
+      const diff = v.prescribedKm - v.targetKm;
+      if (Math.abs(diff) > Math.max(v.targetKm * 0.15, 5)) {
+        warn('volume',
+          `Week ${v.templateWeekNo}: ${round1(v.prescribedKm)} km prescribed against a ${round1(v.targetKm)} km target (${diff >= 0 ? '+' : ''}${round1(diff)} km).`);
+      }
+    }
+
+    const equipment = [...new Set(
+      slots
+        .filter((s) => s.strengthTemplateId)
+        .flatMap((s) => this.strengthTemplates.find((t) => t.id === s.strengthTemplateId)?.components ?? [])
+        .flatMap((c) => this.strengthExercises.find((e) => e.id === c.strengthExerciseId)?.equipment ?? []),
+    )].sort();
+
+    if (equipment.length) {
+      if (!profile.gymAccess) {
+        warn('gym', 'The programme includes strength work, and the athlete has not told us what access they have.');
+      } else if (profile.gymAccess === 'none') {
+        warn('gym', `The programme's strength work needs ${equipment.join(', ')}, and the athlete has no gym access.`);
+      } else if (profile.equipment?.length) {
+        const missing = equipment.filter((e) => !profile.equipment.includes(e));
+        if (missing.length) {
+          warn('equipment',
+            `The programme's strength work uses ${missing.join(', ')}, which is not on the athlete's equipment list.`);
+        }
+      }
+    }
+
+    const active = dataset().programs.find((p) => p.athleteId === athleteId && p.status === 'active');
+    if (active) {
+      warn('active_programme', `Assigning this will archive the athlete's current programme, "${active.name}".`);
+    }
+
+    const onOrAfter = dataset().scheduled.filter((w) => w.athleteId === athleteId && w.date >= startDate);
+    const clearing = onOrAfter.filter((w) => w.status === 'scheduled').length;
+    const keeping = onOrAfter.length - clearing;
+    if (clearing) {
+      warn('replacing', `${clearing} session(s) already scheduled from ${startDate} will be replaced by this programme.`);
+    }
+    if (keeping) {
+      warn('history_kept',
+        `${keeping} session(s) on or after that date are already completed or logged. Those are kept, and the programme works around them.`);
+    }
+
+    return out;
+  }
+
+  async previewAssignment(templateId: UUID, athleteId: UUID, startDate: ISODate): Promise<AssignmentPreview> {
+    const template = this.programTemplates.find((t) => t.id === templateId);
+    if (!template) throw new Error('That programme template is no longer available.');
+    const goal = await this.getPrimaryGoal(athleteId);
+    return buildAssignmentPreview({
+      template: template as unknown as ProgramTemplate,
+      profile: await this.getProfile(athleteId),
+      conflicts: await this.getAssignmentConflicts(templateId, athleteId, startDate),
+      weeks: await this.getTemplateVolume(templateId),
+      goal,
+      race: goal?.raceId ? await this.getRace(goal.raceId) : null,
+      program: await this.getProgram(athleteId),
+      slots: this.templateSlots.filter((s) => s.programTemplateId === templateId),
+      startDate,
+    });
+  }
+
+  async assignProgramTemplate(
+    templateId: UUID,
+    athleteId: UUID,
+    startDate: ISODate,
+    options?: { name?: string; goalId?: UUID },
+  ): Promise<UUID> {
+    const blocking = (await this.getAssignmentConflicts(templateId, athleteId, startDate))
+      .find((c) => c.severity === 'block');
+    if (blocking) throw new Error(blocking.detail);
+
+    const template = this.programTemplates.find((t) => t.id === templateId)!;
+    const d = dataset();
+    const weeks = this.templateWeeks.filter((w) => w.programTemplateId === templateId);
+
+    for (const p of d.programs) {
+      if (p.athleteId === athleteId && p.status === 'active') p.status = 'archived';
+    }
+
+    // the new programme needs the old one's future days back; anything that
+    // already happened is what happened, and stays
+    const superseded = d.scheduled.filter(
+      (w) => w.athleteId === athleteId && w.date >= startDate && w.status === 'scheduled',
+    );
+    for (const w of superseded) this.snapshot(w, 'deleted');
+    const supersededIds = new Set(superseded.map((w) => w.id));
+    d.scheduled = d.scheduled.filter((w) => !supersededIds.has(w.id));
+    this.components = this.components.filter((c) => !supersededIds.has(c.scheduledWorkoutId));
+
+    const program = await this.createProgram({
+      athleteId,
+      coachId: DEMO_COACH_ID,
+      templateId,
+      goalId: options?.goalId ?? null,
+      name: options?.name ?? template.name,
+      startDate,
+      endDate: addDays(startDate, Math.max(weeks.length, 1) * 7 - 1),
+      status: 'active',
+    });
+
+    for (const b of this.templateBlocks
+      .filter((x) => x.programTemplateId === templateId)
+      .sort((a, c) => a.blockIndex - c.blockIndex)) {
+      const block = await this.createBlock({
+        programId: program.id,
+        athleteId,
+        blockIndex: b.blockIndex,
+        name: b.name,
+        phase: b.phase,
+        focus: b.focus,
+        notes: b.description,
+      });
+
+      for (const w of weeks.filter((x) => x.blockId === b.id).sort((a, c) => a.weekIndex - c.weekIndex)) {
+        const weekStart = addDays(startDate, (w.templateWeekNo - 1) * 7);
+        const week = await this.createWeek({
+          blockId: block.id,
+          programId: program.id,
+          athleteId,
+          weekIndex: w.weekIndex,
+          programWeekNo: w.templateWeekNo,
+          startDate: weekStart,
+          targetVolumeKm: w.targetVolumeKm,
+          focus: w.focus,
+          notes: w.notes,
+          isRecoveryWeek: w.isRecoveryWeek,
+        });
+
+        for (const s of this.templateSlots
+          .filter((x) => x.templateWeekId === w.id)
+          .sort((a, c) => a.weekday - c.weekday || a.slot - c.slot)) {
+          const date = addDays(weekStart, s.weekday - 1);
+          // never overwrite a session that records something that happened
+          if (d.scheduled.some((x) => x.athleteId === athleteId && x.date === date && x.slot === s.slot)) continue;
+
+          if (s.isRest) {
+            d.scheduled.push(clone({
+              id: uid('sw'),
+              programId: program.id,
+              programWeekId: week.id,
+              athleteId,
+              date,
+              slot: s.slot,
+              status: 'scheduled',
+              name: s.label ?? 'Rest',
+              type: 'rest',
+              basis: 'time',
+              intensity: 'rest',
+              notes: s.notes,
+              prescriptionRevision: 1,
+              createdAt: new Date().toISOString(),
+            }) as unknown as ScheduledWorkout);
+            continue;
+          }
+
+          const kind = s.workoutTemplateId ? 'workout' : 'strength';
+          const id = await this.insertTemplateIntoProgramme(
+            kind,
+            (s.workoutTemplateId ?? s.strengthTemplateId)!,
+            athleteId,
+            date,
+            s.slot,
+          );
+          const created = d.scheduled.find((x) => x.id === id);
+          if (created) {
+            created.programId = program.id;
+            created.programWeekId = week.id;
+            if (s.label) created.name = s.label;
+            if (s.distanceKm != null) created.distanceKm = s.distanceKm;
+            if (s.durationMinutes != null) created.durationMinutes = s.durationMinutes;
+            if (s.rpeTarget != null) created.rpeTarget = s.rpeTarget;
+            if (s.notes) created.notes = s.notes;
+          }
+        }
+      }
+    }
+
+    return program.id;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {
