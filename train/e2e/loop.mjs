@@ -219,22 +219,33 @@ try {
   {
     const c = await ctx('coach');
     const p = await c.newPage();
+
+    // assignment goes through the review now: pick the athlete and the date,
+    // read what it would do, then commit
     await p.goto(`${BASE}/coach/programs`, { waitUntil: 'networkidle' });
-    const selects = p.locator('select');
-    await selects.nth(0).selectOption({ label: 'Andrew' });
-    await selects.nth(1).selectOption({ label: '10K — Build' });
-    await p.getByRole('button', { name: /Assign programme/ }).click();
-    await p.waitForSelector('text=/assigned/i', { timeout: 30000 });
-    step(17, 'coach assigns a programme', true);
+    const card = p.locator('.im-panel').filter({ hasText: '10K — Build' }).first();
+    await card.getByRole('button', { name: /Assign to athlete/i }).click();
+    await p.waitForTimeout(400);
+    await card.locator('select').first().selectOption({ label: 'Andrew' });
+    await card.getByRole('link', { name: /^Review$/ }).click();
+    await p.waitForTimeout(2500);
+
+    step(17, 'the review opens before anything is written',
+      /\/assign/.test(p.url()) && /Before you assign/i.test(await p.locator('body').innerText()));
+
+    await p.getByRole('button', { name: /Assign programme/i }).click();
+    const status = p.locator('[role="status"]');
+    await status.first().waitFor({ timeout: 30000 });
+    step(18, 'coach assigns a programme', /Assigned/i.test(await status.first().innerText()));
     await c.close();
 
     const c2 = await ctx('athlete');
     const p2 = await c2.newPage();
     await p2.goto(`${BASE}/app/training`, { waitUntil: 'networkidle' });
     const body = await p2.locator('body').innerText();
-    step(18, 'athlete sees the assigned programme', /10K\s*—\s*BUILD/i.test(body),
+    step(19, 'athlete sees the assigned programme', /10K\s*—\s*BUILD/i.test(body),
       'endurance page should resolve the programme');
-    step(19, 'programme is not reported as missing', !/No active programme/i.test(body));
+    step(20, 'programme is not reported as missing', !/No active programme/i.test(body));
     await c2.close();
   }
 } catch (error) {

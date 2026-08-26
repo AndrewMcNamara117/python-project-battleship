@@ -29,24 +29,36 @@ export const EXPERIENCE_LABELS: Record<ExperienceLevel, string> = {
  * phase and this becomes the cached current value rather than the source of
  * truth — the column stays, its authority moves.
  */
-export type TrainingPhase = 'base' | 'build' | 'sharpen' | 'race' | 'recover' | 'off';
+export type TrainingPhase =
+  | 'base' | 'build' | 'specific' | 'sharpen' | 'peak' | 'taper'
+  | 'race' | 'recover' | 'return' | 'off' | 'custom';
 
 export const PHASE_LABELS: Record<TrainingPhase, string> = {
   base: 'Base',
   build: 'Build',
+  specific: 'Race Specific',
   sharpen: 'Sharpen',
+  peak: 'Peak',
+  taper: 'Taper',
   race: 'Race',
   recover: 'Recover',
+  return: 'Return',
   off: 'Off-season',
+  custom: 'Custom',
 };
 
 export const PHASE_INTENT: Record<TrainingPhase, string> = {
   base: 'Build the foundation. Volume over intensity.',
   build: 'Increase volume and intensity together.',
+  specific: 'Rehearse the race. Pace, terrain, fuelling.',
   sharpen: 'Refine fitness. Peak and perform.',
+  peak: 'The hardest weeks. Everything is in place.',
+  taper: 'Do less. Trust the work.',
   race: 'Execute the plan. Own the day.',
   recover: 'Rest. Adapt. Come back stronger.',
+  return: 'Back to running, patiently.',
   off: 'Away from structured training.',
+  custom: 'Written for this athlete alone.',
 };
 
 /** ISO weekday, 1 = Monday. Matches the database check constraint. */

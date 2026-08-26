@@ -1,92 +1,18 @@
 'use client';
 
+/**
+ * Duplicating a week inside a live athlete programme.
+ *
+ * Distinct from the programme templates on this page: this copies a week the
+ * athlete already has onto another date in their own calendar, which is what a
+ * coach reaches for mid-block rather than when starting someone new.
+ */
+
 import { useState, useTransition } from 'react';
-import { assignProgramTemplate, duplicateWeek, type Result } from '@/app/actions/coach';
-import { Badge } from '@/components/ui/Badge';
+import { duplicateWeek, type Result } from '@/app/actions/coach';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
-import type { ProgramTemplateItem } from '@/lib/domain/library';
-import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
-
-export function ProgramBuilder({
-  athletes,
-  templates,
-  defaultStart,
-}: {
-  athletes: { id: string; name: string }[];
-  templates: ProgramTemplateItem[];
-  defaultStart: string;
-}) {
-  const [athleteId, setAthleteId] = useState(athletes[0]?.id ?? '');
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [result, setResult] = useState<Result | null>(null);
-  const [pending, start] = useTransition();
-
-  const template = templates.find((t) => t.id === templateId) ?? templates[0];
-
-  return (
-    <Panel className="p-6 sm:p-8">
-      <PanelHeader label="Assign a programme" />
-      <p className="mt-3 max-w-[62ch] text-[13px] leading-relaxed text-muted">
-        A template is a starting frame. Assigning it copies every session into that athlete&apos;s own
-        calendar, so editing their week never touches anyone else&apos;s.
-      </p>
-
-      <div className="mt-7 grid gap-6 sm:grid-cols-3">
-        <Field label="Athlete">
-          {(p) => (
-            <Select value={athleteId} onChange={(e) => setAthleteId(e.target.value)} {...p}>
-              {athletes.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <Field label="Template">
-          {(p) => (
-            <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} {...p}>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <Field label="Start (Monday)">
-          {(p) => <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} {...p} />}
-        </Field>
-      </div>
-
-      <div className="mt-6 border-t border-line pt-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge tone="neutral">{EVENT_TYPE_LABELS[template.goalType as keyof typeof EVENT_TYPE_LABELS]}</Badge>
-          <Badge tone="neutral">{template.weeks} weeks</Badge>
-        </div>
-        <p className="mt-4 max-w-[70ch] text-[13px] leading-relaxed text-muted">{template.description}</p>
-      </div>
-
-      {result && (
-        <p role="status" className={`mt-6 text-[13px] font-bold ${result.ok ? 'text-green' : 'text-alert'}`}>
-          {result.message}
-        </p>
-      )}
-
-      <Button
-        size="lg"
-        className="mt-7"
-        disabled={pending || !athleteId}
-        onClick={() => start(async () => setResult(await assignProgramTemplate(athleteId, templateId, startDate)))}
-      >
-        {pending ? 'Writing the block…' : 'Assign programme'}
-      </Button>
-    </Panel>
-  );
-}
 
 export function WeekCloner({
   athletes,

@@ -35,7 +35,6 @@ const TEMPLATES = [
     name: 'General Endurance',
     discipline: 'running',
     experience: 'beginner',
-    days: [3, 4],
     purpose: 'No start line yet. Aerobic base, consistent strength, and the habit of showing up.',
     blocks: [
       {
@@ -174,12 +173,13 @@ const TEMPLATES = [
     blocks: [
       {
         name: 'Base', phase: 'base', weeks: 8,
-        pattern: { 1: [run(SWIM)], 2: [run(BIKE)], 3: [run(EASY)], 4: [str(TRI)], 5: [run(SWIM)], 6: [run(BIKE, { label: 'Long Ride' })], 7: [run(LONG, { scale: 0.55 })] },
+        focus: 'Three disciplines, one rest day. Even a triathlete stops.',
+        pattern: { 1: REST, 2: [run(BIKE)], 3: [run(SWIM)], 4: [run(EASY)], 5: [str(TRI)], 6: [run(BIKE, { label: 'Long Ride' })], 7: [run(LONG, { scale: 0.55 })] },
       },
       {
         name: 'Build', phase: 'build', weeks: 7,
         focus: 'Brick work every week. Get used to running off the bike.',
-        pattern: { 1: [run(SWIM)], 2: [run(THR, { scale: 0.8 })], 3: [str(TRI)], 4: [run(SWIM)], 5: [run(REC)], 6: [run(BRICK)], 7: [run(LONG, { scale: 0.7 })] },
+        pattern: { 1: REST, 2: [run(THR, { scale: 0.8 })], 3: [str(TRI)], 4: [run(SWIM)], 5: [run(REC)], 6: [run(BRICK)], 7: [run(LONG, { scale: 0.7 })] },
       },
       {
         name: 'Race Specific', phase: 'specific', weeks: 3,
@@ -217,10 +217,18 @@ for (const spec of TEMPLATES) {
   if (!tpl) throw new Error(`no seeded programme template named ${spec.name}`);
 
   const totalWeeks = spec.blocks.reduce((a, b) => a + b.weeks, 0);
+
+  // The declared frequency is read off the structure rather than asserted
+  // beside it. A programme that says "4-5 days" and trains six is exactly the
+  // mismatch a coach would rely on and be misled by.
+  const daysPerBlock = spec.blocks.map((b) =>
+    Object.values(b.pattern).filter((entry) => entry !== REST).length);
+  const [minDays, maxDays] = [Math.min(...daysPerBlock), Math.max(...daysPerBlock)];
+
   templateUpdates.push(
     `update program_templates set discipline = ${lit(spec.discipline)}, ` +
     `experience_level = ${lit(spec.experience)}::im_experience, ` +
-    `min_days_per_week = ${spec.days[0]}, max_days_per_week = ${spec.days[1]}, ` +
+    `min_days_per_week = ${minDays}, max_days_per_week = ${maxDays}, ` +
     `target_distance_km = ${lit(spec.distance ?? null)}, purpose = ${lit(spec.purpose)}, ` +
     `weeks = ${totalWeeks} where id = '${tpl.id}';`);
 

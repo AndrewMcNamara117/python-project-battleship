@@ -2009,6 +2009,15 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
   }
 
+  async duplicateProgramTemplate(id: UUID, name?: string): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_duplicate_program_template', {
+      p_source: id,
+      p_name: name ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
   async getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]> {
     const { data, error } = await this.db.rpc('im_template_week_volume', { p_template: templateId });
     if (error) throw new Error(error.message);
@@ -2034,23 +2043,34 @@ export class SupabaseRepo implements IronMilesRepo {
     athleteId: UUID,
     startDate: ISODate,
   ): Promise<AssignmentPreview> {
-    const [template, profile, conflicts, weeks, goal, program, slots] = await Promise.all([
-      this.getProgramTemplateRow(templateId),
+    const [detail, profile, conflicts, goal, program, workouts, strength] = await Promise.all([
+      this.getProgramTemplateDetail(templateId),
       this.getProfile(athleteId),
       this.getAssignmentConflicts(templateId, athleteId, startDate),
-      this.getTemplateVolume(templateId),
       this.getPrimaryGoal(athleteId),
       this.getProgram(athleteId),
-      this.rows(
-        this.db.from('program_template_slots').select('*').eq('program_template_id', templateId),
-        this.toTemplateSlot,
-      ),
+      this.listWorkoutTemplates({ includeArchived: true }),
+      this.listStrengthTemplates({ includeArchived: true }),
     ]);
-    if (!template) throw new Error('That programme template is no longer available.');
+    if (!detail) throw new Error('That programme template is no longer available.');
 
     const race = goal?.raceId ? await this.getRace(goal.raceId) : null;
+    const sessionNames = new Map<string, string>([
+      ...workouts.map((w) => [w.id, w.name] as const),
+      ...strength.map((s) => [s.id, s.name] as const),
+    ]);
     return buildAssignmentPreview({
-      template, profile, conflicts, weeks, goal, race, program, slots, startDate,
+      template: detail,
+      athleteId,
+      profile,
+      conflicts,
+      weeks: detail.volume,
+      goal,
+      race,
+      program,
+      detail,
+      sessionNames,
+      startDate,
     });
   }
 

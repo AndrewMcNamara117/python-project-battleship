@@ -156,6 +156,7 @@ export interface AssignmentConflict {
 /** Everything the pre-assignment review shows, gathered in one call. */
 export interface AssignmentPreview {
   template: ProgramTemplate;
+  athleteId: UUID;
   athleteName: string;
   /** ISO weekdays the athlete said they can train. */
   availableDays: Weekday[];
@@ -172,8 +173,8 @@ export interface AssignmentPreview {
   } | null;
   weeks: TemplateWeekVolume[];
   conflicts: AssignmentConflict[];
-  /** The sessions a coach would want to eyeball before committing. */
-  keySessions: { templateWeekNo: number; weekday: Weekday; name: string }[];
+  /** The longest run of each week — the fastest read on a programme's shape. */
+  keySessions: { templateWeekNo: number; weekday: Weekday; name: string; distanceKm: number | null }[];
   activeProgramme: { id: UUID; name: string } | null;
 }
 

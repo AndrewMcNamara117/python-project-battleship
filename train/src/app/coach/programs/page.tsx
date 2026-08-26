@@ -1,24 +1,42 @@
 import type { Metadata } from 'next';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
-import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
+import { LibraryFilters } from '@/components/library/LibraryFilters';
+import { ProgrammeList } from '@/components/programme/ProgrammeList';
 import { Badge } from '@/components/ui/Badge';
-import { Panel } from '@/components/ui/Panel';
+import { requireCoach } from '@/lib/auth';
+import { getRepo } from '@/lib/data';
 import { loadCoachContext } from '@/lib/coach-data';
 import { addDays, formatDayMonth, startOfWeek } from '@/lib/domain/dates';
-import { getRepo } from '@/lib/data';
-import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
-import { ProgramBuilder, WeekCloner } from './ProgramBuilder';
+import { DISCIPLINE_LABELS } from '@/lib/domain/programme-template';
+import type { LibraryQuery, Visibility } from '@/lib/domain/library';
+import { WeekCloner } from './ProgramBuilder';
 
 export const metadata: Metadata = { title: 'Programmes' };
 
-export default async function ProgramsPage() {
-  const ctx = await loadCoachContext();
+export default async function ProgrammesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const session = await requireCoach();
+  const params = await searchParams;
   const repo = await getRepo();
-  const athletes = ctx.athletes.map((a) => ({ id: a.profile.id, name: a.profile.fullName }));
-  const nextMonday = addDays(startOfWeek(ctx.today), 7);
-  const programTemplates = await repo.listProgramTemplates();
+  const ctx = await loadCoachContext();
 
-  // real weeks per athlete, so the coach picks a week rather than typing a date
+  const one = (key: string) => {
+    const value = params[key];
+    return (Array.isArray(value) ? value[0] : value) ?? undefined;
+  };
+
+  const query: LibraryQuery = {
+    search: one('q'),
+    visibility: one('visibility') as Visibility | undefined,
+    includeArchived: one('archived') === '1',
+  };
+
+  const templates = await repo.listProgramTemplates(query);
+
+  // real weeks per athlete, so the week cloner offers a week rather than a date
   const weeksByAthlete: Record<string, { id: string; label: string }[]> = {};
   for (const a of ctx.athletes) {
     const program = await repo.getProgram(a.profile.id);
@@ -40,46 +58,35 @@ export default async function ProgramsPage() {
   return (
     <AppPage>
       <PageHeader
-        eyebrow="Programme builder"
-        title="Write the block."
-        lead="Templates give you the frame. Everything after that is individual."
+        eyebrow="Programmes"
+        title="Build the block once."
+        lead="A programme is blocks, weeks and the sessions in them. Build it once, assign it to as many athletes as you like — each one gets their own independent copy, and editing this never touches theirs."
+        action={<Badge tone="neutral">{templates.length} programmes</Badge>}
       />
 
-      <div className="mt-8 grid gap-5">
-        <Reveal>
-          <ProgramBuilder athletes={athletes} templates={programTemplates} defaultStart={nextMonday} />
-        </Reveal>
-        <Reveal delay={0.06}>
+      <div className="mt-7">
+        <LibraryFilters
+          categories={Object.entries(DISCIPLINE_LABELS).map(([value, label]) => ({ value, label }))}
+          categoryLabel="disciplines"
+        />
+      </div>
+
+      <ProgrammeList
+        templates={templates}
+        coachId={session.userId}
+        athletes={ctx.athletes.map((a) => ({ id: a.profile.id, name: a.profile.fullName }))}
+        defaultStart={addDays(startOfWeek(ctx.today), 7)}
+      />
+
+      <section className="mt-14">
+        <h2 className="im-eyebrow">Inside a live programme</h2>
+        <div className="mt-5">
           <WeekCloner
-            athletes={athletes}
+            athletes={ctx.athletes.map((a) => ({ id: a.profile.id, name: a.profile.fullName }))}
             weeksByAthlete={weeksByAthlete}
             defaultStart={addDays(startOfWeek(ctx.today), 7)}
           />
-        </Reveal>
-      </div>
-
-      <section className="mt-12">
-        <h2 className="im-micro">Template library</h2>
-        <RevealGroup className="mt-5 grid gap-4 md:grid-cols-2">
-          {programTemplates.map((t) => (
-            <RevealItem key={t.id}>
-              <Panel hover className="h-full p-6">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <h3 className="im-display text-[1.2rem]">{t.name}</h3>
-                  <div className="flex gap-2">
-                    <Badge tone="neutral">{EVENT_TYPE_LABELS[t.goalType as keyof typeof EVENT_TYPE_LABELS]}</Badge>
-                    <Badge tone="green">{t.weeks}w</Badge>
-                  </div>
-                </div>
-                <p className="mt-4 text-[13px] leading-relaxed text-muted">{t.description}</p>
-              </Panel>
-            </RevealItem>
-          ))}
-        </RevealGroup>
-        <p className="mt-6 max-w-[72ch] text-[12px] leading-relaxed text-muted-2">
-          Nothing in these templates is a medical prescription or a guarantee. They are editable
-          starting points, and the coach who assigns one is responsible for what it becomes.
-        </p>
+        </div>
       </section>
     </AppPage>
   );

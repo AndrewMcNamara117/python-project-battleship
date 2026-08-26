@@ -1358,6 +1358,43 @@ export class DemoRepo implements IronMilesRepo {
     this.templateSlots = this.templateSlots.filter((s) => s.id !== slotId);
   }
 
+  async duplicateProgramTemplate(id: UUID, name?: string): Promise<UUID> {
+    const source = this.programTemplates.find((t) => t.id === id);
+    if (!source) throw new Error('That programme template is not available to you.');
+
+    const now = new Date().toISOString();
+    const copy = {
+      ...clone(source),
+      id: uid('pt'),
+      name: name ?? `${source.name} (copy)`,
+      visibility: 'private' as const,
+      ownerId: DEMO_COACH_ID,
+      archivedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.programTemplates.push(copy);
+
+    for (const b of this.templateBlocks.filter((x) => x.programTemplateId === id)) {
+      const block: ProgramTemplateBlock = { ...clone(b), id: uid('ptb'), programTemplateId: copy.id, createdAt: now };
+      this.templateBlocks.push(block);
+
+      for (const w of this.templateWeeks.filter((x) => x.blockId === b.id)) {
+        const week: ProgramTemplateWeek = {
+          ...clone(w), id: uid('ptw'), programTemplateId: copy.id, blockId: block.id, createdAt: now,
+        };
+        this.templateWeeks.push(week);
+
+        for (const sl of this.templateSlots.filter((x) => x.templateWeekId === w.id)) {
+          this.templateSlots.push({
+            ...clone(sl), id: uid('pts'), programTemplateId: copy.id, templateWeekId: week.id,
+          });
+        }
+      }
+    }
+    return copy.id;
+  }
+
   /** The same rule im_template_week_volume applies: sum the distances. */
   async getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]> {
     const blocks = new Map(this.templateBlocks.map((b) => [b.id, b]));
@@ -1508,18 +1545,24 @@ export class DemoRepo implements IronMilesRepo {
   }
 
   async previewAssignment(templateId: UUID, athleteId: UUID, startDate: ISODate): Promise<AssignmentPreview> {
-    const template = this.programTemplates.find((t) => t.id === templateId);
-    if (!template) throw new Error('That programme template is no longer available.');
+    const detail = await this.getProgramTemplateDetail(templateId);
+    if (!detail) throw new Error('That programme template is no longer available.');
     const goal = await this.getPrimaryGoal(athleteId);
+    const sessionNames = new Map<string, string>([
+      ...this.workoutTemplates.map((w) => [w.id, w.name] as const),
+      ...this.strengthTemplates.map((s) => [s.id, s.name] as const),
+    ]);
     return buildAssignmentPreview({
-      template: template as unknown as ProgramTemplate,
+      template: detail as unknown as ProgramTemplate,
+      athleteId,
       profile: await this.getProfile(athleteId),
       conflicts: await this.getAssignmentConflicts(templateId, athleteId, startDate),
-      weeks: await this.getTemplateVolume(templateId),
+      weeks: detail.volume,
       goal,
       race: goal?.raceId ? await this.getRace(goal.raceId) : null,
       program: await this.getProgram(athleteId),
-      slots: this.templateSlots.filter((s) => s.programTemplateId === templateId),
+      detail,
+      sessionNames,
       startDate,
     });
   }

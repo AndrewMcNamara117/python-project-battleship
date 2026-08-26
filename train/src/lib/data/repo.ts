@@ -280,6 +280,9 @@ export interface IronMilesRepo {
   saveTemplateSlot(slot: TemplateSlotDraft): Promise<ProgramTemplateSlot>;
   deleteTemplateSlot(slotId: UUID): Promise<void>;
 
+  /** "16 Week Marathon — Intermediate" into "— High Volume", structure and all. */
+  duplicateProgramTemplate(id: UUID, name?: string): Promise<UUID>;
+
   /** Prescribed against intended, week by week. */
   getTemplateVolume(templateId: UUID): Promise<TemplateWeekVolume[]>;
 

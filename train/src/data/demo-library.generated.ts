@@ -28,14 +28,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 4,
     "mainSet": "Steady aerobic riding. Smooth cadence, 85–95rpm.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "cross_training",
     "tags": [
       "easy",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -49,7 +49,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 90,
     "rpeTarget": 6,
     "mainSet": "60 min bike at steady effort, straight into 25 min run off the bike.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "race_specific",
     "purpose": "The first 10 minutes off the bike always feel wrong. Run through it.",
@@ -57,7 +57,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "steady",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -72,7 +72,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 4,
     "mainSet": "Low-impact aerobic work — bike, row, elliptical or pool.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "cross_training",
     "purpose": "Aerobic stimulus without the pounding.",
@@ -80,7 +80,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "easy",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -96,7 +96,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 2,
     "rpeTarget": 3,
     "mainSet": "Continuous easy running. Conversational the whole way.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "easy",
     "purpose": "If you cannot speak in full sentences, you are going too hard.",
@@ -104,7 +104,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "easy",
       "distance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -121,7 +121,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy to the hill.",
     "mainSet": "8 x 60s uphill at hard effort. Jog down as recovery.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "hills",
     "purpose": "Strength in disguise. Tall posture, quick feet.",
@@ -129,7 +129,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -147,7 +147,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "First 15 minutes deliberately slower than target.",
     "mainSet": "Steady, controlled effort. Practise race-day fuelling.",
     "coolDown": "10 minutes easy walking.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "long_run",
     "purpose": "Fuel early. Start controlled. Finish stronger than you started.",
@@ -155,7 +155,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "easy",
       "distance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -169,14 +169,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 20,
     "rpeTarget": 1,
     "mainSet": "Hips, ankles, thoracic spine. Slow and unhurried.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "mobility",
     "tags": [
       "recovery",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -191,7 +191,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "durationMinutes": 75,
     "rpeTarget": 6,
     "mainSet": "Three equal thirds: easy, steady, then marathon effort.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "progression",
     "purpose": "Negative split or it does not count.",
@@ -199,7 +199,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "steady",
       "distance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -212,7 +212,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "intensity": "max",
     "rpeTarget": 10,
     "mainSet": "Execute the plan. Nothing new on race day.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "race",
     "purpose": "The work is done. Trust it.",
@@ -220,7 +220,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "max",
       "distance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -237,7 +237,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy.",
     "mainSet": "3 x 15 min at goal race pace, 3 min float between.",
     "coolDown": "10 min easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "race_specific",
     "purpose": "Rehearsal, not a test.",
@@ -245,7 +245,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "steady",
       "pace"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -261,7 +261,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "hrZone": 1,
     "rpeTarget": 2,
     "mainSet": "Very easy. Flat route. Shorter than it feels like it should be.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "recovery",
     "purpose": "The point is blood flow, not fitness.",
@@ -269,7 +269,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "recovery",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -281,7 +281,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "basis": "time",
     "intensity": "rest",
     "mainSet": "Complete rest. This is a session — treat it like one.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "rest",
     "purpose": "Adaptation happens here, not in the session you skipped it for.",
@@ -289,7 +289,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "rest",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -305,14 +305,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "400m mixed.",
     "mainSet": "8 x 100m steady, 20s rest. Focus on catch.",
     "coolDown": "200m easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "cross_training",
     "tags": [
       "steady",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -330,14 +330,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + 4 x 20s strides.",
     "mainSet": "25 minutes continuous at comfortably hard. You could hold it for an hour on race day.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "tempo",
     "tags": [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -355,7 +355,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + drills + 4 x 20s strides.",
     "mainSet": "6 x 5 min at threshold, 90s easy jog between.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "threshold",
     "purpose": "Controlled discomfort, not a race. Same pace on the last rep as the first.",
@@ -363,7 +363,7 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
       "hard",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -381,14 +381,14 @@ export const DEMO_WORKOUT_TEMPLATES: WorkoutTemplate[] = [
     "warmUp": "15 min easy + drills + 4 x 100m strides.",
     "mainSet": "5 x 3 min hard, 3 min easy jog recovery.",
     "coolDown": "12 min easy.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "category": "intervals",
     "tags": [
       "max",
       "time"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": []
@@ -421,14 +421,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Barbell",
       "Bench"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -455,14 +455,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Step",
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -491,14 +491,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Box"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "plyometric",
     "isUnilateral": false,
     "tags": [
       "plyometric"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -525,14 +525,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Bench"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": true,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -558,14 +558,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Extend the tempo"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": false,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -594,14 +594,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Dumbbells",
       "Kettlebells"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "carry",
     "isUnilateral": false,
     "tags": [
       "carry"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -632,14 +632,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Kettlebell",
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "squat",
     "isUnilateral": false,
     "tags": [
       "squat"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -663,14 +663,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Elevate the toes"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "mobility",
     "isUnilateral": false,
     "tags": [
       "mobility"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -695,14 +695,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Pause at end range"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "mobility",
     "isUnilateral": true,
     "tags": [
       "mobility"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -732,14 +732,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Box",
       "Dumbbells"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "lunge",
     "isUnilateral": true,
     "tags": [
       "lunge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -766,14 +766,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Partner or anchor"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -799,14 +799,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Lateral pogos"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "plyometric",
     "isUnilateral": false,
     "tags": [
       "plyometric"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -835,14 +835,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Pull-up bar"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "pull",
     "isUnilateral": false,
     "tags": [
       "pull"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -869,14 +869,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Tempo"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -907,14 +907,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Bench",
       "Dumbbells"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "lunge",
     "isUnilateral": true,
     "tags": [
       "lunge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -939,14 +939,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Feet elevated"
     ],
     "equipment": [],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "core",
     "isUnilateral": true,
     "tags": [
       "core"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -974,14 +974,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Dumbbell",
       "Bench"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "pull",
     "isUnilateral": false,
     "tags": [
       "pull"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1010,14 +1010,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Dumbbell"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": true,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1046,14 +1046,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
     "equipment": [
       "Step"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "push",
     "isUnilateral": false,
     "tags": [
       "push"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   },
@@ -1084,14 +1084,14 @@ export const DEMO_STRENGTH_EXERCISES: StrengthExercise[] = [
       "Trap bar",
       "Plates"
     ],
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "movementPattern": "hinge",
     "isUnilateral": false,
     "tags": [
       "hinge"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null
   }
@@ -1104,12 +1104,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "foundation",
     "description": "Bilateral strength and posterior chain. The base everything else is built on. Leave two reps in reserve on every set.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "foundation"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1187,12 +1187,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "foundation",
     "description": "Single-leg strength and lateral control. This is the session that keeps you on the road.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "foundation"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1268,12 +1268,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "maintenance",
     "description": "Race week and heavy running weeks. Enough to hold what you built, light enough to leave no trace.",
     "estimatedMinutes": 25,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "maintenance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1325,12 +1325,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "performance",
     "description": "Heavier, faster, lower volume. Run this in a build block when the legs can take it.",
     "estimatedMinutes": 55,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "performance"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1407,12 +1407,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "triathlon_support",
     "description": "Upper-body pulling for the swim, hip strength for the bike, and enough legs to run off it.",
     "estimatedMinutes": 45,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "triathlon_support"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1487,12 +1487,12 @@ export const DEMO_STRENGTH_TEMPLATES: StrengthTemplate[] = [
     "category": "ultra_prep",
     "description": "Durability for long time on feet — carries, calves and hip stability at volume. Built for the back half of an ultra.",
     "estimatedMinutes": 50,
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [
       "ultra_prep"
     ],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "ownerId": null,
     "archivedAt": null,
     "components": [
@@ -1571,15 +1571,15 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "5k",
     "weeks": 8,
     "description": "Eight weeks around one hard session and one sharpening session per week. Built for someone who already runs three or four times a week.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "running",
     "targetDistanceKm": 5,
     "experienceLevel": "developing",
-    "minDaysPerWeek": 4,
-    "maxDaysPerWeek": 5,
+    "minDaysPerWeek": 3,
+    "maxDaysPerWeek": 6,
     "purpose": "Eight weeks around one hard session and one sharpening session per week.",
     "ownerId": null,
     "archivedAt": null
@@ -1590,15 +1590,15 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "10k",
     "weeks": 10,
     "description": "Threshold-led ten-week block. Enough volume to hold the pace, enough speed to find it.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "running",
     "targetDistanceKm": 10,
     "experienceLevel": "developing",
     "minDaysPerWeek": 4,
-    "maxDaysPerWeek": 5,
+    "maxDaysPerWeek": 6,
     "purpose": "Threshold-led ten-week block. Enough volume to hold the pace, enough speed to find it.",
     "ownerId": null,
     "archivedAt": null
@@ -1609,13 +1609,13 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "general_endurance",
     "weeks": 12,
     "description": "No start line yet. Aerobic base, consistent strength, and the habit of showing up. The best place to begin.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "running",
     "experienceLevel": "beginner",
-    "minDaysPerWeek": 3,
+    "minDaysPerWeek": 4,
     "maxDaysPerWeek": 4,
     "purpose": "No start line yet. Aerobic base, consistent strength, and the habit of showing up.",
     "ownerId": null,
@@ -1627,14 +1627,14 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "half_marathon",
     "weeks": 14,
     "description": "Fourteen weeks. Long run progression, one quality session, two strength sessions a week throughout.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "running",
     "targetDistanceKm": 21.1,
     "experienceLevel": "developing",
-    "minDaysPerWeek": 4,
+    "minDaysPerWeek": 3,
     "maxDaysPerWeek": 6,
     "purpose": "Fourteen weeks. Long run progression, one quality session, two strength sessions a week throughout.",
     "ownerId": null,
@@ -1646,14 +1646,14 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "marathon",
     "weeks": 18,
     "description": "Eighteen weeks with three build blocks and a three-week taper. Race-pace work lives in the long run, where it belongs.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "running",
     "targetDistanceKm": 42.2,
     "experienceLevel": "experienced",
-    "minDaysPerWeek": 5,
+    "minDaysPerWeek": 4,
     "maxDaysPerWeek": 6,
     "purpose": "Eighteen weeks with three build blocks and a three-week taper. Race-pace work lives in the long run.",
     "ownerId": null,
@@ -1665,14 +1665,14 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "triathlon_70_3",
     "weeks": 20,
     "description": "Twenty weeks balancing swim, bike and run with weekly brick work and triathlon-specific strength.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "triathlon",
     "targetDistanceKm": 113,
     "experienceLevel": "experienced",
-    "minDaysPerWeek": 6,
+    "minDaysPerWeek": 5,
     "maxDaysPerWeek": 6,
     "purpose": "Twenty weeks balancing swim, bike and run with weekly brick work and triathlon-specific strength.",
     "ownerId": null,
@@ -1684,14 +1684,14 @@ export const DEMO_PROGRAM_TEMPLATES: ProgramTemplateItem[] = [
     "goalType": "ultra",
     "weeks": 24,
     "description": "Twenty-four weeks built around back-to-back long runs, terrain specificity and durability work. Volume rises slowly and steps back every fourth week.",
-    "createdAt": "2026-08-26T13:22:35.278Z",
+    "createdAt": "2026-08-26T17:18:00.686Z",
     "visibility": "system",
     "tags": [],
-    "updatedAt": "2026-08-26T13:22:35.278Z",
+    "updatedAt": "2026-08-26T17:18:00.686Z",
     "discipline": "trail",
     "targetDistanceKm": 50,
     "experienceLevel": "experienced",
-    "minDaysPerWeek": 5,
+    "minDaysPerWeek": 4,
     "maxDaysPerWeek": 6,
     "purpose": "Back-to-back long runs, terrain specificity and durability work. Volume rises slowly and steps back every fourth week.",
     "ownerId": null,
@@ -1706,7 +1706,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Base",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000300000004",
@@ -1715,7 +1715,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Sharpen",
     "phase": "sharpen",
     "focus": "Race-pace speed on tired legs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000400000005",
@@ -1724,7 +1724,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Race Week",
     "phase": "taper",
     "focus": "Sharp, not tired.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000500000006",
@@ -1732,7 +1732,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Base",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000600000007",
@@ -1741,7 +1741,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Build",
     "phase": "build",
     "focus": "Hold threshold pace for longer, week on week.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000700000008",
@@ -1749,7 +1749,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 2,
     "name": "Taper",
     "phase": "taper",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000800000009",
@@ -1757,7 +1757,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Foundation",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000900000010",
@@ -1766,7 +1766,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Build",
     "phase": "build",
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001000000011",
@@ -1775,7 +1775,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Race Specific",
     "phase": "specific",
     "focus": "Race pace inside the long run, where it belongs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001100000012",
@@ -1783,7 +1783,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 3,
     "name": "Taper",
     "phase": "taper",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001200000013",
@@ -1791,7 +1791,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Base",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001300000014",
@@ -1800,7 +1800,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Build",
     "phase": "build",
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001400000015",
@@ -1809,7 +1809,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Race Specific",
     "phase": "specific",
     "focus": "Marathon pace on tired legs, inside the long run.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001500000016",
@@ -1818,7 +1818,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Taper",
     "phase": "taper",
     "focus": "Do less. Trust the work.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001600000017",
@@ -1826,7 +1826,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Base",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001700000018",
@@ -1835,7 +1835,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Build",
     "phase": "build",
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001800000019",
@@ -1844,7 +1844,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Specific",
     "phase": "specific",
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-001900000020",
@@ -1852,7 +1852,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 3,
     "name": "Taper",
     "phase": "taper",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-002000000021",
@@ -1860,7 +1860,8 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 0,
     "name": "Base",
     "phase": "base",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-002100000022",
@@ -1869,7 +1870,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Build",
     "phase": "build",
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-002200000023",
@@ -1877,7 +1878,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 2,
     "name": "Race Specific",
     "phase": "specific",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-002300000024",
@@ -1885,7 +1886,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "blockIndex": 3,
     "name": "Taper",
     "phase": "taper",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000000000001",
@@ -1894,7 +1895,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Foundation",
     "phase": "base",
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8002-000100000002",
@@ -1903,7 +1904,7 @@ export const DEMO_TEMPLATE_BLOCKS: ProgramTemplateBlock[] = [
     "name": "Steady Build",
     "phase": "build",
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   }
 ] as unknown as ProgramTemplateBlock[];
 
@@ -1916,7 +1917,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 40,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001300000014",
@@ -1926,7 +1927,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 42,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001400000015",
@@ -1936,7 +1937,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 44,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001500000016",
@@ -1947,7 +1948,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 47,
     "isRecoveryWeek": false,
     "focus": "Race-pace speed on tired legs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001600000017",
@@ -1958,7 +1959,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 50,
     "isRecoveryWeek": false,
     "focus": "Race-pace speed on tired legs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001700000018",
@@ -1969,7 +1970,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 52,
     "isRecoveryWeek": false,
     "focus": "Race-pace speed on tired legs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001800000019",
@@ -1980,7 +1981,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 54,
     "isRecoveryWeek": false,
     "focus": "Race-pace speed on tired legs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001900000020",
@@ -1991,7 +1992,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 17,
     "isRecoveryWeek": false,
     "focus": "Sharp, not tired.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002000000021",
@@ -2001,7 +2002,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 43,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002100000022",
@@ -2011,7 +2012,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 45,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002200000023",
@@ -2021,7 +2022,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 47,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002300000024",
@@ -2031,7 +2032,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 4,
     "targetVolumeKm": 31,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002400000025",
@@ -2042,7 +2043,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 52,
     "isRecoveryWeek": false,
     "focus": "Hold threshold pace for longer, week on week.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002500000026",
@@ -2053,7 +2054,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 55,
     "isRecoveryWeek": false,
     "focus": "Hold threshold pace for longer, week on week.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002600000027",
@@ -2064,7 +2065,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 57,
     "isRecoveryWeek": false,
     "focus": "Hold threshold pace for longer, week on week.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002700000028",
@@ -2075,7 +2076,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 38,
     "isRecoveryWeek": true,
     "focus": "Hold threshold pace for longer, week on week.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002800000029",
@@ -2085,7 +2086,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 9,
     "targetVolumeKm": 30,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-002900000030",
@@ -2095,7 +2096,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 10,
     "targetVolumeKm": 32,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003000000031",
@@ -2105,7 +2106,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 41,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003100000032",
@@ -2115,7 +2116,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 43,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003200000033",
@@ -2125,7 +2126,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 45,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003300000034",
@@ -2135,7 +2136,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 4,
     "targetVolumeKm": 30,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003400000035",
@@ -2145,7 +2146,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 5,
     "targetVolumeKm": 49,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003500000036",
@@ -2156,7 +2157,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 46,
     "isRecoveryWeek": false,
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003600000037",
@@ -2167,7 +2168,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 48,
     "isRecoveryWeek": false,
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003700000038",
@@ -2178,7 +2179,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 34,
     "isRecoveryWeek": true,
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003800000039",
@@ -2189,7 +2190,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 53,
     "isRecoveryWeek": false,
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-003900000040",
@@ -2200,7 +2201,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 55,
     "isRecoveryWeek": false,
     "focus": "Volume rises. Quality holds.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004000000041",
@@ -2211,7 +2212,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 51,
     "isRecoveryWeek": false,
     "focus": "Race pace inside the long run, where it belongs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004100000042",
@@ -2222,7 +2223,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 37,
     "isRecoveryWeek": true,
     "focus": "Race pace inside the long run, where it belongs.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004200000043",
@@ -2232,7 +2233,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 13,
     "targetVolumeKm": 23,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004300000044",
@@ -2242,7 +2243,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 14,
     "targetVolumeKm": 24,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004400000045",
@@ -2252,7 +2253,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 49,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004500000046",
@@ -2262,7 +2263,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 51,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004600000047",
@@ -2272,7 +2273,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 54,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004700000048",
@@ -2282,7 +2283,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 4,
     "targetVolumeKm": 36,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004800000049",
@@ -2292,7 +2293,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 5,
     "targetVolumeKm": 58,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-004900000050",
@@ -2302,7 +2303,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 6,
     "targetVolumeKm": 61,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005000000051",
@@ -2313,7 +2314,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 47,
     "isRecoveryWeek": false,
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005100000052",
@@ -2324,7 +2325,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 35,
     "isRecoveryWeek": true,
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005200000053",
@@ -2335,7 +2336,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 52,
     "isRecoveryWeek": false,
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005300000054",
@@ -2346,7 +2347,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 54,
     "isRecoveryWeek": false,
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005400000055",
@@ -2357,7 +2358,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 56,
     "isRecoveryWeek": false,
     "focus": "The long run grows. Everything else holds steady.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005500000056",
@@ -2368,7 +2369,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 64,
     "isRecoveryWeek": false,
     "focus": "Marathon pace on tired legs, inside the long run.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005600000057",
@@ -2379,7 +2380,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 67,
     "isRecoveryWeek": false,
     "focus": "Marathon pace on tired legs, inside the long run.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005700000058",
@@ -2390,7 +2391,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 70,
     "isRecoveryWeek": false,
     "focus": "Marathon pace on tired legs, inside the long run.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005800000059",
@@ -2401,7 +2402,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 73,
     "isRecoveryWeek": false,
     "focus": "Marathon pace on tired legs, inside the long run.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-005900000060",
@@ -2412,7 +2413,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 29,
     "isRecoveryWeek": false,
     "focus": "Do less. Trust the work.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006000000061",
@@ -2423,7 +2424,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 30,
     "isRecoveryWeek": false,
     "focus": "Do less. Trust the work.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006100000062",
@@ -2434,7 +2435,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 31,
     "isRecoveryWeek": false,
     "focus": "Do less. Trust the work.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006200000063",
@@ -2444,7 +2445,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 41,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006300000064",
@@ -2454,7 +2455,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 43,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006400000065",
@@ -2464,7 +2465,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 45,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006500000066",
@@ -2474,7 +2475,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 4,
     "targetVolumeKm": 30,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006600000067",
@@ -2484,7 +2485,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 5,
     "targetVolumeKm": 49,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006700000068",
@@ -2494,7 +2495,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 6,
     "targetVolumeKm": 52,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006800000069",
@@ -2504,7 +2505,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 7,
     "targetVolumeKm": 54,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-006900000070",
@@ -2514,7 +2515,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 8,
     "targetVolumeKm": 30,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007000000071",
@@ -2525,7 +2526,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 61,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007100000072",
@@ -2536,7 +2537,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 64,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007200000073",
@@ -2547,7 +2548,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 67,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007300000074",
@@ -2558,7 +2559,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 44,
     "isRecoveryWeek": true,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007400000075",
@@ -2569,7 +2570,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 72,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007500000076",
@@ -2580,7 +2581,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 76,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007600000077",
@@ -2591,7 +2592,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 79,
     "isRecoveryWeek": false,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007700000078",
@@ -2602,7 +2603,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 44,
     "isRecoveryWeek": true,
     "focus": "Back-to-back weekends. Practise eating on the move.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007800000079",
@@ -2613,7 +2614,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 61,
     "isRecoveryWeek": false,
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-007900000080",
@@ -2624,7 +2625,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 64,
     "isRecoveryWeek": false,
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008000000081",
@@ -2635,7 +2636,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 67,
     "isRecoveryWeek": false,
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008100000082",
@@ -2646,7 +2647,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 44,
     "isRecoveryWeek": true,
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008200000083",
@@ -2657,7 +2658,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 73,
     "isRecoveryWeek": false,
     "focus": "Terrain, night running, and the kit you will race in.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008300000084",
@@ -2667,7 +2668,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 22,
     "targetVolumeKm": 25,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008400000085",
@@ -2677,7 +2678,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 23,
     "targetVolumeKm": 27,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008500000086",
@@ -2687,7 +2688,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 24,
     "targetVolumeKm": 18,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008600000087",
@@ -2697,7 +2698,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 1,
     "targetVolumeKm": 20,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008700000088",
@@ -2707,7 +2709,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 2,
     "targetVolumeKm": 21,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008800000089",
@@ -2717,7 +2720,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 3,
     "targetVolumeKm": 23,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-008900000090",
@@ -2727,7 +2731,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 4,
     "targetVolumeKm": 15,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009000000091",
@@ -2737,7 +2742,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 5,
     "targetVolumeKm": 24,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009100000092",
@@ -2747,7 +2753,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 6,
     "targetVolumeKm": 25,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009200000093",
@@ -2757,7 +2764,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 7,
     "targetVolumeKm": 26,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009300000094",
@@ -2767,7 +2775,8 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 8,
     "targetVolumeKm": 15,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "focus": "Three disciplines, one rest day. Even a triathlete stops.",
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009400000095",
@@ -2778,7 +2787,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 32,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009500000096",
@@ -2789,7 +2798,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 34,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009600000097",
@@ -2800,7 +2809,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 35,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009700000098",
@@ -2811,7 +2820,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 23,
     "isRecoveryWeek": true,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009800000099",
@@ -2822,7 +2831,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 38,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-009900000100",
@@ -2833,7 +2842,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 40,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010000000101",
@@ -2844,7 +2853,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 42,
     "isRecoveryWeek": false,
     "focus": "Brick work every week. Get used to running off the bike.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010100000102",
@@ -2854,7 +2863,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 16,
     "targetVolumeKm": 29,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010200000103",
@@ -2864,7 +2873,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 17,
     "targetVolumeKm": 31,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010300000104",
@@ -2874,7 +2883,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 18,
     "targetVolumeKm": 32,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010400000105",
@@ -2884,7 +2893,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 19,
     "targetVolumeKm": 12,
     "isRecoveryWeek": false,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-010500000106",
@@ -2894,7 +2903,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "templateWeekNo": 20,
     "targetVolumeKm": 9,
     "isRecoveryWeek": true,
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000000000001",
@@ -2905,7 +2914,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 27,
     "isRecoveryWeek": false,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000100000002",
@@ -2916,7 +2925,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 29,
     "isRecoveryWeek": false,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000200000003",
@@ -2927,7 +2936,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 30,
     "isRecoveryWeek": false,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000300000004",
@@ -2938,7 +2947,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 20,
     "isRecoveryWeek": true,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000400000005",
@@ -2949,7 +2958,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 32,
     "isRecoveryWeek": false,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000500000006",
@@ -2960,7 +2969,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 34,
     "isRecoveryWeek": false,
     "focus": "Build the habit before building the volume.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000600000007",
@@ -2971,7 +2980,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 32,
     "isRecoveryWeek": false,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000700000008",
@@ -2982,7 +2991,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 23,
     "isRecoveryWeek": true,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000800000009",
@@ -2993,7 +3002,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 35,
     "isRecoveryWeek": false,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-000900000010",
@@ -3004,7 +3013,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 36,
     "isRecoveryWeek": false,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001000000011",
@@ -3015,7 +3024,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 38,
     "isRecoveryWeek": false,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   },
   {
     "id": "00000000-0000-4000-8003-001100000012",
@@ -3026,7 +3035,7 @@ export const DEMO_TEMPLATE_WEEKS: ProgramTemplateWeek[] = [
     "targetVolumeKm": 23,
     "isRecoveryWeek": true,
     "focus": "One session with some quality in it. Everything else stays easy.",
-    "createdAt": "2026-08-26T13:22:35.362Z"
+    "createdAt": "2026-08-26T17:18:00.748Z"
   }
 ] as unknown as ProgramTemplateWeek[];
 
@@ -8137,9 +8146,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-008600000087",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8157,6 +8165,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-008600000087",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-047900000480",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-008600000087",
     "isRest": false,
@@ -8164,21 +8182,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 8
   },
   {
-    "id": "00000000-0000-4000-8004-047900000480",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-008600000087",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-048000000481",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-008600000087",
     "isRest": false,
     "isOptional": false
@@ -8210,9 +8218,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-008700000088",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8230,6 +8237,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-008700000088",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-048600000487",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-008700000088",
     "isRest": false,
@@ -8237,21 +8254,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 8.5
   },
   {
-    "id": "00000000-0000-4000-8004-048600000487",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-008700000088",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-048700000488",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-008700000088",
     "isRest": false,
     "isOptional": false
@@ -8283,9 +8290,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-008800000089",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8303,6 +8309,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-008800000089",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-049300000494",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-008800000089",
     "isRest": false,
@@ -8310,21 +8326,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 9
   },
   {
-    "id": "00000000-0000-4000-8004-049300000494",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-008800000089",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-049400000495",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-008800000089",
     "isRest": false,
     "isOptional": false
@@ -8356,9 +8362,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-008900000090",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8376,6 +8381,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-008900000090",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-050000000501",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-008900000090",
     "isRest": false,
@@ -8383,21 +8398,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 6
   },
   {
-    "id": "00000000-0000-4000-8004-050000000501",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-008900000090",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-050100000502",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-008900000090",
     "isRest": false,
     "isOptional": false
@@ -8429,9 +8434,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009000000091",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8449,6 +8453,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-009000000091",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-050700000508",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-009000000091",
     "isRest": false,
@@ -8456,21 +8470,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 9.5
   },
   {
-    "id": "00000000-0000-4000-8004-050700000508",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-009000000091",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-050800000509",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-009000000091",
     "isRest": false,
     "isOptional": false
@@ -8502,9 +8506,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009100000092",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8522,6 +8525,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-009100000092",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-051400000515",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-009100000092",
     "isRest": false,
@@ -8529,21 +8542,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 10
   },
   {
-    "id": "00000000-0000-4000-8004-051400000515",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-009100000092",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-051500000516",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-009100000092",
     "isRest": false,
     "isOptional": false
@@ -8575,9 +8578,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009200000093",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8595,6 +8597,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-009200000093",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-052100000522",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-009200000093",
     "isRest": false,
@@ -8602,21 +8614,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 10.5
   },
   {
-    "id": "00000000-0000-4000-8004-052100000522",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-009200000093",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-052200000523",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-009200000093",
     "isRest": false,
     "isOptional": false
@@ -8648,9 +8650,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009300000094",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8668,6 +8669,16 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 3,
     "slot": 0,
+    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "templateWeekId": "00000000-0000-4000-8003-009300000094",
+    "isRest": false,
+    "isOptional": false
+  },
+  {
+    "id": "00000000-0000-4000-8004-052800000529",
+    "programTemplateId": "00000000-0000-4000-8001-000000000006",
+    "weekday": 4,
+    "slot": 0,
     "workoutTemplateId": "00000000-0000-4000-8000-000000000001",
     "templateWeekId": "00000000-0000-4000-8003-009300000094",
     "isRest": false,
@@ -8675,21 +8686,11 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "distanceKm": 6
   },
   {
-    "id": "00000000-0000-4000-8004-052800000529",
-    "programTemplateId": "00000000-0000-4000-8001-000000000006",
-    "weekday": 4,
-    "slot": 1,
-    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
-    "templateWeekId": "00000000-0000-4000-8003-009300000094",
-    "isRest": false,
-    "isOptional": false
-  },
-  {
     "id": "00000000-0000-4000-8004-052900000530",
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 5,
-    "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
+    "slot": 1,
+    "strengthTemplateId": "00000000-0000-4000-8002-000000000006",
     "templateWeekId": "00000000-0000-4000-8003-009300000094",
     "isRest": false,
     "isOptional": false
@@ -8721,9 +8722,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009400000095",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8794,9 +8794,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009500000096",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8867,9 +8866,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009600000097",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -8940,9 +8938,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009700000098",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -9013,9 +9010,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009800000099",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -9086,9 +9082,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-009900000100",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {
@@ -9159,9 +9154,8 @@ export const DEMO_TEMPLATE_SLOTS: ProgramTemplateSlot[] = [
     "programTemplateId": "00000000-0000-4000-8001-000000000006",
     "weekday": 1,
     "slot": 0,
-    "workoutTemplateId": "00000000-0000-4000-8000-000000000012",
     "templateWeekId": "00000000-0000-4000-8003-010000000101",
-    "isRest": false,
+    "isRest": true,
     "isOptional": false
   },
   {

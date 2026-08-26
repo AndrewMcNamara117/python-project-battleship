@@ -51,10 +51,33 @@ describe('the shipped programmes', () => {
 
   it('state the training frequency they were written for', async () => {
     const { rows } = await t.asService(
-      `select name, min_days_per_week lo, max_days_per_week hi from program_templates order by min_days_per_week`);
+      `select name, min_days_per_week lo, max_days_per_week hi from program_templates order by max_days_per_week, name`);
     assert.ok(rows.every((r) => r.lo >= 1 && r.hi <= 7 && r.lo <= r.hi));
-    assert.equal(rows[0].name, 'General Endurance', 'the beginner programme is the least frequent');
+    assert.equal(rows[0].name, 'General Endurance', 'the beginner programme is the least demanding');
     assert.ok(rows[0].hi <= 4, 'and it is not a five-day-a-week programme');
+  });
+
+  it('declare a frequency their own structure honours', async () => {
+    const { rows } = await t.asService(
+      `select id, name, min_days_per_week lo, max_days_per_week hi from program_templates`);
+    for (const r of rows) {
+      const { rows: [actual] } = await t.asUser(coachA,
+        `select min(training_days)::int lo, max(training_days)::int hi from im_template_week_volume($1)`, [r.id]);
+      assert.ok(actual.hi <= r.hi,
+        `${r.name} says at most ${r.hi} days a week but trains ${actual.hi}`);
+      assert.ok(actual.lo >= r.lo,
+        `${r.name} says at least ${r.lo} days a week but trains ${actual.lo}`);
+    }
+  });
+
+  it('give every week at least one day off', async () => {
+    const { rows } = await t.asService(`select id, name from program_templates`);
+    for (const r of rows) {
+      const { rows: weeks } = await t.asUser(coachA,
+        `select max(training_days)::int busiest from im_template_week_volume($1)`, [r.id]);
+      assert.ok(weeks[0].busiest <= 6,
+        `${r.name} trains all seven days — no programme should leave an athlete no day off`);
+    }
   });
 
   it('do not fill every day of the week', async () => {
