@@ -60,6 +60,14 @@ import type {
 } from '@/lib/domain/programme-template';
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
+import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
+import type {
+  CheckInContext,
+  SessionHistory,
+  ShiftRow,
+  VolumeRow,
+  WeekSession,
+} from '@/lib/domain/adaptation';
 import type {
   IronMilesRepo,
   LibraryKind,
@@ -2153,6 +2161,103 @@ export class SupabaseRepo implements IronMilesRepo {
     });
     if (error) throw new Error(error.message);
     return data as UUID;
+  }
+
+  /* ================= adapting a live programme ================= */
+
+  async moveSession(sessionId: UUID, date: ISODate, slot?: number): Promise<void> {
+    const { error } = await this.db.rpc('im_move_session', {
+      p_session: sessionId,
+      p_date: date,
+      p_slot: slot ?? null,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async swapSessions(a: UUID, b: UUID): Promise<void> {
+    const { error } = await this.db.rpc('im_swap_sessions', { p_a: a, p_b: b });
+    if (error) throw new Error(error.message);
+  }
+
+  async shiftSessions(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    days: number,
+    apply: boolean,
+  ): Promise<ShiftRow[]> {
+    const { data, error } = await this.db.rpc('im_shift_sessions', {
+      p_athlete: athleteId, p_from: from, p_to: to, p_days: days, p_apply: apply,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      sessionId: r.session_id,
+      action: r.action,
+      name: r.name,
+      fromDate: r.from_date,
+      toDate: r.to_date,
+      status: r.status,
+      detail: r.detail,
+    }));
+  }
+
+  async scaleVolume(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    factor: number,
+    apply: boolean,
+  ): Promise<VolumeRow[]> {
+    const { data, error } = await this.db.rpc('im_scale_volume', {
+      p_athlete: athleteId, p_from: from, p_to: to, p_factor: factor, p_apply: apply,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      sessionId: r.session_id,
+      action: r.action,
+      name: r.name,
+      fromKm: r.from_km == null ? null : Number(r.from_km),
+      toKm: r.to_km == null ? null : Number(r.to_km),
+      status: r.status,
+      detail: r.detail,
+    }));
+  }
+
+  async getWeekAdaptationContext(weekId: UUID): Promise<WeekSession[]> {
+    const { data, error } = await this.db.rpc('im_week_adaptation_context', { p_week: weekId });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      sessionId: r.session_id,
+      date: r.date,
+      slot: r.slot,
+      name: r.name,
+      type: r.type,
+      status: r.status,
+      distanceKm: r.distance_km == null ? null : Number(r.distance_km),
+      durationMinutes: r.duration_minutes ?? null,
+      blocker: r.blocker ?? null,
+      revisions: Number(r.revisions ?? 0),
+      movedFrom: r.moved_from ?? null,
+    }));
+  }
+
+  async getSessionHistory(sessionId: UUID): Promise<SessionHistory> {
+    const { data, error } = await this.db.rpc('im_session_history', { p_session: sessionId });
+    if (error) throw new Error(error.message);
+    return buildSessionHistory((data ?? []).map((r: any) => ({
+      revision: r.revision,
+      kind: r.kind,
+      changedAt: r.changed_at,
+      changedBy: r.changed_by ?? null,
+      changedByName: r.changed_by_name ?? null,
+      session: r.session ?? {},
+      note: r.note ?? null,
+    })));
+  }
+
+  async getCheckInContext(athleteId: UUID): Promise<CheckInContext | null> {
+    const [latest] = await this.listCheckIns(athleteId, 1);
+    return latest ? toCheckInContext(latest) : null;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

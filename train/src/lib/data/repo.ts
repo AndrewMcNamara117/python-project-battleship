@@ -15,6 +15,13 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type {
+  CheckInContext,
+  SessionHistory,
+  ShiftRow,
+  VolumeRow,
+  WeekSession,
+} from '@/lib/domain/adaptation';
+import type {
   AssignmentConflict,
   AssignmentPreview,
   ExtractionMetadata,
@@ -320,6 +327,50 @@ export interface IronMilesRepo {
 
   /** Prescribed against intended volume, for the mismatch warning. */
   getWeekVolume(weekId: UUID): Promise<WeekVolume>;
+
+  /* ---- adapting a live programme ---- */
+
+  /**
+   * Move one session. Re-homes it in the week that contains the new date, and
+   * refuses to land on an occupied slot, on completed training, or outside
+   * the programme.
+   */
+  moveSession(sessionId: UUID, date: ISODate, slot?: number): Promise<void>;
+  /** Exchange two sessions' days. Neither may be completed. */
+  swapSessions(a: UUID, b: UUID): Promise<void>;
+
+  /**
+   * Shift every adaptable session in a range.
+   *
+   * `apply: false` returns exactly the rows `apply: true` would act on, so
+   * what a coach confirms is what runs. Completed training always comes back
+   * blocked.
+   */
+  shiftSessions(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    days: number,
+    apply: boolean,
+  ): Promise<ShiftRow[]>;
+
+  /** Scale prescribed distance across a range, on the same preview contract. */
+  scaleVolume(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    factor: number,
+    apply: boolean,
+  ): Promise<VolumeRow[]>;
+
+  /** The week a coach is working on: what is in it, and what is protected. */
+  getWeekAdaptationContext(weekId: UUID): Promise<WeekSession[]>;
+
+  /** Originally prescribed, what changed, and what it is now. */
+  getSessionHistory(sessionId: UUID): Promise<SessionHistory>;
+
+  /** The athlete's own account of the week just gone. Context, never an instruction. */
+  getCheckInContext(athleteId: UUID): Promise<CheckInContext | null>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;

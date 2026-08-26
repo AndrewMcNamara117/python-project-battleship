@@ -8,7 +8,7 @@ import {
   DEMO_WORKOUT_TEMPLATES,
 } from '@/data/demo-library.generated';
 import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, type DemoDataset } from '@/data/demo-seed';
-import { addDays, daysBetween, startOfMonth, startOfWeek, toISODate, weekdayIndex } from '@/lib/domain/dates';
+import { addDays, daysBetween, formatDayMonth, startOfMonth, startOfWeek, toISODate, weekdayIndex } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
 import { parseTimeToSeconds } from '@/lib/domain/dates';
 import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
@@ -74,6 +74,14 @@ import type {
 } from '@/lib/domain/programme-template';
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
+import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
+import type {
+  CheckInContext,
+  SessionHistory,
+  ShiftRow,
+  VolumeRow,
+  WeekSession,
+} from '@/lib/domain/adaptation';
 import type {
   IronMilesRepo,
   LibraryKind,
@@ -104,6 +112,18 @@ function dataset(): DemoDataset {
   const day = toISODate(new Date());
   if (!cache || cache.day !== day) cache = { day, data: buildDemoDataset(day) };
   return cache.data;
+}
+
+/**
+ * Rebuild the demo dataset from its seed.
+ *
+ * Demo mode keeps its state in this module, which is what makes it a
+ * believable product to click through and what makes one test's completed
+ * session leak into the next. Tests call this between cases; nothing in the
+ * app does, because a coach mid-session would not thank us for it.
+ */
+export function resetDemoData(): void {
+  cache = null;
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -252,6 +272,10 @@ export class DemoRepo implements IronMilesRepo {
     const i = d.scheduled.findIndex((w) => w.id === workout.id);
     if (i >= 0) d.scheduled[i] = clone(workout);
     else d.scheduled.push(clone(workout));
+
+    // Postgres records this from a trigger on every insert and update; the two
+    // adapters have to agree on what revision 1 is
+    this.snapshot(workout, i >= 0 ? 'edited' : 'created', DEMO_COACH_ID);
     return clone(workout);
   }
 
@@ -703,6 +727,14 @@ export class DemoRepo implements IronMilesRepo {
   private revisions: SessionRevision[] = [];
 
   /** Mirrors the Postgres trigger. Called wherever a session changes. */
+  /**
+   * Record a revision.
+   *
+   * Call it *after* the change, never before: revision N holds the state the
+   * session was left in by change N, which is what makes revision 1 the
+   * original prescription. Postgres does this from an AFTER trigger; this has
+   * to match, or the same session reads differently in the two adapters.
+   */
   private snapshot(
     session: ScheduledWorkout | { id: UUID; athleteId: UUID },
     kind: SessionRevision['kind'],
@@ -1202,6 +1234,7 @@ export class DemoRepo implements IronMilesRepo {
     } else {
       d.scheduled.push(session);
     }
+    this.snapshot(session, occupied >= 0 ? 'edited' : 'created', DEMO_COACH_ID);
 
     const copied = clone(template.components ?? []);
     this.components.push(
@@ -1647,7 +1680,7 @@ export class DemoRepo implements IronMilesRepo {
           if (d.scheduled.some((x) => x.athleteId === athleteId && x.date === date && x.slot === s.slot)) continue;
 
           if (s.isRest) {
-            d.scheduled.push(clone({
+            const rest = clone({
               id: uid('sw'),
               programId: program.id,
               programWeekId: week.id,
@@ -1662,7 +1695,9 @@ export class DemoRepo implements IronMilesRepo {
               notes: s.notes,
               prescriptionRevision: 1,
               createdAt: new Date().toISOString(),
-            }) as unknown as ScheduledWorkout);
+            }) as unknown as ScheduledWorkout;
+            d.scheduled.push(rest);
+            this.snapshot(rest, 'created', DEMO_COACH_ID);
             continue;
           }
 
@@ -1962,6 +1997,267 @@ export class DemoRepo implements IronMilesRepo {
     }
 
     return templateId;
+  }
+
+  /* ================= adapting a live programme ================= */
+
+  /** The same rule im_adaptation_blocker applies. */
+  private adaptationBlocker(w: ScheduledWorkout): string | null {
+    if (w.status === 'completed') {
+      return 'That session is already completed. What an athlete has done is not a plan any more.';
+    }
+    const d = dataset();
+    if (d.completed.some((c) => c.scheduledWorkoutId === w.id)) {
+      return 'That session has a logged result against it.';
+    }
+    if (d.strengthSessions.some((x) => x.scheduledWorkoutId === w.id && x.status === 'completed')) {
+      return 'That session has a logged strength result against it.';
+    }
+    return null;
+  }
+
+  private weekContaining(programId: UUID | null, date: ISODate): UUID | null {
+    if (!programId) return null;
+    const week = this.weeks.find(
+      (w) => w.programId === programId && date >= w.startDate && date < addDays(w.startDate, 7),
+    );
+    return week?.id ?? null;
+  }
+
+  async moveSession(sessionId: UUID, date: ISODate, slot?: number): Promise<void> {
+    const d = dataset();
+    const session = d.scheduled.find((w) => w.id === sessionId);
+    if (!session) throw new Error('That session no longer exists.');
+
+    const blocker = this.adaptationBlocker(session);
+    if (blocker) throw new Error(blocker);
+
+    const target = slot ?? session.slot;
+    if (session.date === date && target === session.slot) return;
+
+    const taken = d.scheduled.find(
+      (w) => w.athleteId === session.athleteId && w.date === date && w.slot === target && w.id !== session.id,
+    );
+    if (taken) {
+      throw new Error(
+        `There is already a session in that slot on ${formatDayMonth(date)}: "${taken.name}". ` +
+        'Swap them, or pick another slot.',
+      );
+    }
+
+    const program = d.programs.find((p) => p.id === session.programId);
+    if (program && (date < program.startDate || date > program.endDate)) {
+      throw new Error(
+        `That date is outside the programme, which runs ${formatDayMonth(program.startDate)} to ` +
+        `${formatDayMonth(program.endDate)}.`,
+      );
+    }
+
+    session.date = date;
+    session.slot = target;
+    session.programWeekId = this.weekContaining(session.programId, date) ?? session.programWeekId;
+    this.snapshot(session, 'moved', DEMO_COACH_ID);
+  }
+
+  async swapSessions(a: UUID, b: UUID): Promise<void> {
+    const d = dataset();
+    const first = d.scheduled.find((w) => w.id === a);
+    const second = d.scheduled.find((w) => w.id === b);
+    if (!first || !second) throw new Error('One of those sessions no longer exists.');
+    if (first.athleteId !== second.athleteId) {
+      throw new Error('Those sessions belong to different athletes.');
+    }
+
+    const blocker = this.adaptationBlocker(first) ?? this.adaptationBlocker(second);
+    if (blocker) throw new Error(blocker);
+
+    const from = { date: first.date, slot: first.slot, week: first.programWeekId };
+    first.date = second.date;
+    first.slot = second.slot;
+    first.programWeekId = this.weekContaining(first.programId, second.date) ?? second.programWeekId;
+    second.date = from.date;
+    second.slot = from.slot;
+    second.programWeekId = this.weekContaining(second.programId, from.date) ?? from.week;
+
+    this.snapshot(first, 'moved', DEMO_COACH_ID);
+    this.snapshot(second, 'moved', DEMO_COACH_ID);
+  }
+
+  async shiftSessions(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    days: number,
+    apply: boolean,
+  ): Promise<ShiftRow[]> {
+    if (days === 0) throw new Error('Shifting by zero days would change nothing.');
+    if (from > to) throw new Error('That date range runs backwards.');
+
+    const d = dataset();
+    const today = toISODate(new Date());
+    const inRange = d.scheduled
+      .filter((w) => w.athleteId === athleteId && w.date >= from && w.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.slot - b.slot);
+
+    // first pass: what each session is on its own terms
+    const plan = inRange.map((w) => {
+      const blocker = this.adaptationBlocker(w);
+      const toDate = addDays(w.date, days);
+      const program = d.programs.find((p) => p.id === w.programId);
+
+      if (blocker) return { w, action: 'blocked' as const, toDate: w.date, detail: blocker };
+      if (w.date < today) {
+        return {
+          w, action: 'keep' as const, toDate: w.date,
+          detail: 'In the past. Sessions before today are left where they are.',
+        };
+      }
+      if (program && (toDate < program.startDate || toDate > program.endDate)) {
+        return {
+          w, action: 'blocked' as const, toDate,
+          detail: `That would land outside the programme, which ends ${formatDayMonth(program.endDate)}.`,
+        };
+      }
+      return {
+        w, action: 'move' as const, toDate,
+        detail: days > 0 ? `Moves forward ${days} day(s).` : `Moves back ${Math.abs(days)} day(s).`,
+      };
+    });
+
+    // second pass: nothing may land on a slot something else is keeping.
+    // Blocking one can strand another, so this settles rather than sweeping once.
+    for (;;) {
+      let changed = false;
+      for (const p of plan) {
+        if (p.action !== 'move') continue;
+        const occupant = d.scheduled.find(
+          (o) => o.athleteId === athleteId && o.date === p.toDate && o.slot === p.w.slot && o.id !== p.w.id,
+        );
+        const occupantMoving = occupant
+          ? plan.some((x) => x.w.id === occupant.id && x.action === 'move')
+          : false;
+        if (occupant && !occupantMoving) {
+          (p as { action: string }).action = 'blocked';
+          p.detail = 'Something is already in that slot on the day it would move to.';
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+
+    if (apply) {
+      // forward: the latest goes first. Backwards: the earliest.
+      const order = plan
+        .filter((p) => p.action === 'move')
+        .sort((a, b) => (days > 0 ? b.w.date.localeCompare(a.w.date) : a.w.date.localeCompare(b.w.date)));
+      for (const p of order) {
+        p.w.date = p.toDate;
+        p.w.programWeekId = this.weekContaining(p.w.programId, p.toDate) ?? p.w.programWeekId;
+        this.snapshot(p.w, 'moved', DEMO_COACH_ID);
+      }
+    }
+
+    return plan.map((p) => ({
+      sessionId: p.w.id,
+      action: p.action,
+      name: p.w.name,
+      fromDate: inRange.find((w) => w.id === p.w.id)!.date,
+      toDate: p.toDate,
+      status: p.w.status,
+      detail: p.detail,
+    }));
+  }
+
+  async scaleVolume(
+    athleteId: UUID,
+    from: ISODate,
+    to: ISODate,
+    factor: number,
+    apply: boolean,
+  ): Promise<VolumeRow[]> {
+    if (!factor || factor <= 0) throw new Error('That is not a volume adjustment.');
+    if (factor > 3) throw new Error('Tripling a block is not an adjustment. Rewrite the sessions instead.');
+    if (from > to) throw new Error('That date range runs backwards.');
+
+    const today = toISODate(new Date());
+    const rows: VolumeRow[] = [];
+
+    for (const w of dataset().scheduled
+      .filter((x) => x.athleteId === athleteId && x.date >= from && x.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.slot - b.slot)) {
+      const base = { sessionId: w.id, name: w.name, status: w.status, fromKm: w.distanceKm, toKm: w.distanceKm };
+      const blocker = this.adaptationBlocker(w);
+
+      if (blocker) { rows.push({ ...base, action: 'blocked', detail: blocker }); continue; }
+      if (w.date < today) {
+        rows.push({ ...base, action: 'keep', detail: 'In the past. Sessions before today are left where they are.' });
+        continue;
+      }
+      if (w.type === 'rest') {
+        rows.push({ ...base, action: 'keep', detail: 'A rest day. Nothing to scale.' });
+        continue;
+      }
+      if (w.distanceKm == null) {
+        rows.push({ ...base, action: 'keep', detail: 'Prescribed by time rather than distance.' });
+        continue;
+      }
+
+      const next = Math.round(w.distanceKm * factor * 2) / 2;
+      if (next === w.distanceKm) {
+        rows.push({ ...base, action: 'keep', detail: 'Unchanged at that adjustment.' });
+        continue;
+      }
+
+      if (apply) {
+        w.distanceKm = next;
+        this.snapshot(w, 'edited', DEMO_COACH_ID);
+      }
+      rows.push({ ...base, action: 'scale', toKm: next, detail: `${base.fromKm} km → ${next} km` });
+    }
+
+    return rows;
+  }
+
+  async getWeekAdaptationContext(weekId: UUID): Promise<WeekSession[]> {
+    return dataset().scheduled
+      .filter((w) => w.programWeekId === weekId)
+      .sort((a, b) => a.date.localeCompare(b.date) || a.slot - b.slot)
+      .map((w) => {
+        const revisions = this.revisions.filter((r) => r.scheduledWorkoutId === w.id);
+        const first = revisions.find((r) => r.revision === 1);
+        const originalDate = (first?.session as { date?: string } | undefined)?.date ?? null;
+        return {
+          sessionId: w.id,
+          date: w.date,
+          slot: w.slot,
+          name: w.name,
+          type: w.type,
+          status: w.status,
+          distanceKm: w.distanceKm,
+          durationMinutes: w.durationMinutes,
+          blocker: this.adaptationBlocker(w),
+          revisions: revisions.length,
+          movedFrom: originalDate && originalDate !== w.date ? (originalDate as ISODate) : null,
+        };
+      });
+  }
+
+  async getSessionHistory(sessionId: UUID): Promise<SessionHistory> {
+    const rows = (await this.listSessionRevisions(sessionId)).map((r) => ({
+      revision: r.revision,
+      kind: r.kind as never,
+      changedAt: r.changedAt,
+      changedBy: r.changedBy ?? null,
+      changedByName: r.changedBy === DEMO_COACH_ID ? 'R. Doyle' : null,
+      session: (r.session ?? {}) as Record<string, unknown>,
+      note: r.note ?? null,
+    }));
+    return buildSessionHistory(rows);
+  }
+
+  async getCheckInContext(athleteId: UUID): Promise<CheckInContext | null> {
+    const [latest] = await this.listCheckIns(athleteId, 1);
+    return latest ? toCheckInContext(latest) : null;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {
