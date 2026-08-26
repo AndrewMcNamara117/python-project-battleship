@@ -135,6 +135,8 @@ try {
     check('and names what cannot be changed', /cannot be changed|already completed/i.test(previewText));
   }
   check('it offers an apply naming the count', /Apply to \d+ session/i.test(previewText));
+  check('the full list of movers is available but not dumped on the coach',
+    /Show all \d+ that will change/i.test(previewText));
 
   /* ---- and nothing has happened yet ---- */
 
@@ -167,9 +169,19 @@ try {
   await panel5.getByRole('button', { name: /^Preview$/ }).nth(1).click();
   await p.waitForTimeout(1500);
 
-  const volumeText = await panel5.innerText();
-  check('a volume preview shows the km change', /\d+(\.\d+)? km → \d+(\.\d+)? km/i.test(volumeText));
-  check('and what it will not scale', /rest day|by time|untouched/i.test(volumeText));
+  const volumeSummary = await panel5.innerText();
+  check('a volume preview counts what will change', /\d+ will change/i.test(volumeSummary));
+  check('and what it will not scale', /rest day|by time|untouched/i.test(volumeSummary));
+
+  // the per-session detail is available, one click away rather than dumped
+  const showAll = panel5.getByRole('button', { name: /Show all \d+ that will change/i });
+  check('the detail is offered', await showAll.count() > 0);
+  if (await showAll.count()) {
+    await showAll.click();
+    await p.waitForTimeout(500);
+    check('and shows the km change per session',
+      /\d+(\.\d+)? km → \d+(\.\d+)? km/i.test(await panel5.innerText()));
+  }
 
   /* ---- the athlete sees the result ---- */
 

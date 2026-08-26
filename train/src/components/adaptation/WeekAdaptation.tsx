@@ -58,6 +58,7 @@ export function WeekAdaptation({
   const [percent, setPercent] = useState('90');
   const [swapA, setSwapA] = useState('');
   const [swapB, setSwapB] = useState('');
+  const [showEvery, setShowEvery] = useState(false);
 
   const weekEnd = addDays(weekStart, 6);
   const shiftTo = scope === 'week' ? weekEnd : (programmeEnd > weekEnd ? programmeEnd : weekEnd);
@@ -75,6 +76,8 @@ export function WeekAdaptation({
     });
 
   const summary = preview ? summarise(preview.rows) : null;
+  const changing = preview?.rows.filter((r) => r.action === 'move' || r.action === 'scale') ?? [];
+  const needsAttention = preview?.rows.filter((r) => r.action === 'blocked' || r.action === 'keep') ?? [];
 
   return (
     <Panel className="min-w-0 p-5 sm:p-6">
@@ -149,7 +152,7 @@ export function WeekAdaptation({
             />
             <span className="shrink-0 text-[12px] text-ink-secondary">days</span>
             <Select
-              className="w-full min-w-0 sm:w-[9rem]"
+              className="w-full min-w-0 sm:w-[11.5rem]"
               value={scope}
               onChange={(e) => { setScope(e.target.value as 'week' | 'programme'); setPreview(null); }}
               aria-label="What to shift"
@@ -167,6 +170,7 @@ export function WeekAdaptation({
                   const outcome = await previewShift(athleteId, weekStart, shiftTo, Number(days));
                   if (outcome.ok && outcome.rows) setPreview({ kind: 'shift', days: Number(days), rows: outcome.rows });
                   else setResult(outcome);
+                  setShowEvery(false);
                 })
               }
             >
@@ -262,22 +266,47 @@ export function WeekAdaptation({
             )}
           </div>
 
-          <ul className="mt-4 space-y-2">
-            {preview.rows.map((row) => (
-              <li key={row.sessionId} className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12.5px]">
-                <span
-                  className={`im-mono text-[10px] uppercase tracking-[0.1em] ${
-                    row.action === 'blocked' ? 'text-status-missed'
-                      : row.action === 'keep' ? 'text-ink-tertiary' : 'text-mint'
-                  }`}
-                >
-                  {row.action === 'blocked' ? 'no' : row.action === 'keep' ? '—' : 'yes'}
-                </span>
-                <span className="text-ink">{row.name}</span>
-                <span className="min-w-0 break-words text-ink-tertiary">{row.detail}</span>
-              </li>
-            ))}
-          </ul>
+          {/* What needs a decision comes first. Forty-five identical lines
+              saying a session moves is not information a coach reads; the
+              handful that will not move is. */}
+          {needsAttention.length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {needsAttention.map((row) => (
+                <li key={row.sessionId} className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[12.5px]">
+                  <span
+                    className={`im-mono text-[10px] uppercase tracking-[0.1em] ${
+                      row.action === 'blocked' ? 'text-status-missed' : 'text-ink-tertiary'
+                    }`}
+                  >
+                    {row.action === 'blocked' ? 'no' : '—'}
+                  </span>
+                  <span className="text-ink">{row.name}</span>
+                  <span className="min-w-0 break-words text-ink-tertiary">{row.detail}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {changing.length > 0 && (
+            <div className="mt-4">
+              <Button variant="quiet" size="sm" className="px-0" onClick={() => setShowEvery((v) => !v)}>
+                {showEvery
+                  ? 'Hide the full list'
+                  : `Show all ${changing.length} that will change`}
+              </Button>
+              {showEvery && (
+                <ul className="mt-2.5 space-y-1.5">
+                  {changing.map((row) => (
+                    <li key={row.sessionId} className="flex min-w-0 flex-wrap items-baseline gap-x-3 text-[12.5px]">
+                      <span className="im-mono text-[10px] uppercase tracking-[0.1em] text-mint">yes</span>
+                      <span className="text-ink">{row.name}</span>
+                      <span className="min-w-0 break-words text-ink-tertiary">{row.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Button
