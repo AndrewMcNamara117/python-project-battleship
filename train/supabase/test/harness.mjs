@@ -93,9 +93,17 @@ export async function createTestDatabase({ verbose = false } = {}) {
     }
   };
 
-  /** Run as the service role (migrations, webhooks, cron) — bypasses RLS. */
+  /**
+   * Run as the service role (migrations, webhooks, cron) — bypasses RLS.
+   *
+   * The identity GUC is cleared first. asUser sets it at session scope, so
+   * without this the service role keeps whichever user acted last, and
+   * anything reading auth.uid() — guard triggers, audit attribution — sees a
+   * stale identity instead of no identity.
+   */
   const asService = async (sql, params = []) => {
     await db.exec('reset role;');
+    await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
     return await db.query(sql, params);
   };
 

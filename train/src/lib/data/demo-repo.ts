@@ -1,3 +1,8 @@
+import {
+  DEMO_STRENGTH_EXERCISES,
+  DEMO_STRENGTH_TEMPLATES,
+  DEMO_WORKOUT_TEMPLATES,
+} from '@/data/demo-library.generated';
 import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, type DemoDataset } from '@/data/demo-seed';
 import { addDays, daysBetween, startOfMonth, startOfWeek, toISODate, weekdayIndex } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
@@ -41,7 +46,21 @@ import type {
   SessionComponentDraft,
   SessionRevision,
 } from '@/lib/domain/programme';
-import type { IronMilesRepo } from './repo';
+import type {
+  LibraryQuery,
+  StrengthExercise,
+  StrengthTemplate,
+  WeekVolume,
+  WorkoutTemplate,
+} from '@/lib/domain/library';
+import type {
+  IronMilesRepo,
+  LibraryKind,
+  StrengthExerciseDraft,
+  StrengthTemplateDraft,
+  TemplateComponentDraft,
+  WorkoutTemplateDraft,
+} from './repo';
 
 /**
  * In-memory implementation of the data contract.
@@ -706,16 +725,17 @@ export class DemoRepo implements IronMilesRepo {
   }
 
   async deleteBlock(blockId: UUID): Promise<void> {
+    // Matches the database guard: a populated block is never silently removed,
+    // because doing so would take prescribed athlete history with it.
     const weekIds = this.weeks.filter((w) => w.blockId === blockId).map((w) => w.id);
-    const d = dataset();
-    for (let i = d.scheduled.length - 1; i >= 0; i--) {
-      if (weekIds.includes(d.scheduled[i].programWeekId ?? '')) {
-        this.snapshot(d.scheduled[i], 'deleted');
-        d.scheduled.splice(i, 1);
-      }
+    const sessions = dataset().scheduled.filter((w) => weekIds.includes(w.programWeekId ?? ''));
+    if (weekIds.length || sessions.length) {
+      throw new Error(
+        `This block still holds ${weekIds.length} week(s) and ${sessions.length} prescribed session(s). ` +
+          'Archive it instead, or empty it first.',
+      );
     }
     const ds = dataset();
-    ds.weeks = ds.weeks.filter((w) => w.blockId !== blockId);
     ds.blocks = ds.blocks.filter((b) => b.id !== blockId);
   }
 
@@ -945,6 +965,226 @@ export class DemoRepo implements IronMilesRepo {
       sharedCoachNotes: d.coachNotes.filter((n) => n.athleteId === athleteId && n.visibility === 'shared'),
       exportedAt: new Date().toISOString(),
     });
+  }
+
+  /* ================= the libraries ================= */
+
+  private workoutTemplates: WorkoutTemplate[] = clone(DEMO_WORKOUT_TEMPLATES);
+  private strengthExercises: StrengthExercise[] = clone(DEMO_STRENGTH_EXERCISES);
+  private strengthTemplates: StrengthTemplate[] = clone(DEMO_STRENGTH_TEMPLATES);
+
+  /** The same filtering the database does, so the two adapters agree. */
+  private filterLibrary<T extends { name: string; tags: string[]; visibility: string; archivedAt: string | null }>(
+    items: T[],
+    q: LibraryQuery = {},
+    extraText: (item: T) => (string | null)[] = () => [],
+  ): T[] {
+    const term = q.search?.trim().toLowerCase();
+    return clone(
+      items
+        .filter((i) => (q.includeArchived ? true : !i.archivedAt))
+        .filter((i) => (q.visibility ? i.visibility === q.visibility : true))
+        .filter((i) => (q.category ? (i as { category?: string }).category === q.category : true))
+        .filter((i) =>
+          q.movementPattern ? (i as { movementPattern?: string }).movementPattern === q.movementPattern : true,
+        )
+        .filter((i) => (q.tags?.length ? i.tags.some((t) => q.tags!.includes(t)) : true))
+        .filter((i) =>
+          term
+            ? [i.name, ...extraText(i), ...i.tags].some((t) => t?.toLowerCase().includes(term))
+            : true,
+        )
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, q.limit ?? 200),
+    );
+  }
+
+  async listWorkoutTemplates(query?: LibraryQuery): Promise<WorkoutTemplate[]> {
+    return this.filterLibrary(this.workoutTemplates, query, (t) => [t.purpose]);
+  }
+
+  async getWorkoutTemplate(id: UUID): Promise<WorkoutTemplate | null> {
+    return clone(this.workoutTemplates.find((t) => t.id === id) ?? null);
+  }
+
+  async saveWorkoutTemplate(
+    template: WorkoutTemplateDraft,
+    components?: TemplateComponentDraft[],
+  ): Promise<WorkoutTemplate> {
+    return this.saveLibraryItem(this.workoutTemplates, template, components, 'wt');
+  }
+
+  async listStrengthExercises(query?: LibraryQuery): Promise<StrengthExercise[]> {
+    return this.filterLibrary(this.strengthExercises, query, (e) => [e.description]);
+  }
+
+  async getStrengthExercise(id: UUID): Promise<StrengthExercise | null> {
+    return clone(this.strengthExercises.find((e) => e.id === id) ?? null);
+  }
+
+  async saveStrengthExercise(exercise: StrengthExerciseDraft): Promise<StrengthExercise> {
+    return this.saveLibraryItem(this.strengthExercises, exercise, undefined, 'ex');
+  }
+
+  async listStrengthTemplates(query?: LibraryQuery): Promise<StrengthTemplate[]> {
+    return this.filterLibrary(this.strengthTemplates, query, (t) => [t.description]);
+  }
+
+  async getStrengthTemplate(id: UUID): Promise<StrengthTemplate | null> {
+    return clone(this.strengthTemplates.find((t) => t.id === id) ?? null);
+  }
+
+  async saveStrengthTemplate(
+    template: StrengthTemplateDraft,
+    components?: TemplateComponentDraft[],
+  ): Promise<StrengthTemplate> {
+    return this.saveLibraryItem(this.strengthTemplates, template, components, 'st');
+  }
+
+  private saveLibraryItem<T extends { id: UUID; visibility: string; components?: SessionComponent[] }>(
+    store: T[],
+    draft: { id?: UUID },
+    components: TemplateComponentDraft[] | undefined,
+    prefix: string,
+  ): T {
+    const existing = draft.id ? store.find((i) => i.id === draft.id) : undefined;
+    if (existing?.visibility === 'system') {
+      throw new Error('System library content cannot be edited. Duplicate it and edit your copy.');
+    }
+
+    const now = new Date().toISOString();
+    const positioned = components?.map((c, i) => ({ ...c, position: i, id: uid('tc'), scheduledWorkoutId: '', athleteId: '' }));
+
+    if (existing) {
+      Object.assign(existing, draft, { id: existing.id, updatedAt: now });
+      if (positioned) existing.components = positioned as SessionComponent[];
+      return clone(existing);
+    }
+
+    const row = {
+      ...draft,
+      id: draft.id ?? uid(prefix),
+      createdAt: now,
+      updatedAt: now,
+      ...(positioned ? { components: positioned } : {}),
+    } as unknown as T;
+    store.push(row);
+    return clone(row);
+  }
+
+  private libraryStore(kind: LibraryKind) {
+    if (kind === 'workout') return this.workoutTemplates;
+    if (kind === 'exercise') return this.strengthExercises;
+    return this.strengthTemplates;
+  }
+
+  async setLibraryArchived(kind: LibraryKind, id: UUID, archived: boolean): Promise<void> {
+    const item = this.libraryStore(kind).find((i) => i.id === id);
+    if (!item) throw new Error('That library item is no longer available.');
+    if (item.visibility === 'system') {
+      throw new Error('System library content cannot be edited. Duplicate it and edit your copy.');
+    }
+    item.archivedAt = archived ? new Date().toISOString() : null;
+    item.updatedAt = new Date().toISOString();
+  }
+
+  async duplicateLibraryItem(kind: LibraryKind, id: UUID, name?: string): Promise<UUID> {
+    const store = this.libraryStore(kind);
+    const source = store.find((i) => i.id === id);
+    if (!source) throw new Error('That library item is no longer available.');
+    const now = new Date().toISOString();
+    const copy = {
+      ...clone(source),
+      id: uid(kind),
+      name: name ?? `${source.name} (copy)`,
+      // a copy is always the coach's own, whatever it came from
+      visibility: 'private' as const,
+      ownerId: DEMO_COACH_ID,
+      archivedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.push(copy as never);
+    return copy.id;
+  }
+
+  async insertTemplateIntoProgramme(
+    kind: 'workout' | 'strength',
+    templateId: UUID,
+    athleteId: UUID,
+    date: ISODate,
+    slot = 0,
+  ): Promise<UUID> {
+    const template =
+      kind === 'workout'
+        ? this.workoutTemplates.find((t) => t.id === templateId)
+        : this.strengthTemplates.find((t) => t.id === templateId);
+    if (!template) throw new Error('That template is no longer available.');
+    if (template.archivedAt) throw new Error('That template is archived. Restore it first.');
+
+    const d = dataset();
+    const program = d.programs.find((p) => p.athleteId === athleteId && p.status === 'active');
+    const week = program ? await this.findWeekByDate(program.id, date) : null;
+
+    const workout = kind === 'workout' ? (template as WorkoutTemplate) : null;
+    const strength = kind === 'strength' ? (template as StrengthTemplate) : null;
+
+    // A copy, not a reference: later edits to the template must not reach a
+    // session an athlete has already been given.
+    const session = clone({
+      id: uid('sw'),
+      athleteId,
+      programId: program?.id ?? null,
+      programWeekId: week?.id ?? null,
+      date,
+      slot,
+      name: template.name,
+      type: workout?.type ?? 'strength',
+      basis: workout?.basis ?? 'time',
+      intensity: workout?.intensity ?? 'easy',
+      distanceKm: workout?.distanceKm ?? null,
+      durationMinutes: workout?.durationMinutes ?? strength?.estimatedMinutes ?? null,
+      paceMinSecPerKm: workout?.paceMinSecKm ?? null,
+      paceMaxSecPerKm: workout?.paceMaxSecKm ?? null,
+      hrZone: workout?.hrZone ?? null,
+      rpeTarget: workout?.rpeTarget ?? null,
+      warmUp: workout?.warmUp ?? null,
+      mainSet: workout?.mainSet ?? null,
+      coolDown: workout?.coolDown ?? null,
+      description: template.purpose ?? null,
+      coachNotes: null,
+      status: 'scheduled' as const,
+      prescriptionRevision: 1,
+      sourceWorkoutTemplateId: kind === 'workout' ? template.id : null,
+      sourceStrengthTemplateId: kind === 'strength' ? template.id : null,
+      createdAt: new Date().toISOString(),
+    }) as unknown as ScheduledWorkout;
+
+    d.scheduled.push(session);
+
+    const copied = clone(template.components ?? []);
+    this.components.push(
+      ...copied.map((c, i) => ({
+        ...c,
+        id: uid('cmp'),
+        position: i,
+        scheduledWorkoutId: session.id,
+        athleteId,
+      })),
+    );
+
+    return session.id;
+  }
+
+  async getWeekVolume(weekId: UUID): Promise<WeekVolume> {
+    const week = this.weeks.find((w) => w.id === weekId);
+    // every prescribed session counts, matching im_week_volume
+    const sessions = dataset().scheduled.filter((s) => s.programWeekId === weekId);
+    return {
+      prescribedKm: Number(sessions.reduce((sum, s) => sum + (s.distanceKm ?? 0), 0).toFixed(1)),
+      targetKm: week?.targetVolumeKm ?? null,
+      sessionCount: sessions.length,
+    };
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

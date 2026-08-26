@@ -37,7 +37,21 @@ import type {
   SessionComponentDraft,
   SessionRevision,
 } from '@/lib/domain/programme';
-import type { IronMilesRepo } from './repo';
+import type {
+  LibraryQuery,
+  StrengthExercise,
+  StrengthTemplate,
+  WeekVolume,
+  WorkoutTemplate,
+} from '@/lib/domain/library';
+import type {
+  IronMilesRepo,
+  LibraryKind,
+  StrengthExerciseDraft,
+  StrengthTemplateDraft,
+  TemplateComponentDraft,
+  WorkoutTemplateDraft,
+} from './repo';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -1350,6 +1364,366 @@ export class SupabaseRepo implements IronMilesRepo {
     const { data, error } = await this.db.rpc('im_export_athlete_data', { target: athleteId });
     if (error) throw new Error(error.message);
     return data as Record<string, unknown>;
+  }
+
+  /* ================= the libraries ================= */
+
+  private toWorkoutTemplate = (r: any): WorkoutTemplate => ({
+    id: r.id,
+    ownerId: r.owner_id ?? null,
+    visibility: r.visibility,
+    name: r.name,
+    category: r.category,
+    type: r.type,
+    basis: r.basis,
+    intensity: r.intensity,
+    distanceKm: r.distance_km == null ? null : Number(r.distance_km),
+    durationMinutes: r.duration_minutes ?? null,
+    paceMinSecKm: r.pace_min_sec_km ?? null,
+    paceMaxSecKm: r.pace_max_sec_km ?? null,
+    hrZone: r.hr_zone ?? null,
+    rpeTarget: r.rpe_target ?? null,
+    warmUp: r.warm_up ?? null,
+    mainSet: r.main_set ?? null,
+    coolDown: r.cool_down ?? null,
+    purpose: r.purpose ?? null,
+    coachNotes: r.coach_notes ?? null,
+    notes: r.notes ?? null,
+    tags: r.tags ?? [],
+    archivedAt: r.archived_at ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    ...(r.template_components
+      ? { components: [...r.template_components].sort((a: any, b: any) => a.position - b.position).map(this.toTemplateComponent) }
+      : {}),
+  });
+
+  private toStrengthExercise = (r: any): StrengthExercise => ({
+    id: r.id,
+    ownerId: r.owner_id ?? null,
+    visibility: r.visibility,
+    name: r.name,
+    category: r.category,
+    movementPattern: r.movement_pattern ?? null,
+    description: r.description ?? null,
+    muscleGroups: r.muscle_groups ?? [],
+    cues: r.cues ?? [],
+    regressions: r.regressions ?? [],
+    progressions: r.progressions ?? [],
+    equipment: r.equipment ?? [],
+    videoUrl: r.video_url ?? null,
+    defaultSets: r.default_sets ?? null,
+    defaultReps: r.default_reps ?? null,
+    loadGuidance: r.load_guidance ?? null,
+    defaultTempo: r.default_tempo ?? null,
+    defaultRestSeconds: r.default_rest_seconds ?? null,
+    defaultRpe: r.default_rpe ?? null,
+    isUnilateral: r.is_unilateral ?? false,
+    tags: r.tags ?? [],
+    archivedAt: r.archived_at ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  });
+
+  private toStrengthTemplate = (r: any): StrengthTemplate => ({
+    id: r.id,
+    ownerId: r.owner_id ?? null,
+    visibility: r.visibility,
+    name: r.name,
+    category: r.category,
+    description: r.description ?? '',
+    estimatedMinutes: r.estimated_minutes ?? 0,
+    purpose: r.purpose ?? null,
+    coachNotes: r.coach_notes ?? null,
+    tags: r.tags ?? [],
+    archivedAt: r.archived_at ?? null,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    ...(r.template_components
+      ? { components: [...r.template_components].sort((a: any, b: any) => a.position - b.position).map(this.toTemplateComponent) }
+      : {}),
+  });
+
+  /**
+   * A template component maps onto the same shape as a session component —
+   * they are the same columns, which is what lets a template be copied into a
+   * session without translation.
+   */
+  private toTemplateComponent = (r: any): SessionComponent => ({
+    id: r.id,
+    scheduledWorkoutId: '',
+    athleteId: '',
+    position: r.position,
+    kind: r.kind,
+    label: r.label ?? null,
+    notes: r.notes ?? null,
+    repeats: r.repeats ?? null,
+    rpeTarget: r.rpe_target ?? null,
+    distanceKm: r.distance_km == null ? null : Number(r.distance_km),
+    durationSeconds: r.duration_seconds ?? null,
+    paceMinSecPerKm: r.pace_min_sec_km ?? null,
+    paceMaxSecPerKm: r.pace_max_sec_km ?? null,
+    hrZone: r.hr_zone ?? null,
+    recoverySeconds: r.recovery_seconds ?? null,
+    recoveryDescription: r.recovery_description ?? null,
+    strengthExerciseId: r.strength_exercise_id ?? null,
+    sets: r.sets ?? null,
+    reps: r.reps ?? null,
+    loadPrescription: r.load_prescription ?? null,
+    tempo: r.tempo ?? null,
+    restSeconds: r.rest_seconds ?? null,
+  });
+
+  private fromTemplateComponent = (c: TemplateComponentDraft, position: number, parent: Record<string, UUID>) => ({
+    ...parent,
+    position,
+    kind: c.kind,
+    label: c.label,
+    notes: c.notes,
+    repeats: c.repeats,
+    rpe_target: c.rpeTarget,
+    distance_km: c.distanceKm,
+    duration_seconds: c.durationSeconds,
+    pace_min_sec_km: c.paceMinSecPerKm,
+    pace_max_sec_km: c.paceMaxSecPerKm,
+    hr_zone: c.hrZone,
+    recovery_seconds: c.recoverySeconds,
+    recovery_description: c.recoveryDescription,
+    strength_exercise_id: c.strengthExerciseId,
+    sets: c.sets,
+    reps: c.reps,
+    load_prescription: c.loadPrescription,
+    tempo: c.tempo,
+    rest_seconds: c.restSeconds,
+  });
+
+  /** Shared filtering. RLS already decides what is visible; this narrows it. */
+  private applyLibraryQuery(query: any, q: LibraryQuery = {}, searchColumns = 'name,purpose') {
+    if (!q.includeArchived) query = query.is('archived_at', null);
+    if (q.visibility) query = query.eq('visibility', q.visibility);
+    if (q.category) query = query.eq('category', q.category);
+    if (q.movementPattern) query = query.eq('movement_pattern', q.movementPattern);
+    if (q.tags?.length) query = query.overlaps('tags', q.tags);
+    if (q.search?.trim()) {
+      const term = q.search.trim().replace(/[%,()]/g, ' ');
+      const ors = searchColumns.split(',').map((c) => `${c}.ilike.%${term}%`);
+      query = query.or(ors.join(','));
+    }
+    return query.order('name').limit(q.limit ?? 200);
+  }
+
+  listWorkoutTemplates(query?: LibraryQuery) {
+    return this.rows(
+      this.applyLibraryQuery(this.db.from('workout_templates').select('*'), query),
+      this.toWorkoutTemplate,
+    );
+  }
+
+  getWorkoutTemplate(id: UUID) {
+    return this.one(
+      this.db.from('workout_templates').select('*, template_components(*)').eq('id', id).single(),
+      this.toWorkoutTemplate,
+    );
+  }
+
+  async saveWorkoutTemplate(template: WorkoutTemplateDraft, components?: TemplateComponentDraft[]) {
+    const row: Record<string, unknown> = {
+      owner_id: template.ownerId,
+      visibility: template.visibility,
+      name: template.name,
+      category: template.category,
+      type: template.type,
+      basis: template.basis,
+      intensity: template.intensity,
+      distance_km: template.distanceKm,
+      duration_minutes: template.durationMinutes,
+      pace_min_sec_km: template.paceMinSecKm,
+      pace_max_sec_km: template.paceMaxSecKm,
+      hr_zone: template.hrZone,
+      rpe_target: template.rpeTarget,
+      warm_up: template.warmUp,
+      main_set: template.mainSet,
+      cool_down: template.coolDown,
+      purpose: template.purpose,
+      coach_notes: template.coachNotes,
+      notes: template.notes,
+      tags: template.tags,
+      archived_at: template.archivedAt,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await this.db
+      .from('workout_templates')
+      .upsert(template.id ? { ...row, id: template.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    if (components) await this.replaceTemplateComponents({ workout_template_id: data.id }, components);
+    return this.toWorkoutTemplate(data);
+  }
+
+  listStrengthExercises(query?: LibraryQuery) {
+    return this.rows(
+      this.applyLibraryQuery(this.db.from('strength_exercises').select('*'), query, 'name,description'),
+      this.toStrengthExercise,
+    );
+  }
+
+  getStrengthExercise(id: UUID) {
+    return this.one(this.db.from('strength_exercises').select('*').eq('id', id).single(), this.toStrengthExercise);
+  }
+
+  async saveStrengthExercise(exercise: StrengthExerciseDraft) {
+    const row: Record<string, unknown> = {
+      owner_id: exercise.ownerId,
+      visibility: exercise.visibility,
+      name: exercise.name,
+      category: exercise.category,
+      movement_pattern: exercise.movementPattern,
+      description: exercise.description,
+      muscle_groups: exercise.muscleGroups,
+      cues: exercise.cues,
+      regressions: exercise.regressions,
+      progressions: exercise.progressions,
+      equipment: exercise.equipment,
+      video_url: exercise.videoUrl,
+      default_sets: exercise.defaultSets,
+      default_reps: exercise.defaultReps,
+      load_guidance: exercise.loadGuidance,
+      default_tempo: exercise.defaultTempo,
+      default_rest_seconds: exercise.defaultRestSeconds,
+      default_rpe: exercise.defaultRpe,
+      is_unilateral: exercise.isUnilateral,
+      tags: exercise.tags,
+      archived_at: exercise.archivedAt,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await this.db
+      .from('strength_exercises')
+      .upsert(exercise.id ? { ...row, id: exercise.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toStrengthExercise(data);
+  }
+
+  listStrengthTemplates(query?: LibraryQuery) {
+    return this.rows(
+      this.applyLibraryQuery(this.db.from('strength_templates').select('*'), query, 'name,description'),
+      this.toStrengthTemplate,
+    );
+  }
+
+  getStrengthTemplate(id: UUID) {
+    return this.one(
+      this.db.from('strength_templates').select('*, template_components(*)').eq('id', id).single(),
+      this.toStrengthTemplate,
+    );
+  }
+
+  async saveStrengthTemplate(template: StrengthTemplateDraft, components?: TemplateComponentDraft[]) {
+    const row: Record<string, unknown> = {
+      owner_id: template.ownerId,
+      visibility: template.visibility,
+      name: template.name,
+      category: template.category,
+      description: template.description,
+      estimated_minutes: template.estimatedMinutes,
+      purpose: template.purpose,
+      coach_notes: template.coachNotes,
+      tags: template.tags,
+      archived_at: template.archivedAt,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await this.db
+      .from('strength_templates')
+      .upsert(template.id ? { ...row, id: template.id } : row)
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    if (components) await this.replaceTemplateComponents({ strength_template_id: data.id }, components);
+    return this.toStrengthTemplate(data);
+  }
+
+  /** Replace wholesale — position is array order, and a partial write would strand positions. */
+  private async replaceTemplateComponents(parent: Record<string, UUID>, components: TemplateComponentDraft[]) {
+    const [column, id] = Object.entries(parent)[0];
+    const { error: clearError } = await this.db.from('template_components').delete().eq(column, id);
+    if (clearError) throw new Error(clearError.message);
+    if (!components.length) return;
+    const { error } = await this.db
+      .from('template_components')
+      .insert(components.map((c, i) => this.fromTemplateComponent(c, i, parent)));
+    if (error) throw new Error(error.message);
+  }
+
+  private static readonly LIBRARY_TABLES: Record<LibraryKind, string> = {
+    workout: 'workout_templates',
+    exercise: 'strength_exercises',
+    strength: 'strength_templates',
+  };
+
+  async setLibraryArchived(kind: LibraryKind, id: UUID, archived: boolean): Promise<void> {
+    const { error } = await this.db
+      .from(SupabaseRepo.LIBRARY_TABLES[kind])
+      .update({ archived_at: archived ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async duplicateLibraryItem(kind: LibraryKind, id: UUID, name?: string): Promise<UUID> {
+    if (kind === 'exercise') {
+      const source = await this.getStrengthExercise(id);
+      if (!source) throw new Error('That exercise is no longer available.');
+      const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = source;
+      const copy = await this.saveStrengthExercise({
+        ...rest,
+        name: name ?? `${source.name} (copy)`,
+        visibility: 'private',
+        ownerId: await this.currentUserId(),
+        archivedAt: null,
+      });
+      return copy.id;
+    }
+    const fn = kind === 'workout' ? 'im_duplicate_workout_template' : 'im_duplicate_strength_template';
+    const { data, error } = await this.db.rpc(fn, { p_source: id, p_name: name ?? null });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  async insertTemplateIntoProgramme(
+    kind: 'workout' | 'strength',
+    templateId: UUID,
+    athleteId: UUID,
+    date: ISODate,
+    slot = 0,
+  ): Promise<UUID> {
+    const fn = kind === 'workout' ? 'im_insert_workout_template' : 'im_insert_strength_template';
+    const { data, error } = await this.db.rpc(fn, {
+      p_template: templateId,
+      p_athlete: athleteId,
+      p_date: date,
+      p_slot: slot,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  async getWeekVolume(weekId: UUID): Promise<WeekVolume> {
+    const { data, error } = await this.db.rpc('im_week_volume', { p_week: weekId });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      prescribedKm: Number(row?.prescribed_km ?? 0),
+      targetKm: row?.target_km == null ? null : Number(row.target_km),
+      sessionCount: Number(row?.session_count ?? 0),
+    };
+  }
+
+  private async currentUserId(): Promise<UUID> {
+    const { data } = await this.db.auth.getUser();
+    const id = data.user?.id;
+    if (!id) throw new Error('You need to be signed in to do that.');
+    return id;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

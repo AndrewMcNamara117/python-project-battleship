@@ -7,6 +7,13 @@ import type {
   SessionRevision,
 } from '@/lib/domain/programme';
 import type {
+  LibraryQuery,
+  StrengthExercise,
+  StrengthTemplate,
+  WeekVolume,
+  WorkoutTemplate,
+} from '@/lib/domain/library';
+import type {
   AcceptanceOutcome,
   Achievement,
   CheckIn,
@@ -45,6 +52,19 @@ import type {
  *
  * Components never import either one directly; they call `getRepo()`.
  */
+/** Which library a call is talking about. */
+export type LibraryKind = 'workout' | 'exercise' | 'strength';
+
+/** A library item on the way in: the database owns id and timestamps. */
+export type WorkoutTemplateDraft = Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt' | 'components'> &
+  Partial<Pick<WorkoutTemplate, 'id'>>;
+export type StrengthExerciseDraft = Omit<StrengthExercise, 'id' | 'createdAt' | 'updatedAt'> &
+  Partial<Pick<StrengthExercise, 'id'>>;
+export type StrengthTemplateDraft = Omit<StrengthTemplate, 'id' | 'createdAt' | 'updatedAt' | 'components'> &
+  Partial<Pick<StrengthTemplate, 'id'>>;
+/** Position comes from array order, so callers cannot desynchronise it. */
+export type TemplateComponentDraft = Omit<SessionComponentDraft, 'position'>;
+
 export interface IronMilesRepo {
   readonly mode: 'supabase' | 'demo';
 
@@ -170,6 +190,53 @@ export interface IronMilesRepo {
   listSessionRevisions(scheduledWorkoutId: UUID): Promise<SessionRevision[]>;
   /** What the coach originally wrote, whatever has happened since. */
   getOriginalPrescription(scheduledWorkoutId: UUID): Promise<Record<string, unknown> | null>;
+
+  /* ---- the libraries ---- */
+
+  listWorkoutTemplates(query?: LibraryQuery): Promise<WorkoutTemplate[]>;
+  /** Includes its components, in order. */
+  getWorkoutTemplate(id: UUID): Promise<WorkoutTemplate | null>;
+  saveWorkoutTemplate(
+    template: WorkoutTemplateDraft,
+    components?: TemplateComponentDraft[],
+  ): Promise<WorkoutTemplate>;
+
+  listStrengthExercises(query?: LibraryQuery): Promise<StrengthExercise[]>;
+  getStrengthExercise(id: UUID): Promise<StrengthExercise | null>;
+  saveStrengthExercise(exercise: StrengthExerciseDraft): Promise<StrengthExercise>;
+
+  listStrengthTemplates(query?: LibraryQuery): Promise<StrengthTemplate[]>;
+  getStrengthTemplate(id: UUID): Promise<StrengthTemplate | null>;
+  saveStrengthTemplate(
+    template: StrengthTemplateDraft,
+    components?: TemplateComponentDraft[],
+  ): Promise<StrengthTemplate>;
+
+  /**
+   * Archive rather than delete: anything previously prescribed keeps its
+   * reference, and a coach can bring the item back.
+   */
+  setLibraryArchived(kind: LibraryKind, id: UUID, archived: boolean): Promise<void>;
+  /** Copy a system or shared item into one the coach owns and can edit. */
+  duplicateLibraryItem(kind: LibraryKind, id: UUID, name?: string): Promise<UUID>;
+
+  /**
+   * Prescribe a template to an athlete on a date.
+   *
+   * Copies the template — the resulting session records where it came from but
+   * holds no live link, so editing the template later cannot change training
+   * the athlete has already been given.
+   */
+  insertTemplateIntoProgramme(
+    kind: 'workout' | 'strength',
+    templateId: UUID,
+    athleteId: UUID,
+    date: ISODate,
+    slot?: number,
+  ): Promise<UUID>;
+
+  /** Prescribed against intended volume, for the mismatch warning. */
+  getWeekVolume(weekId: UUID): Promise<WeekVolume>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;
