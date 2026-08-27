@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import {
   applicableIds, availableActions, BATCH_ACTION_LABEL, confirmLabel,
-  resultSentence, tally, tallySentence, unavailableReason,
+  resultSentence, selectionLabel, tally, tallySentence, unavailableReason,
 } from '@/lib/domain/batch';
 import { addDays, startOfWeek, toISODate } from '@/lib/domain/dates';
 import type {
@@ -130,35 +130,39 @@ export function BatchBar({
       role="region"
       aria-label="Selected athletes"
     >
-      {/* who is selected — always visible, never a count on its own */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <Badge tone="solid">{selected.length} selected</Badge>
+      {/* Who is selected — always visible, never a count on its own. The names
+          scroll sideways rather than wrapping, so the bar stays one row high
+          on a phone instead of pushing the actions behind the nav. */}
+      <div className="flex items-center gap-x-3 gap-y-3">
+        {/* the count is never just a number: the brief is that a coach always
+            knows how many athletes an action is about to touch */}
+        <Badge tone="solid" className="shrink-0">{selectionLabel({ ids })}</Badge>
 
-        <ul className="flex min-w-0 flex-1 flex-wrap gap-1.5">
-          {selected.slice(0, 8).map((e) => (
-            <li key={e.athleteId}>
+        <ul className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {selected.slice(0, 12).map((e) => (
+            <li key={e.athleteId} className="shrink-0">
               <button
                 type="button"
                 onClick={() => onRemove(e.athleteId)}
-                className="rounded-xs border border-hairline-strong px-2 py-1 text-[11px] text-ink-secondary transition-colors hover:border-status-missed hover:text-status-missed"
+                className="whitespace-nowrap rounded-xs border border-hairline-strong px-2 py-1 text-[11px] text-ink-secondary transition-colors hover:border-status-missed hover:text-status-missed"
                 aria-label={`Remove ${e.fullName} from the selection`}
               >
                 {e.fullName} ×
               </button>
             </li>
           ))}
-          {selected.length > 8 && (
-            <li className="self-center im-mono text-[11px] text-ink-tertiary">
-              and {selected.length - 8} more
+          {selected.length > 12 && (
+            <li className="shrink-0 self-center im-mono text-[11px] text-ink-tertiary">
+              +{selected.length - 12}
             </li>
           )}
         </ul>
 
-        <Button variant="quiet" size="sm" onClick={onClear}>Clear</Button>
+        <Button variant="quiet" size="sm" className="shrink-0" onClick={onClear}>Clear</Button>
       </div>
 
       {/* what to do with them */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(['assign_template', 'scale_volume', 'shift_sessions'] as BatchAction[]).map((key) => {
           const usable = offered.includes(key);
           const why = unavailableReason(key, selected);
@@ -170,7 +174,7 @@ export function BatchBar({
               title={usable ? undefined : why ?? undefined}
               onClick={() => chooseAction(key)}
               aria-pressed={action === key}
-              className={`rounded-xs border px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] transition-colors disabled:opacity-35 ${
+              className={`shrink-0 whitespace-nowrap rounded-xs border px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] transition-colors disabled:opacity-35 ${
                 action === key
                   ? 'border-mint bg-mint/10 text-mint'
                   : 'border-hairline-strong text-ink-secondary hover:border-mint hover:text-mint'

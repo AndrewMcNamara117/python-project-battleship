@@ -116,7 +116,16 @@ try {
     check('a shared problem is stated once', /\d+ athletes|\d+ programmes/i.test(groupText),
       groupText.replace(/\n/g, ' | ').slice(0, 120));
     check('and names who it covers', groupText.split('\n').length > 1);
-    check('and can be acted on', (await grouped.first().getByRole('link').count()) > 0);
+    // Slice 9: the group's action selects everyone it names. It used to be a
+    // link to the first athlete's page, which promised a group action and
+    // delivered a single-athlete one.
+    const groupAction = grouped.first().getByRole('button', { name: /select all \d+/i });
+    check('and can be acted on as a group', (await groupAction.count()) > 0, groupText.slice(0, 80));
+    if (await groupAction.count()) {
+      const named = Number((groupText.match(/(\d+) athletes|(\d+) programmes/i) ?? [0, 0])[1] ?? 0);
+      const offered = Number(((await groupAction.innerText()).match(/(\d+)/) ?? [0, 0])[1]);
+      check('and the action covers everyone it named', offered === named, `${offered} vs ${named}`);
+    }
     check('and can be expanded to the individuals',
       (await grouped.first().getByRole('button', { name: /Show them/i }).count()) > 0);
   }

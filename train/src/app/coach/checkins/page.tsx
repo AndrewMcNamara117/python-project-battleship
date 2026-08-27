@@ -9,6 +9,7 @@ import { getRepo } from '@/lib/data';
 import { attentionLabel } from '@/lib/domain/checkin-rules';
 import { formatDayMonth } from '@/lib/domain/dates';
 import { CheckInResponder } from '../athletes/[id]/CoachControls';
+import { CheckInAdapt } from '@/components/roster/CheckInAdapt';
 
 export const metadata: Metadata = { title: 'Check-in queue' };
 
@@ -103,6 +104,16 @@ export default async function CheckInQueuePage() {
 
               <div className="mt-7 border-t border-line pt-6">
                 <CheckInResponder checkInId={c.id} athleteId={c.athleteId} existing={c.coachResponse} />
+              </div>
+
+              {/* the seam the audit found: a coach can change next week from
+                  here, with what the athlete wrote still on screen above */}
+              <div className="mt-5">
+                <CheckInAdapt
+                  athleteId={c.athleteId}
+                  athleteName={c.athleteName}
+                  weekStart={c.weekStart}
+                />
               </div>
             </Panel>
           </Reveal>
