@@ -42,7 +42,10 @@ export function AthleteTable({ athletes }: { athletes: AthleteRow[] }) {
                     )}
                   </td>
                   <td className="px-5 py-4 text-[13px] text-muted">
-                    {a.race?.name ?? (a.goal ? EVENT_TYPE_LABELS[a.goal.eventType] : '—')}
+                    {a.race?.name
+                      ?? (a.eventType
+                        ? EVENT_TYPE_LABELS[a.eventType as keyof typeof EVENT_TYPE_LABELS]
+                        : '—')}
                   </td>
                   <td className="im-mono px-5 py-4 text-[13px]">
                     {a.daysToRace != null ? `${a.daysToRace}d` : '—'}
@@ -52,11 +55,11 @@ export function AthleteTable({ athletes }: { athletes: AthleteRow[] }) {
                   </td>
                   <td className="px-5 py-4">
                     <span className="flex items-center gap-2.5">
-                      <span className="im-mono w-9 text-[13px] font-bold">{a.weekAdherencePct}%</span>
+                      <span className="im-mono w-9 text-[13px] font-bold">{(a.weekAdherencePct ?? 0)}%</span>
                       <span className="block h-px w-14 bg-line-2">
                         <span
-                          className={`block h-px ${a.weekAdherencePct >= 80 ? 'bg-green' : 'bg-warn'}`}
-                          style={{ width: `${a.weekAdherencePct}%` }}
+                          className={`block h-px ${(a.weekAdherencePct ?? 0) >= 80 ? 'bg-green' : 'bg-warn'}`}
+                          style={{ width: `${(a.weekAdherencePct ?? 0)}%` }}
                         />
                       </span>
                     </span>

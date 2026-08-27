@@ -14,6 +14,7 @@ import type {
   WeekVolume,
   WorkoutTemplate,
 } from '@/lib/domain/library';
+import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
   SessionHistory,
@@ -371,6 +372,18 @@ export interface IronMilesRepo {
 
   /** The athlete's own account of the week just gone. Context, never an instruction. */
   getCheckInContext(athleteId: UUID): Promise<CheckInContext | null>;
+
+  /* ---- the roster ---- */
+
+  /**
+   * Every athlete on the coach's roster, with what is going on for each.
+   *
+   * One call, whatever the roster size — a coach with fifty athletes was
+   * previously six database round trips per athlete. Signals are classified
+   * in the domain layer, so both adapters mean the same thing by "needs
+   * attention".
+   */
+  listRoster(coachId: UUID, today: ISODate): Promise<RosterEntry[]>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;

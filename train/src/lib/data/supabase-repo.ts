@@ -61,6 +61,8 @@ import type {
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
+import { buildEntry, rankEntries } from '@/lib/domain/roster';
+import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
   SessionHistory,
@@ -2258,6 +2260,65 @@ export class SupabaseRepo implements IronMilesRepo {
   async getCheckInContext(athleteId: UUID): Promise<CheckInContext | null> {
     const [latest] = await this.listCheckIns(athleteId, 1);
     return latest ? toCheckInContext(latest) : null;
+  }
+
+  /* ================= the roster ================= */
+
+  async listRoster(coachId: UUID, today: ISODate): Promise<RosterEntry[]> {
+    const { data, error } = await this.db.rpc('im_coach_roster', { p_coach: coachId, p_today: today });
+    if (error) throw new Error(error.message);
+
+    return rankEntries((data ?? []).map((r: any) => buildEntry({
+      athleteId: r.athlete_id,
+      fullName: r.full_name,
+      avatarUrl: r.avatar_url ?? null,
+      joinedAt: r.joined_at ?? null,
+
+      programmeId: r.programme_id ?? null,
+      programmeName: r.programme_name ?? null,
+      programmeEndDate: r.programme_end_date ?? null,
+      blockName: r.block_name ?? null,
+      phase: r.phase ?? null,
+      weekNo: r.week_no ?? null,
+      totalWeeks: r.total_weeks ?? null,
+
+      plannedThisWeek: Number(r.planned_this_week ?? 0),
+      completedThisWeek: Number(r.completed_this_week ?? 0),
+      plannedFourWeeks: Number(r.planned_four_weeks ?? 0),
+      completedFourWeeks: Number(r.completed_four_weeks ?? 0),
+
+      missedFourteenDays: Number(r.missed_fourteen_days ?? 0),
+      missedKeySession: r.missed_key_name
+        ? { name: r.missed_key_name, date: r.missed_key_date }
+        : null,
+
+      lastCompletedDate: r.last_completed_date ?? null,
+      lastCompletedName: r.last_completed_name ?? null,
+      nextSessionDate: r.next_session_date ?? null,
+      nextSessionName: r.next_session_name ?? null,
+      futureSessions: Number(r.future_sessions ?? 0),
+
+      checkIn: r.checkin_week_start
+        ? {
+            weekStart: r.checkin_week_start,
+            submittedAt: r.checkin_submitted_at,
+            attention: r.checkin_attention,
+            reasons: r.checkin_reasons ?? [],
+            reviewedAt: r.checkin_reviewed_at ?? null,
+            fatigue: r.checkin_fatigue ?? null,
+            soreness: r.checkin_soreness ?? null,
+            painOrNiggles: r.checkin_pain ?? null,
+          }
+        : null,
+
+      raceId: r.race_id ?? null,
+      raceName: r.race_name ?? null,
+      raceDate: r.race_date ?? null,
+      eventType: r.goal_event_type ?? null,
+
+      unreadFromAthlete: Number(r.unread_from_athlete ?? 0),
+      recentAdaptations: Number(r.recent_adaptations ?? 0),
+    }, today)));
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

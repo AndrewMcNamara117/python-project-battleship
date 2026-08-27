@@ -75,6 +75,8 @@ import type {
 import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
+import { buildEntry, rankEntries, KEY_SESSION_TYPES } from '@/lib/domain/roster';
+import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
   SessionHistory,
@@ -2277,6 +2279,109 @@ export class DemoRepo implements IronMilesRepo {
   async getCheckInContext(athleteId: UUID): Promise<CheckInContext | null> {
     const [latest] = await this.listCheckIns(athleteId, 1);
     return latest ? toCheckInContext(latest) : null;
+  }
+
+  /* ================= the roster ================= */
+
+  /**
+   * The same facts im_coach_roster gathers, from memory.
+   *
+   * Both adapters hand the result to the same classifier, so what "needs
+   * attention" means cannot differ between demo and production — only where
+   * the numbers came from.
+   */
+  async listRoster(coachId: UUID, today: ISODate): Promise<RosterEntry[]> {
+    const d = dataset();
+    const monday = startOfWeek(today);
+    const profiles = await this.listAthletesForCoach(coachId);
+
+    const entries = await Promise.all(profiles.map(async (profile) => {
+      const sessions = d.scheduled.filter((w) => w.athleteId === profile.id);
+      const training = sessions.filter((w) => w.type !== 'rest');
+
+      const inWindow = (from: ISODate, to: ISODate) =>
+        training.filter((w) => w.date >= from && w.date <= to);
+
+      const week = inWindow(monday, today);
+      const month = inWindow(addDays(today, -27), today);
+      const fortnight = inWindow(addDays(today, -13), today);
+
+      const program = d.programs.find((p) => p.athleteId === profile.id && p.status === 'active');
+      const weeks = program ? this.weeks.filter((w) => w.programId === program.id) : [];
+      const currentWeek = weeks.find((w) => today >= w.startDate && today < addDays(w.startDate, 7));
+      const block = currentWeek ? this.blocks.find((b) => b.id === currentWeek.blockId) : null;
+
+      const completed = training
+        .filter((w) => w.status === 'completed')
+        .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+      const next = training
+        .filter((w) => w.status === 'scheduled' && w.date >= today)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.slot - b.slot)[0] ?? null;
+
+      const missedKey = fortnight
+        .filter((w) => w.status === 'missed' && KEY_SESSION_TYPES.has(w.type))
+        .sort((a, b) => b.date.localeCompare(a.date))[0] ?? null;
+
+      const [checkIn] = await this.listCheckIns(profile.id, 1);
+      const goal = await this.getPrimaryGoal(profile.id);
+      const race = goal?.raceId ? await this.getRace(goal.raceId) : null;
+      const messages = await this.listMessages(profile.id);
+
+      return buildEntry({
+        athleteId: profile.id,
+        fullName: profile.fullName,
+        avatarUrl: profile.avatarUrl ?? null,
+        joinedAt: d.links.find((l) => l.athleteId === profile.id && l.coachId === coachId)?.startedAt ?? null,
+
+        programmeId: program?.id ?? null,
+        programmeName: program?.name ?? null,
+        programmeEndDate: program?.endDate ?? null,
+        blockName: block?.name ?? null,
+        phase: block?.phase ?? null,
+        weekNo: currentWeek?.programWeekNo ?? null,
+        totalWeeks: weeks.length || null,
+
+        plannedThisWeek: week.length,
+        completedThisWeek: week.filter((w) => w.status === 'completed').length,
+        plannedFourWeeks: month.length,
+        completedFourWeeks: month.filter((w) => w.status === 'completed').length,
+
+        missedFourteenDays: fortnight.filter((w) => w.status === 'missed').length,
+        missedKeySession: missedKey ? { name: missedKey.name, date: missedKey.date } : null,
+
+        lastCompletedDate: completed?.date ?? null,
+        lastCompletedName: completed?.name ?? null,
+        nextSessionDate: next?.date ?? null,
+        nextSessionName: next?.name ?? null,
+        futureSessions: training.filter((w) => w.status === 'scheduled' && w.date >= today).length,
+
+        checkIn: checkIn
+          ? {
+              weekStart: checkIn.weekStart,
+              submittedAt: checkIn.submittedAt,
+              attention: checkIn.attentionLevel,
+              reasons: checkIn.attentionReasons ?? [],
+              reviewedAt: checkIn.reviewedByCoachAt ?? null,
+              fatigue: checkIn.scores?.fatigue ?? null,
+              soreness: checkIn.scores?.soreness ?? null,
+              painOrNiggles: checkIn.painOrNiggles?.trim() || null,
+            }
+          : null,
+
+        raceId: race && race.date >= today ? race.id : null,
+        raceName: race && race.date >= today ? race.name : null,
+        raceDate: race && race.date >= today ? race.date : null,
+        eventType: goal?.eventType ?? null,
+
+        unreadFromAthlete: messages.filter((m) => m.recipientId === coachId && !m.readAt).length,
+        recentAdaptations: this.revisions.filter(
+          (r) => r.athleteId === profile.id && r.kind !== 'created'
+            && r.changedAt >= addDays(today, -6),
+        ).length,
+      }, today);
+    }));
+
+    return rankEntries(entries);
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

@@ -26,7 +26,8 @@ export default async function CoachAnalyticsPage() {
     { label: 'Under 50%', test: (n: number) => n < 50 },
   ].map((b) => ({
     ...b,
-    count: ctx.athletes.filter((a) => b.test(a.weekAdherencePct)).length,
+    // an athlete with nothing prescribed this week has no adherence to band
+    count: ctx.athletes.filter((a) => a.weekAdherencePct != null && b.test(a.weekAdherencePct)).length,
   }));
   const maxBand = Math.max(1, ...bands.map((b) => b.count));
 

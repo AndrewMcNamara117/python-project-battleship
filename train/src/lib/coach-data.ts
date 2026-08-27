@@ -1,21 +1,34 @@
 import { requireCoach, type Session } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
-import { adherence, countsForAdherence } from '@/lib/domain/analytics';
-import { addDays, daysBetween, endOfWeek, startOfWeek, toISODate } from '@/lib/domain/dates';
-import type { CheckIn, Goal, Profile, Race, ScheduledWorkout } from '@/lib/domain/types';
+import { startOfWeek, toISODate } from '@/lib/domain/dates';
+import type { RosterEntry } from '@/lib/domain/roster';
+import type { ISODate, ISOTimestamp, Profile, UUID } from '@/lib/domain/types';
 
+/**
+ * One athlete as the coach's screens read them.
+ *
+ * Sourced from the single roster query rather than assembled per athlete: a
+ * coach with fifty athletes used to cost six database round trips each.
+ */
 export interface AthleteRow {
-  profile: Profile;
-  goal: Goal | null;
-  race: Race | null;
+  profile: Pick<Profile, 'id' | 'fullName' | 'avatarUrl'>;
+  eventType: string | null;
+  race: { id: UUID; name: string; date: ISODate } | null;
   daysToRace: number | null;
-  weekAdherencePct: number;
+  weekAdherencePct: number | null;
   sessionsThisWeek: { completed: number; prescribed: number };
-  lastWorkoutDate: string | null;
-  lastCheckIn: CheckIn | null;
+  lastWorkoutDate: ISODate | null;
+  lastCheckIn: {
+    weekStart: ISODate;
+    attentionLevel: 'none' | 'watch' | 'attention';
+    attentionReasons: string[];
+    reviewedByCoachAt: ISOTimestamp | null;
+  } | null;
   checkInDue: boolean;
   unreadMessages: number;
   missedLastTwoWeeks: number;
+  /** Everything the roster view needs, kept rather than flattened away. */
+  entry: RosterEntry;
 }
 
 export interface CoachContext {
@@ -24,6 +37,8 @@ export interface CoachContext {
   today: string;
   weekStart: string;
   athletes: AthleteRow[];
+  /** The same athletes, with their signals, for the operating view. */
+  roster: RosterEntry[];
   totals: {
     athletes: number;
     needingAttention: number;
@@ -32,7 +47,7 @@ export interface CoachContext {
     upcomingRaces: number;
     averageAdherence: number;
   };
-  upcomingRaces: { race: Race; athleteName: string; daysAway: number }[];
+  upcomingRaces: { race: { id: UUID; name: string; date: ISODate }; athleteName: string; daysAway: number }[];
 }
 
 /**
@@ -50,49 +65,38 @@ export async function loadCoachContext(): Promise<CoachContext> {
 
   const today = toISODate(new Date());
   const weekStart = startOfWeek(today);
-  const weekEnd = endOfWeek(today);
-  const twoWeeksAgo = addDays(weekStart, -14);
 
-  const [profiles, queue] = await Promise.all([
-    repo.listAthletesForCoach(session.userId),
-    repo.listCheckInQueue(session.userId),
-  ]);
+  // one call, whatever the roster size
+  const roster = await repo.listRoster(session.userId, today);
 
-  const athletes: AthleteRow[] = await Promise.all(
-    profiles.map(async (profile) => {
-      const [goal, week, recent, completed, messages] = await Promise.all([
-        repo.getPrimaryGoal(profile.id),
-        repo.listScheduled(profile.id, weekStart, weekEnd),
-        repo.listScheduled(profile.id, twoWeeksAgo, today),
-        repo.listCompleted(profile.id, twoWeeksAgo, today),
-        repo.listMessages(profile.id),
-      ]);
-
-      const race = goal?.raceId ? await repo.getRace(goal.raceId) : null;
-      const prescribed = week.filter(countsForAdherence);
-      const lastCheckIn = queue.find((c) => c.athleteId === profile.id) ?? null;
-
-      return {
-        profile,
-        goal,
-        race,
-        daysToRace: race ? daysBetween(today, race.date) : goal ? daysBetween(today, goal.targetDate) : null,
-        weekAdherencePct: adherence(week, weekStart, weekEnd, today).pct,
-        sessionsThisWeek: {
-          completed: prescribed.filter((w) => w.status === 'completed').length,
-          prescribed: prescribed.length,
-        },
-        lastWorkoutDate: completed[0]?.date ?? null,
-        lastCheckIn,
-        checkInDue: !queue.some((c) => c.athleteId === profile.id && c.weekStart === weekStart),
-        unreadMessages: messages.filter((m) => m.recipientId === session.userId && !m.readAt).length,
-        missedLastTwoWeeks: recent.filter((w) => w.status === 'missed' && countsForAdherence(w)).length,
-      };
-    }),
-  );
+  const athletes: AthleteRow[] = roster.map((entry) => ({
+    profile: { id: entry.athleteId, fullName: entry.fullName, avatarUrl: entry.avatarUrl },
+    eventType: entry.eventType,
+    race: entry.raceId && entry.raceName && entry.raceDate
+      ? { id: entry.raceId, name: entry.raceName, date: entry.raceDate }
+      : null,
+    daysToRace: entry.daysToRace,
+    weekAdherencePct: entry.plannedThisWeek
+      ? Math.round((entry.completedThisWeek / entry.plannedThisWeek) * 100)
+      : null,
+    sessionsThisWeek: { completed: entry.completedThisWeek, prescribed: entry.plannedThisWeek },
+    lastWorkoutDate: entry.lastCompletedDate,
+    lastCheckIn: entry.checkIn
+      ? {
+          weekStart: entry.checkIn.weekStart,
+          attentionLevel: entry.checkIn.attention,
+          attentionReasons: entry.checkIn.reasons,
+          reviewedByCoachAt: entry.checkIn.reviewedAt,
+        }
+      : null,
+    checkInDue: entry.checkIn?.weekStart !== weekStart,
+    unreadMessages: entry.unreadFromAthlete,
+    missedLastTwoWeeks: entry.missedFourteenDays,
+    entry,
+  }));
 
   const needingAttention = athletes.filter(
-    (a) => a.lastCheckIn?.attentionLevel === 'attention' || a.missedLastTwoWeeks >= 3,
+    (a) => a.entry.signals.some((s) => s.severity !== 'information'),
   ).length;
 
   const upcomingRaces = athletes
@@ -100,44 +104,36 @@ export async function loadCoachContext(): Promise<CoachContext> {
     .map((a) => ({ race: a.race!, athleteName: a.profile.fullName, daysAway: a.daysToRace! }))
     .sort((x, y) => x.daysAway - y.daysAway);
 
+  const withAdherence = athletes.filter((a) => a.weekAdherencePct != null);
+
   return {
     session,
     coach,
     today,
     weekStart,
-    athletes: athletes.sort((a, b) => rank(a) - rank(b)),
+    // already ranked by the roster: loudest signal, then most signals, then name
+    athletes,
+    roster,
     totals: {
       athletes: athletes.length,
       needingAttention,
-      checkInsWaiting: queue.filter((c) => !c.reviewedByCoachAt).length,
+      checkInsWaiting: athletes.filter((a) => a.lastCheckIn && !a.lastCheckIn.reviewedByCoachAt).length,
       missedSessions: athletes.reduce((sum, a) => sum + a.missedLastTwoWeeks, 0),
-      upcomingRaces: upcomingRaces.filter((r) => r.daysAway <= 60).length,
-      averageAdherence: athletes.length
-        ? Math.round(athletes.reduce((s, a) => s + a.weekAdherencePct, 0) / athletes.length)
+      upcomingRaces: upcomingRaces.length,
+      averageAdherence: withAdherence.length
+        ? Math.round(withAdherence.reduce((sum, a) => sum + (a.weekAdherencePct ?? 0), 0) / withAdherence.length)
         : 0,
     },
     upcomingRaces,
   };
 }
 
-/** Athletes who need something come first — that is the entire point of the list. */
-function rank(a: AthleteRow): number {
-  if (a.lastCheckIn?.attentionLevel === 'attention') return 0;
-  if (a.missedLastTwoWeeks >= 3) return 1;
-  if (a.unreadMessages > 0) return 2;
-  if (a.lastCheckIn && !a.lastCheckIn.reviewedByCoachAt) return 3;
-  return 4;
-}
-
 export function attentionFlag(a: AthleteRow): { tone: 'alert' | 'warn' | 'green'; label: string } {
   if (a.lastCheckIn?.attentionLevel === 'attention') return { tone: 'alert', label: 'Attention' };
   if (a.missedLastTwoWeeks >= 3) return { tone: 'alert', label: 'Missing sessions' };
   if (a.lastCheckIn?.attentionLevel === 'watch') return { tone: 'warn', label: 'Watch' };
-  if (a.weekAdherencePct < 60) return { tone: 'warn', label: 'Low adherence' };
+  if (a.weekAdherencePct != null && a.weekAdherencePct < 60) {
+    return { tone: 'warn', label: 'Low adherence' };
+  }
   return { tone: 'green', label: 'On track' };
-}
-
-/** Sessions prescribed but not yet done, for the coach's own week view. */
-export function outstanding(week: ScheduledWorkout[], today: string): ScheduledWorkout[] {
-  return week.filter((w) => w.date <= today && w.status === 'scheduled' && countsForAdherence(w));
 }
