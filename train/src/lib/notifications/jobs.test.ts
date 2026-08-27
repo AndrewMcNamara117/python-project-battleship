@@ -66,8 +66,10 @@ describe('the alert job', () => {
     assert.ok(report.created > 0, 'the coach is told');
 
     const feed = await repo.listNotificationFeed(DEMO_COACH_ID);
-    const alert = feed.find((n) => n.signalKind === 'soreness_reported');
+    const alert = feed.find((n) => n.athleteId === athlete.athleteId);
     assert.ok(alert, 'and it is in their feed');
+    assert.equal(feed.filter((n) => n.athleteId === athlete.athleteId).length, 1,
+      'one buzz per athlete, not one per signal from the same check-in');
     assert.equal(alert.athleteName, athlete.fullName);
     assert.match(alert.body, /Sharp pain in my left Achilles on hills/,
       'their exact words, carried through');

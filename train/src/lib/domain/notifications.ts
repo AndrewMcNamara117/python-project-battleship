@@ -193,36 +193,61 @@ export function alertsFor(
   const drafts: NotificationDraft[] = [];
 
   for (const entry of roster) {
-    for (const signal of entry.signals) {
-      if (!ALERT_SIGNALS.has(signal.kind)) continue;
+    const raised = entry.signals.filter((signal) => {
+      if (!ALERT_SIGNALS.has(signal.kind)) return false;
 
       // An alert interrupts someone. A signal the roster itself rated
       // 'information' is not worth interrupting anyone for, and a draft whose
       // own priority reads 'information' is a contradiction: it says "urgent
       // enough to push, not urgent enough to matter". Severity is the roster's
       // judgement and this defers to it rather than forming a second one.
-      if (signal.severity === 'information') continue;
+      if (signal.severity === 'information') return false;
 
       const preference = ALERT_PREFERENCE[signal.kind];
-      if (preference && !prefs[preference]) continue;
+      return !preference || prefs[preference];
+    });
 
-      drafts.push({
-        userId: prefs.userId,
-        kind: 'alert',
-        priority: signal.severity,
-        athleteId: entry.athleteId,
-        signalKind: signal.kind,
-        title: `${entry.fullName} — ${alertTitle(signal.kind)}`,
-        // the athlete's own words, unedited and undiagnosed
-        body: signal.detail,
-        href: signal.href,
-        dedupeKey: dedupeKeyFor(entry, signal),
-        deliverAfter: held,
-      });
-    }
+    if (!raised.length) continue;
+
+    // ONE BUZZ PER ATHLETE.
+    //
+    // Both alertable signals come from the same weekly check-in, so an athlete
+    // who scores their soreness high and writes about it raises two. Sent
+    // separately that is the same news twice, and at fifty athletes on a bad
+    // Monday it doubled the interruptions for no extra information. The coach
+    // is told once, about a person, with everything that person said.
+    const lead = raised.reduce((a, b) =>
+      RANK[b.severity] < RANK[a.severity] ? b : a);
+
+    drafts.push({
+      userId: prefs.userId,
+      kind: 'alert',
+      priority: lead.severity,
+      athleteId: entry.athleteId,
+      signalKind: lead.kind,
+      title: `${entry.fullName} — ${raised.map((s) => alertTitle(s.kind)).join(', ')}`,
+      // the athlete's own words, unedited and undiagnosed
+      body: raised.map((s) => s.detail).join(' '),
+      href: lead.href,
+      dedupeKey: alertKey(entry),
+      deliverAfter: held,
+    });
   }
 
   return drafts;
+}
+
+const RANK: Record<Severity, number> = { urgent: 0, attention: 1, information: 2 };
+
+/**
+ * One key per athlete per check-in.
+ *
+ * Keyed to the check-in rather than to which signal happened to lead, so
+ * turning a preference on or off does not make an already-sent alert look
+ * like news again.
+ */
+function alertKey(entry: RosterEntry): string {
+  return `checkin:${entry.athleteId}:${entry.checkIn?.weekStart ?? 'none'}`;
 }
 
 function alertTitle(kind: SignalKind): string {
@@ -305,7 +330,13 @@ export function digestDraft(digest: Digest, prefs: NotificationPreferences): Not
     digest.flaggedCheckIns ? `${digest.flaggedCheckIns} flagged check-in${digest.flaggedCheckIns === 1 ? '' : 's'}` : null,
     digest.reportedPain ? `${digest.reportedPain} reported a niggle` : null,
     digest.missedSessions ? `${digest.missedSessions} missed sessions` : null,
-  ].filter(Boolean).join(' · ');
+  ]
+    .filter(Boolean)
+    // Four clauses. The lead's job is to answer "is this a morning I need to
+    // clear time for", not to itemise the roster — which is one tap away and
+    // is where the rest of it lives.
+    .slice(0, 4)
+    .join(' · ');
 
   return {
     userId: prefs.userId,

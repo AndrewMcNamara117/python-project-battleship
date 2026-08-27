@@ -338,3 +338,55 @@ describe('what leaves the building', () => {
     assert.doesNotMatch(preview, /Andrew/, 'a summary line names nobody');
   });
 });
+
+describe('a fifty-athlete roster on a bad Monday', () => {
+  // The question this answers: a coach with fifty athletes should be
+  // interrupted a handful of times, not fifty. If this number climbs, the
+  // product has started training its coaches to ignore it.
+  const roster = Array.from({ length: 50 }, (_, i) => {
+    const n = i + 1;
+    const id = `a${n}`;
+    if (n <= 3) return buildEntry(facts({
+      athleteId: id, fullName: `Athlete ${n}`,
+      checkIn: {
+        weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'attention',
+        reasons: ['soreness high'], reviewedAt: null,
+        fatigue: 8, soreness: 9, painOrNiggles: 'Left calf tight',
+      },
+    }), TODAY);
+    if (n <= 9) return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}`, missedFourteenDays: 4 }), TODAY);
+    if (n <= 14) return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}`, programmeId: null, programmeName: null }), TODAY);
+    if (n <= 18) return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}`, programmeEndDate: '2026-09-25' }), TODAY);
+    if (n <= 22) return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}`, unreadFromAthlete: 2 }), TODAY);
+    if (n <= 25) return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}`, futureSessions: 0 }), TODAY);
+    return buildEntry(facts({ athleteId: id, fullName: `Athlete ${n}` }), TODAY);
+  });
+
+  const open = prefs({ timezone: 'UTC', quietFrom: null, quietUntil: null });
+
+  it('interrupts the coach a handful of times, not fifty', () => {
+    const alerts = alertsFor(roster, open, new Date(`${TODAY}T07:30:00Z`));
+    assert.equal(alerts.length, 3, 'three athletes reported something; three alerts');
+    assert.ok(alerts.length <= 5, 'twenty urgent alerts a day is a product nobody reads');
+  });
+
+  it('sends one alert per athlete, however many signals their check-in raised', () => {
+    const alerts = alertsFor(roster, open, new Date(`${TODAY}T07:30:00Z`));
+    const athletes = new Set(alerts.map((a) => a.athleteId));
+    assert.equal(athletes.size, alerts.length);
+    assert.match(alerts[0].title, /check-in flagged, reported a niggle/,
+      'and says both things in one');
+  });
+
+  it('keeps the digest to a line a coach reads before their coffee', () => {
+    const draft = digestDraft(composeDigest(roster, TODAY), open)!;
+    assert.ok(draft.body.split(' · ').length <= 4, draft.body);
+    assert.match(draft.body, /waiting on a programme/, 'shared problems said once');
+  });
+
+  it('sends four things in total on the worst morning in this fixture', () => {
+    const alerts = alertsFor(roster, open, new Date(`${TODAY}T07:30:00Z`));
+    const draft = digestDraft(composeDigest(roster, TODAY), open);
+    assert.equal(alerts.length + (draft ? 1 : 0), 4);
+  });
+});

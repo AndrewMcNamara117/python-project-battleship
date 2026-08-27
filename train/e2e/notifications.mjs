@@ -71,23 +71,27 @@ try {
   await ap.waitForTimeout(600);
 
   // drive the real form the way an athlete would: score the soreness high,
-  // and write the niggle in their own words
-  const scale = ap.locator('[role=radiogroup][aria-label="Soreness"] [aria-label="9 out of 10"]');
-  const formOpen = (await scale.count()) > 0;
+  // and write the niggle in their own words.
+  //
+  // Demo state lives in the dev server process and e2e/loop.mjs submits this
+  // week's check-in before this suite runs, so in the full sweep the form is
+  // already gone. Detect that on the submit button — the thing this leg
+  // actually needs — and say so rather than asserting something this run did
+  // not establish.
+  const submit = ap.getByRole('button', { name: /submit|send|finish/i }).last();
+  const formOpen = (await submit.count()) > 0 && (await submit.isVisible().catch(() => false));
 
   if (formOpen) {
-    await scale.click();
+    await ap.locator('[role=radiogroup][aria-label="Soreness"] [aria-label="9 out of 10"]').click();
     await ap.getByLabel('Any pain or niggles?').fill(WORDS);
-    await ap.getByRole('button', { name: /submit|send|finish/i }).last().click();
+    await submit.click();
     await ap.waitForTimeout(1400);
     check('the athlete could report a niggle', true);
   } else {
-    // demo state lives in the dev server process, so a second run in the same
-    // process finds this week's check-in already submitted. Say so rather than
-    // asserting something this run did not actually establish.
     console.log('  --   this week\'s check-in is already submitted;'
-      + ' restart the dev server to re-run the reporting leg');
+      + ' restart the dev server and run this suite alone to exercise the reporting leg');
   }
+
   await athlete.close();
 
   console.log('\nrunning the jobs');
