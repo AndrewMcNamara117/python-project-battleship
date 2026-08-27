@@ -15,6 +15,7 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type { RosterEntry } from '@/lib/domain/roster';
+import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
   ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
 } from '@/lib/domain/notifications';
@@ -133,6 +134,17 @@ export interface PendingDelivery {
 }
 
 /** One send attempt and everything worth keeping about it. */
+/** One line of "this athlete's programme changed as part of a squad decision". */
+export interface BatchHistoryRow {
+  batchId: UUID;
+  action: BatchAction;
+  params: Record<string, unknown>;
+  outcome: BatchOutcome;
+  detail: string | null;
+  athleteCount: number;
+  createdAt: ISOTimestamp;
+}
+
 export interface DeliveryAttempt {
   state: DeliveryStatus;
   detail: string;
@@ -463,6 +475,32 @@ export interface IronMilesRepo {
    * event returns false rather than raising.
    */
   recordProviderStatus(providerMessageId: string, status: string, detail?: string): Promise<boolean>;
+
+  /* ---- batches: one coaching decision, several athletes ---- */
+
+  /**
+   * Start a record of one coaching decision.
+   *
+   * The athletes are recorded one at a time as each single-athlete operation
+   * returns, so a batch that half-succeeds is a batch that half-recorded —
+   * which is the honest shape.
+   */
+  openBatch(action: BatchAction, params: Record<string, unknown>, intended: number): Promise<UUID>;
+
+  /**
+   * Record what became of one athlete. Re-checks the roster per athlete: one
+   * authorised id never vouches for the rest of a list.
+   */
+  recordBatchItem(
+    batchId: UUID,
+    athleteId: UUID,
+    outcome: BatchOutcome,
+    detail: string,
+    extra?: { programmeId?: UUID | null; sessionIds?: UUID[] },
+  ): Promise<void>;
+
+  /** The batches that touched this athlete, for "why did this change?". */
+  listBatchHistory(athleteId: UUID, limit?: number): Promise<BatchHistoryRow[]>;
 
   /** Which coaches have a roster to summarise, for the digest job. */
   listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]>;

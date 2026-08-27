@@ -64,10 +64,11 @@ import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries } from '@/lib/domain/roster';
 import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
 import { MAX_ATTEMPTS } from '@/lib/domain/retry';
+import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
   ChannelName, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -2334,6 +2335,49 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   /* ================= notifications ================= */
+
+  /* ================= batches ================= */
+
+  async openBatch(
+    action: BatchAction, params: Record<string, unknown>, intended: number,
+  ): Promise<UUID> {
+    const { data, error } = await this.db.rpc('im_open_batch', {
+      p_action: action, p_params: params, p_intended: intended,
+    });
+    if (error) throw new Error(error.message);
+    return data as UUID;
+  }
+
+  async recordBatchItem(
+    batchId: UUID, athleteId: UUID, outcome: BatchOutcome, detail: string,
+    extra?: { programmeId?: UUID | null; sessionIds?: UUID[] },
+  ): Promise<void> {
+    const { error } = await this.db.rpc('im_record_batch_item', {
+      p_batch: batchId,
+      p_athlete: athleteId,
+      p_outcome: outcome,
+      p_detail: detail,
+      p_program: extra?.programmeId ?? null,
+      p_sessions: extra?.sessionIds ?? [],
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async listBatchHistory(athleteId: UUID, limit = 20): Promise<BatchHistoryRow[]> {
+    const { data, error } = await this.db.rpc('im_batch_history', {
+      p_athlete: athleteId, p_limit: limit,
+    });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      batchId: r.batch_id,
+      action: r.action,
+      params: r.params ?? {},
+      outcome: r.outcome,
+      detail: r.detail ?? null,
+      athleteCount: r.athlete_count,
+      createdAt: r.created_at,
+    }));
+  }
 
   async getNotificationPreferences(userId: UUID): Promise<NotificationPreferences> {
     const { data, error } = await this.db

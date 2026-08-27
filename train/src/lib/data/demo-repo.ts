@@ -78,10 +78,11 @@ import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries, KEY_SESSION_TYPES } from '@/lib/domain/roster';
 import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
 import { MAX_ATTEMPTS } from '@/lib/domain/retry';
+import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
   ChannelName, DeliveryStatus, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -187,6 +188,14 @@ interface DemoNotificationStore {
   }[];
   owners: Map<UUID, UUID>;
   lastDigest: Map<UUID, ISODate>;
+  batches: {
+    id: UUID; coachId: UUID; action: BatchAction;
+    params: Record<string, unknown>; intended: number; createdAt: string;
+    items: {
+      athleteId: UUID; outcome: BatchOutcome; detail: string;
+      programmeId: UUID | null; sessionIds: UUID[]; createdAt: string;
+    }[];
+  }[];
 }
 
 function notes(): DemoNotificationStore {
@@ -195,12 +204,31 @@ function notes(): DemoNotificationStore {
   const s = state();
   s.notes ??= {
     prefs: new Map(), notifications: [], deliveries: [],
-    owners: new Map(), lastDigest: new Map(),
+    owners: new Map(), lastDigest: new Map(), batches: [],
   };
   return s.notes;
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+/**
+ * A session snapshot in the shape Postgres stores it.
+ *
+ * The history diff in `domain/adaptation.ts` compares snake_case column names,
+ * because Postgres snapshots a row. The demo adapter was storing the camelCase
+ * domain object, so every field comparison silently found nothing: a coach in
+ * demo mode saw "Changed" with no changes listed, and `changed` was false even
+ * after a session was rewritten. One shape, so one diff reads both.
+ */
+function snapshotShape(session: { id: UUID; athleteId: UUID } & Partial<ScheduledWorkout>): Record<string, unknown> {
+  const camel = clone(session) as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(camel)) {
+    out[key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)] = value;
+  }
+  return out;
+}
+
+
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const uid = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -836,7 +864,7 @@ export class DemoRepo implements IronMilesRepo {
       kind,
       changedBy,
       changedAt: new Date().toISOString(),
-      session: clone(session) as unknown as Record<string, unknown>,
+      session: snapshotShape(session),
       components: clone(
         this.components.filter((c) => c.scheduledWorkoutId === session.id),
       ) as unknown as Record<string, unknown>[],
@@ -2458,6 +2486,67 @@ export class DemoRepo implements IronMilesRepo {
 
   /* ================= notifications ================= */
 
+
+  /* ================= batches ================= */
+
+  async openBatch(
+    action: BatchAction, params: Record<string, unknown>, intended: number,
+  ): Promise<UUID> {
+    const id = uid('batch');
+    notes().batches.push({
+      id, coachId: DEMO_COACH_ID, action, params,
+      intended, createdAt: new Date().toISOString(), items: [],
+    });
+    return id;
+  }
+
+  async recordBatchItem(
+    batchId: UUID, athleteId: UUID, outcome: BatchOutcome, detail: string,
+    extra?: { programmeId?: UUID | null; sessionIds?: UUID[] },
+  ): Promise<void> {
+    const batch = notes().batches.find((b) => b.id === batchId);
+    if (!batch) throw new Error('No such batch.');
+
+    // the roster is re-checked per athlete, exactly as im_record_batch_item
+    // does: one authorised id never vouches for the rest of a list. The one
+    // exception is 'unauthorised' itself, which must stay recordable or a
+    // poisoned list would vanish from the record instead of being reported.
+    if (outcome !== 'unauthorised') {
+      const linked = dataset().links.some(
+        (l) => l.athleteId === athleteId && l.coachId === batch.coachId && l.status === 'active');
+      if (!linked) throw new Error('That athlete is not on your roster.');
+    }
+
+    // a retried batch reports the same athlete once, with the latest outcome
+    const existing = batch.items.find((i) => i.athleteId === athleteId);
+    const item = {
+      athleteId, outcome, detail,
+      programmeId: extra?.programmeId ?? existing?.programmeId ?? null,
+      sessionIds: extra?.sessionIds ?? [],
+      createdAt: new Date().toISOString(),
+    };
+    if (existing) Object.assign(existing, item);
+    else batch.items.push(item);
+  }
+
+  async listBatchHistory(athleteId: UUID, limit = 20): Promise<BatchHistoryRow[]> {
+    return notes().batches
+      .filter((b) => b.items.some((i) => i.athleteId === athleteId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map((b) => {
+        const mine = b.items.find((i) => i.athleteId === athleteId)!;
+        return {
+          batchId: b.id,
+          action: b.action,
+          params: b.params,
+          outcome: mine.outcome,
+          detail: mine.detail,
+          athleteCount: b.items.length,
+          createdAt: b.createdAt,
+        };
+      });
+  }
 
   async getNotificationPreferences(userId: UUID): Promise<NotificationPreferences> {
     return clone(notes().prefs.get(userId) ?? { userId, ...DEFAULT_PREFERENCES });
