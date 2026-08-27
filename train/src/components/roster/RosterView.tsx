@@ -10,6 +10,12 @@ import {
 } from '@/lib/domain/roster';
 import type { RosterEntry, RosterFilter, RosterGroup, Severity } from '@/lib/domain/roster';
 import { formatDayMonth } from '@/lib/domain/dates';
+import {
+  allSelected, deselectAll, EMPTY_SELECTION, isSelected, reconcile,
+  selectAll, selectedEntries, toggle,
+} from '@/lib/domain/batch';
+import type { Selection } from '@/lib/domain/batch';
+import { BatchBar } from './BatchBar';
 
 /**
  * THE ROSTER
@@ -36,6 +42,15 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
   const [filter, setFilter] = useState<RosterFilter>('attention');
   const [search, setSearch] = useState('');
 
+  // Selection is deliberate and it is the coach's. It is never derived from a
+  // filter at apply time — a selection stored as "everyone matching this"
+  // changes underneath them between the review and the confirmation. It does
+  // survive filtering, so four athletes chosen, then a filter, then back, are
+  // still the same four.
+  const [rawSelection, setSelection] = useState<Selection>(EMPTY_SELECTION);
+  const selection = useMemo(() => reconcile(rawSelection, roster), [rawSelection, roster]);
+  const chosen = useMemo(() => selectedEntries(selection, roster), [selection, roster]);
+
   const counts = useMemo(() => filterCounts(roster), [roster]);
   const visible = useMemo(() => applyFilter(roster, filter, search), [roster, filter, search]);
 
@@ -47,6 +62,9 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
       : { individual: visible, groups: [] as RosterGroup[] }),
     [visible, filter, search]);
   const summary = useMemo(() => summariseToday(roster, today), [roster, today]);
+
+  const visibleIds = visible.map((e) => e.athleteId);
+  const everyVisibleChosen = allSelected(selection, visibleIds);
 
   return (
     <>
@@ -76,6 +94,18 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
           );
         })}
 
+        {visible.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelection(everyVisibleChosen
+              ? deselectAll(selection, visibleIds)
+              : selectAll(selection, visibleIds))}
+            className="rounded-xs border border-hairline-strong px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-secondary transition-colors hover:border-mint hover:text-mint"
+          >
+            {everyVisibleChosen ? 'Clear these' : `Select these ${visible.length}`}
+          </button>
+        )}
+
         <label className="ml-auto w-full sm:w-auto">
           <span className="sr-only">Search athletes</span>
           <Input
@@ -102,7 +132,12 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
             <ul className="mt-6 grid gap-3" aria-label="Shared across the squad">
               {groups.map((group) => (
                 <li key={group.kind}>
-                  <GroupRow group={group} onShow={() => { setFilter('all'); setSearch(''); }} />
+                  <GroupRow
+                    group={group}
+                    onShow={() => { setFilter('all'); setSearch(''); }}
+                    onSelect={() => setSelection(
+                      selectAll(selection, group.entries.map((e) => e.athleteId)))}
+                  />
                 </li>
               ))}
             </ul>
@@ -112,7 +147,12 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
             <ul className="mt-3 grid gap-3" aria-label="Athletes">
               {individual.map((entry) => (
                 <li key={entry.athleteId}>
-                  <AthleteRow entry={entry} today={today} />
+                  <AthleteRow
+                    entry={entry}
+                    today={today}
+                    selected={isSelected(selection, entry.athleteId)}
+                    onToggle={() => setSelection(toggle(selection, entry.athleteId))}
+                  />
                 </li>
               ))}
             </ul>
@@ -125,12 +165,22 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
           )}
         </>
       )}
+
+      <BatchBar
+        selected={chosen}
+        onClear={() => setSelection(EMPTY_SELECTION)}
+        onRemove={(id) => setSelection(toggle(selection, id))}
+      />
     </>
   );
 }
 
 /** One problem several athletes share, stated once and actionable once. */
-function GroupRow({ group, onShow }: { group: RosterGroup; onShow: () => void }) {
+function GroupRow({ group, onShow, onSelect }: {
+  group: RosterGroup;
+  onShow: () => void;
+  onSelect: () => void;
+}) {
   return (
     <Panel className="min-w-0 p-5">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
@@ -153,12 +203,15 @@ function GroupRow({ group, onShow }: { group: RosterGroup; onShow: () => void })
           >
             Show them
           </button>
-          <Link
-            href={group.href}
-            className="inline-flex items-center rounded-xs border border-hairline-strong px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-ink-body transition-colors hover:border-mint hover:text-mint"
+          {/* the row already knows who these athletes are; the coach should not
+              have to find them one at a time to act on the thing they share */}
+          <button
+            type="button"
+            onClick={onSelect}
+            className="rounded-xs border border-hairline-strong px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-ink-body transition-colors hover:border-mint hover:text-mint"
           >
-            Assign
-          </Link>
+            Select all {group.entries.length}
+          </button>
         </div>
       </div>
     </Panel>
@@ -211,7 +264,12 @@ function TodayStrip({
  * Enough to decide whether opening them is worth it, and never so much that
  * the roster becomes the athlete page.
  */
-function AthleteRow({ entry, today }: { entry: RosterEntry; today: string }) {
+function AthleteRow({ entry, today, selected, onToggle }: {
+  entry: RosterEntry;
+  today: string;
+  selected: boolean;
+  onToggle: () => void;
+}) {
   // A bare programme name does not tell a coach whether it is running. The
   // three states a programme can be in each read differently.
   const position = !entry.programmeName
@@ -223,8 +281,17 @@ function AthleteRow({ entry, today }: { entry: RosterEntry; today: string }) {
         : `${entry.programmeName} — not started yet`;
 
   return (
-    <Panel className="min-w-0 p-5">
+    <Panel className={`min-w-0 p-5 transition-colors ${selected ? 'border-mint/40' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 flex-1 gap-3.5">
+          {/* a real checkbox: keyboard reachable, and it says whose it is */}
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggle}
+            aria-label={`Select ${entry.fullName}`}
+            className="mt-1 size-4.5 shrink-0 appearance-none rounded-[2px] border border-hairline-strong bg-slate transition-colors checked:border-mint checked:bg-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
+          />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {entry.topSignal && (
@@ -277,6 +344,7 @@ function AthleteRow({ entry, today }: { entry: RosterEntry; today: string }) {
             {entry.nextSessionName && entry.nextSessionDate &&
               ` · Next: ${entry.nextSessionName}, ${formatDayMonth(entry.nextSessionDate)}`}
           </p>
+        </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-3">

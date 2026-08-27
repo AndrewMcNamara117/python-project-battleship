@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireCoach } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
-import { batchSizeError, MAX_BATCH_SIZE } from '@/lib/domain/batch';
+import { batchSizeError } from '@/lib/domain/batch';
 import { previewBatch, runBatch } from '@/lib/coach/batch-runner';
 import type { BatchParams, BatchPreview, BatchResult } from '@/lib/domain/batch';
 import type { Result } from './coach';
@@ -85,5 +85,3 @@ export async function loadBatchHistory(athleteId: string): Promise<Result & {
   const repo = await getRepo();
   return { ok: true, message: '', rows: await repo.listBatchHistory(athleteId, 10) };
 }
-
-export { MAX_BATCH_SIZE };
