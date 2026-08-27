@@ -28,6 +28,9 @@ function validate(athleteIds: string[], params: BatchParams): string | null {
       return 'A volume adjustment runs from 50% to 150%. Rewrite the sessions instead.';
     }
   }
+  // marking read takes no parameters, so there is nothing to get wrong
+  if (params.action === 'acknowledge_checkin') return null;
+
   if (params.action === 'shift_sessions') {
     if (!Number.isInteger(params.days) || params.days === 0 || Math.abs(params.days) > 21) {
       return 'A shift runs from 1 to 21 days, in either direction.';
@@ -67,6 +70,7 @@ export async function runBatchAction(
   revalidatePath('/coach');
   revalidatePath('/coach/athletes');
   revalidatePath('/coach/checkins');
+  revalidatePath('/app/check-in');
   for (const row of result.rows) {
     if (row.outcome === 'applied') revalidatePath(`/coach/athletes/${row.athleteId}`);
   }

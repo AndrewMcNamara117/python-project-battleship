@@ -102,11 +102,16 @@ export interface RosterFacts {
   futureSessions: number;
 
   checkIn: {
+    /** So an action on a check-in does not need a second lookup to find it. */
+    id: UUID;
     weekStart: ISODate;
     submittedAt: ISOTimestamp;
     attention: 'none' | 'watch' | 'attention';
     reasons: string[];
-    reviewedAt: ISOTimestamp | null;
+    /** A coach marked it read. Clears the "to read" signal, nothing else. */
+    acknowledgedAt: ISOTimestamp | null;
+    /** A coach wrote back. This is what settles a flagged check-in. */
+    respondedAt: ISOTimestamp | null;
     fatigue: number | null;
     soreness: number | null;
     painOrNiggles: string | null;
@@ -196,7 +201,10 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
 
   if (facts.checkIn) {
     const c = facts.checkIn;
-    if (c.attention === 'attention' && !c.reviewedAt) {
+    // A flagged check-in is settled by answering it, not by reading it.
+    // Reading "my Achilles is sore" has not made the Achilles better, and a
+    // product that clears the signal on a click is one that loses injuries.
+    if (c.attention === 'attention' && !c.respondedAt) {
       signals.push({
         kind: 'checkin_flagged',
         severity: 'attention',
@@ -205,7 +213,8 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
           : 'Check-in flagged for review.',
         href: `${athlete}#checkins`,
       });
-    } else if (!c.reviewedAt) {
+    } else if (!c.acknowledgedAt) {
+      // purely a communication state: has anyone looked at this yet
       signals.push({
         kind: 'checkin_unreviewed',
         severity: 'information',
@@ -384,7 +393,7 @@ export function summariseToday(entries: RosterEntry[], today: ISODate): RosterTo
     keySessionsToday: entries
       .filter((e) => e.nextSessionDate === today && e.nextSessionName)
       .map((e) => ({ athleteId: e.athleteId, athleteName: e.fullName, sessionName: e.nextSessionName! })),
-    checkInsToRead: entries.filter((e) => e.checkIn && !e.checkIn.reviewedAt).length,
+    checkInsToRead: entries.filter((e) => e.checkIn && !e.checkIn.acknowledgedAt).length,
     racesWithin: entries
       .filter((e) => e.daysToRace != null && e.daysToRace >= 0 && e.daysToRace <= 42)
       .map((e) => ({

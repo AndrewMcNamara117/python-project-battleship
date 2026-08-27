@@ -193,6 +193,15 @@ export interface IronMilesRepo {
   getCheckIn(athleteId: UUID, weekStart: ISODate): Promise<CheckIn | null>;
   submitCheckIn(checkIn: Omit<CheckIn, 'id' | 'submittedAt'>): Promise<CheckIn>;
   respondToCheckIn(id: UUID, coachId: UUID, response: string): Promise<void>;
+
+  /**
+   * A coach states they have read a check-in, without replying.
+   *
+   * Returns false when it was already read — a retried batch reports the
+   * athlete once and does not rewrite when the coach actually looked.
+   * Never called by rendering a page: reading is an act, not a side effect.
+   */
+  acknowledgeCheckIn(id: UUID, coachId: UUID): Promise<boolean>;
   listCheckInQueue(coachId: UUID): Promise<(CheckIn & { athleteName: string })[]>;
 
   /* forge score + community */

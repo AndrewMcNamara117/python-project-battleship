@@ -192,7 +192,11 @@ describe('what the athlete reported', () => {
     assert.equal(row.checkin_soreness, 7);
     assert.deepEqual(row.checkin_reasons, ['fatigue up', 'soreness reported']);
     assert.match(row.checkin_pain, /calf/);
-    assert.equal(row.checkin_reviewed_at, null);
+    // Slice 10 split one column into two: nobody has read it, and nobody has
+    // answered it. Both are asserted rather than the single merged value.
+    assert.equal(row.checkin_acknowledged_at, null, 'unread');
+    assert.equal(row.checkin_responded_at, null, 'and unanswered');
+    assert.ok(row.checkin_id, 'and the roster carries which check-in it is');
   });
 
   it('takes the most recent one when there are several', async () => {

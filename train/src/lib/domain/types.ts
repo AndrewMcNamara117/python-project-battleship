@@ -462,7 +462,22 @@ export interface CheckIn {
   /** Rule-based, never a diagnosis. */
   attentionLevel: AttentionLevel;
   attentionReasons: string[];
+  /**
+   * Three states, not two.
+   *
+   * `acknowledgedAt` — a coach deliberately marked this read. Never set by
+   * rendering a page, and never set by the athlete.
+   * `respondedAt`    — a coach wrote back. A reply implies a read; a read
+   *                    implies nothing.
+   *
+   * `reviewedByCoachAt` is the original single column, kept in step so
+   * anything not yet migrated still works. `acknowledgedAt` is the one this
+   * product believes.
+   */
   reviewedByCoachAt: ISOTimestamp | null;
+  acknowledgedAt: ISOTimestamp | null;
+  acknowledgedBy: UUID | null;
+  respondedAt: ISOTimestamp | null;
   coachResponse: string | null;
   submittedAt: ISOTimestamp;
 }

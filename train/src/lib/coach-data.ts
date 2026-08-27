@@ -22,6 +22,7 @@ export interface AthleteRow {
     weekStart: ISODate;
     attentionLevel: 'none' | 'watch' | 'attention';
     attentionReasons: string[];
+    /** Read by the coach. Not the same as answered. */
     reviewedByCoachAt: ISOTimestamp | null;
   } | null;
   checkInDue: boolean;
@@ -86,7 +87,7 @@ export async function loadCoachContext(): Promise<CoachContext> {
           weekStart: entry.checkIn.weekStart,
           attentionLevel: entry.checkIn.attention,
           attentionReasons: entry.checkIn.reasons,
-          reviewedByCoachAt: entry.checkIn.reviewedAt,
+          reviewedByCoachAt: entry.checkIn.acknowledgedAt,
         }
       : null,
     checkInDue: entry.checkIn?.weekStart !== weekStart,
@@ -117,6 +118,7 @@ export async function loadCoachContext(): Promise<CoachContext> {
     totals: {
       athletes: athletes.length,
       needingAttention,
+      // waiting to be read, not waiting to be answered
       checkInsWaiting: athletes.filter((a) => a.lastCheckIn && !a.lastCheckIn.reviewedByCoachAt).length,
       missedSessions: athletes.reduce((sum, a) => sum + a.missedLastTwoWeeks, 0),
       upcomingRaces: upcomingRaces.length,

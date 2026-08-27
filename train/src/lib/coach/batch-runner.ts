@@ -2,6 +2,7 @@ import 'server-only';
 import { getRepo } from '@/lib/data';
 import { isBlocking } from '@/lib/domain/programme-template';
 import { describeParams } from '@/lib/domain/batch';
+import { toISODate } from '@/lib/domain/dates';
 import type {
   BatchAction, BatchParams, BatchPreview, BatchPreviewRow,
   BatchResult, BatchResultRow,
@@ -36,6 +37,29 @@ import type { Profile, UUID } from '@/lib/domain/types';
  *     from a single assignment because it *is* single assignments.
  */
 
+/** One athlete's check-in as the batch needs it: which one, and its state. */
+interface CheckInState {
+  checkInId: UUID | null;
+  acknowledgedAt: string | null;
+  attention: 'none' | 'watch' | 'attention';
+  weekStart: string | null;
+}
+
+/**
+ * Check-in state for the whole selection, taken from the roster the coach is
+ * already looking at. One query, and the preview cannot disagree with the row
+ * above it.
+ */
+async function checkInIndex(repo: IronMilesRepo, coachId: UUID): Promise<Map<UUID, CheckInState>> {
+  const roster = await repo.listRoster(coachId, toISODate(new Date()));
+  return new Map(roster.map((e) => [e.athleteId, {
+    checkInId: e.checkIn?.id ?? null,
+    acknowledgedAt: e.checkIn?.acknowledgedAt ?? null,
+    attention: e.checkIn?.attention ?? 'none',
+    weekStart: e.checkIn?.weekStart ?? null,
+  }]));
+}
+
 /**
  * The coach's roster, resolved once rather than per athlete.
  *
@@ -61,10 +85,13 @@ export async function previewBatch(
 ): Promise<BatchPreview> {
   const repo = await getRepo();
   const mine = await rosterIndex(repo, coachId);
+  const checkIns = params.action === 'acknowledge_checkin'
+    ? await checkInIndex(repo, coachId)
+    : null;
   const rows: BatchPreviewRow[] = [];
 
   for (const athleteId of athleteIds) {
-    rows.push(await previewOne(repo, mine, athleteId, params));
+    rows.push(await previewOne(repo, mine, athleteId, params, checkIns));
   }
 
   return { action: params.action, rows };
@@ -75,6 +102,7 @@ async function previewOne(
   mine: Map<UUID, Profile>,
   athleteId: UUID,
   params: BatchParams,
+  checkIns: Map<UUID, CheckInState> | null,
 ): Promise<BatchPreviewRow> {
   const profile = mine.get(athleteId);
   if (!profile) {
@@ -123,6 +151,9 @@ async function previewOne(
           athleteId, params.from, params.to, params.days, false);
         return adaptationRow(athleteId, athleteName, rows, 'shift');
       }
+
+      case 'acknowledge_checkin':
+        return acknowledgeRow(athleteId, athleteName, checkIns?.get(athleteId));
     }
   } catch (error) {
     // a refusal from the database is a blocker for this athlete alone
@@ -203,6 +234,9 @@ export async function runBatch(
 ): Promise<BatchResult> {
   const repo = await getRepo();
   const mine = await rosterIndex(repo, coachId);
+  const checkIns = params.action === 'acknowledge_checkin'
+    ? await checkInIndex(repo, coachId)
+    : null;
 
   // opened first, so a batch that dies halfway still has a record of what it
   // was trying to do and how many athletes it expected to touch
@@ -215,7 +249,7 @@ export async function runBatch(
   const rows: BatchResultRow[] = [];
 
   for (const athleteId of athleteIds) {
-    const row = await applyOne(repo, mine, athleteId, params);
+    const row = await applyOne(repo, mine, athleteId, params, checkIns, coachId);
     rows.push(row);
 
     // filed as each athlete finishes rather than in one write at the end, so
@@ -239,6 +273,8 @@ async function applyOne(
   mine: Map<UUID, Profile>,
   athleteId: UUID,
   params: BatchParams,
+  checkIns: Map<UUID, CheckInState> | null,
+  coach: UUID,
 ): Promise<BatchResultRow> {
   const profile = mine.get(athleteId);
   if (!profile) {
@@ -275,11 +311,66 @@ async function applyOne(
           athleteId, params.from, params.to, params.days, true);
         return adaptationResult(athleteId, athleteName, rows, 'moved');
       }
+
+      case 'acknowledge_checkin': {
+        const state = checkIns?.get(athleteId);
+        if (!state?.checkInId) {
+          return {
+            athleteId, athleteName, outcome: 'skipped',
+            detail: 'No check-in to read.',
+          };
+        }
+        // the same single-athlete operation, which re-checks the roster in the
+        // database whatever this loop believes
+        const changed = await repo.acknowledgeCheckIn(state.checkInId, coach);
+        return {
+          athleteId, athleteName,
+          outcome: changed ? 'applied' : 'skipped',
+          detail: changed ? 'Marked read.' : 'Already read.',
+        };
+      }
     }
   } catch (error) {
     // this athlete alone. The loop continues; the others are untouched.
     return { athleteId, athleteName, outcome: 'failed', detail: message(error) };
   }
+}
+
+/**
+ * What marking read would do to one athlete.
+ *
+ * Deliberately says what it will NOT do. A coach acting on twenty-five
+ * check-ins should not have to wonder whether they have just cleared a flagged
+ * one off their roster — so the row that carries a flag says so.
+ */
+function acknowledgeRow(
+  athleteId: UUID,
+  athleteName: string,
+  state: CheckInState | undefined,
+): BatchPreviewRow {
+  if (!state?.checkInId) {
+    return {
+      athleteId, athleteName, outcome: 'skipped',
+      summary: 'No check-in to read.', warnings: [], blockers: [],
+    };
+  }
+  if (state.acknowledgedAt) {
+    return {
+      athleteId, athleteName, outcome: 'skipped',
+      summary: 'Already read.', warnings: [], blockers: [],
+    };
+  }
+
+  return {
+    athleteId,
+    athleteName,
+    outcome: 'applied',
+    summary: `Check-in from ${state.weekStart} — marked read, not answered.`,
+    warnings: state.attention === 'attention'
+      ? ['Flagged for review. Reading it does not settle it — it stays on the roster until you reply.']
+      : [],
+    blockers: [],
+  };
 }
 
 function adaptationResult(

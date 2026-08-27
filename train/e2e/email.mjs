@@ -67,7 +67,15 @@ try {
   // finds nothing left to send — which is the dedupe working, not a failure.
   const alerts = await cron('coach-alerts');
   const digest = await cron('coach-digest');
-  const queued = alerts.created + alerts.held + digest.created + digest.held;
+
+  // Only what is deliverable now. A notification `held` by quiet hours is
+  // written immediately and delivered later by design — counting it here made
+  // this suite pass by day and fail after 22:00, which it did.
+  const queued = alerts.created + digest.created;
+  const held = alerts.held + digest.held;
+  if (held) {
+    console.log(`  --   ${held} held by quiet hours; delivery correctly waits for them`);
+  }
 
   const delivery = await cron('notification-delivery');
   check('the jobs ran', typeof delivery.processed === 'number');

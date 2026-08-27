@@ -21,12 +21,13 @@ import type { ISODate, UUID } from './types';
  * identically and neither can invent its own arithmetic.
  */
 
-export type BatchAction = 'assign_template' | 'scale_volume' | 'shift_sessions';
+export type BatchAction = 'assign_template' | 'scale_volume' | 'shift_sessions' | 'acknowledge_checkin';
 
 export const BATCH_ACTION_LABEL: Record<BatchAction, string> = {
   assign_template: 'Assign a programme',
   scale_volume: 'Adjust volume',
   shift_sessions: 'Shift training days',
+  acknowledge_checkin: 'Mark check-in read',
 };
 
 /**
@@ -132,8 +133,13 @@ export function availableActions(entries: RosterEntry[]): BatchAction[] {
   if (entries.length === 0) return [];
 
   const anyOnProgramme = entries.some((e) => e.programmeId !== null);
+  const anyUnread = entries.some((e) => e.checkIn && !e.checkIn.acknowledgedAt);
+
   const actions: BatchAction[] = ['assign_template'];
   if (anyOnProgramme) actions.push('scale_volume', 'shift_sessions');
+  // offered only when there is something unread, so the button is never a
+  // no-op the coach has to click to discover
+  if (anyUnread) actions.push('acknowledge_checkin');
   return actions;
 }
 
@@ -141,6 +147,13 @@ export function availableActions(entries: RosterEntry[]): BatchAction[] {
 export function unavailableReason(action: BatchAction, entries: RosterEntry[]): string | null {
   if (entries.length === 0) return 'Select an athlete first.';
   if (action === 'assign_template') return null;
+
+  if (action === 'acknowledge_checkin') {
+    return entries.some((e) => e.checkIn && !e.checkIn.acknowledgedAt)
+      ? null
+      : 'Every selected athlete\'s check-in has already been read.';
+  }
+
   return entries.some((e) => e.programmeId !== null)
     ? null
     : 'None of the selected athletes are on a programme, so there is nothing to adjust.';
@@ -210,6 +223,10 @@ export function applicableIds(preview: BatchPreview): UUID[] {
 export function confirmLabel(action: BatchAction, t: BatchTally): string {
   if (t.willChange === 0) return 'Nothing to apply';
 
+  if (action === 'acknowledge_checkin') {
+    return `Mark ${t.willChange} read`;
+  }
+
   const verb = action === 'assign_template' ? 'Assign to'
     : action === 'scale_volume' ? 'Adjust'
       : 'Shift';
@@ -265,7 +282,8 @@ export function resultSentence(result: BatchResult): string {
 
   const verb = result.action === 'assign_template' ? 'assigned'
     : result.action === 'scale_volume' ? 'adjusted'
-      : 'shifted';
+      : result.action === 'acknowledge_checkin' ? 'marked read'
+        : 'shifted';
 
   if (applied === 0 && bad.length === 0) return 'Nothing needed changing.';
 
@@ -312,7 +330,21 @@ export interface ShiftSessionsParams {
   days: number;
 }
 
-export type BatchParams = AssignTemplateParams | ScaleVolumeParams | ShiftSessionsParams;
+/**
+ * Marking read takes no parameters at all.
+ *
+ * That is the point of it: there is nothing to configure, nothing to get
+ * wrong, and nothing said to anybody. It records that the coach looked.
+ */
+export interface AcknowledgeCheckInParams {
+  action: 'acknowledge_checkin';
+}
+
+export type BatchParams =
+  | AssignTemplateParams
+  | ScaleVolumeParams
+  | ShiftSessionsParams
+  | AcknowledgeCheckInParams;
 
 /**
  * The most athletes one batch may name.
@@ -345,5 +377,7 @@ export function describeParams(params: BatchParams): string {
       const dir = params.days > 0 ? 'later' : 'earlier';
       return `${d} ${d === 1 ? 'day' : 'days'} ${dir}, ${params.from} to ${params.to}`;
     }
+    case 'acknowledge_checkin':
+      return 'read, not answered';
   }
 }

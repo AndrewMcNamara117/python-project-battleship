@@ -41,6 +41,9 @@ async function reportSevereNiggle(athleteId: string, words: string) {
     attentionLevel: 'attention',
     attentionReasons: ['soreness high'],
     reviewedByCoachAt: null,
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    respondedAt: null,
     coachResponse: null,
   });
 }

@@ -98,8 +98,9 @@ describe('signals', () => {
   it('raises a flagged check-in with the reasons the athlete gave', () => {
     const [signal] = classify(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'attention',
-        reasons: ['fatigue up', 'soreness reported'], reviewedAt: null,
+        reasons: ['fatigue up', 'soreness reported'], acknowledgedAt: null, respondedAt: null,
         fatigue: 8, soreness: 7, painOrNiggles: null,
       },
     }), TODAY);
@@ -111,8 +112,9 @@ describe('signals', () => {
   it('does not raise a flagged check-in the coach has already read', () => {
     const result = kinds(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'attention',
-        reasons: ['fatigue up'], reviewedAt: `${TODAY}T09:00:00Z`,
+        reasons: ['fatigue up'], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:00:00Z`,
         fatigue: 8, soreness: 7, painOrNiggles: null,
       },
     }));
@@ -122,8 +124,9 @@ describe('signals', () => {
   it('shows an unread ordinary check-in as information, not attention', () => {
     const [signal] = classify(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
+        reasons: [], acknowledgedAt: null, respondedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
       },
     }), TODAY);
     assert.equal(signal.kind, 'checkin_unreviewed');
@@ -133,8 +136,9 @@ describe('signals', () => {
   it('quotes what the athlete said about a niggle rather than scoring it', () => {
     const signals = classify(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: `${TODAY}T09:00:00Z`,
+        reasons: [], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:00:00Z`,
         fatigue: 4, soreness: 6, painOrNiggles: 'Left calf tight after the long run',
       },
     }), TODAY);
@@ -249,8 +253,9 @@ describe('filters', () => {
     buildEntry(facts({
       athleteId: '4', fullName: 'Checked In',
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
+        reasons: [], acknowledgedAt: null, respondedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
       },
     }), TODAY),
   ];
@@ -290,8 +295,9 @@ describe('today', () => {
       buildEntry(facts({
         athleteId: '3', fullName: 'C', raceName: 'Dublin', raceDate: '2026-09-20',
         checkIn: {
+          id: 'ci-fixture',
           weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-          reasons: [], reviewedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
+          reasons: [], acknowledgedAt: null, respondedAt: null, fatigue: 3, soreness: 2, painOrNiggles: null,
         },
       }), TODAY),
     ];
@@ -347,5 +353,80 @@ describe('grouping a shared problem', () => {
     const { individual, groups } = partitionRoster(roster);
     assert.equal(groups.length, 0, 'four athletes missing training is four conversations');
     assert.equal(individual.length, 4);
+  });
+});
+
+describe('read is not resolved', () => {
+  const flagged = (over: Partial<NonNullable<RosterFacts['checkIn']>> = {}) => buildEntry(facts({
+    checkIn: {
+      id: 'ci-1', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+      attention: 'attention', reasons: ['Soreness reported at 8 or above'],
+      acknowledgedAt: null, respondedAt: null,
+      fatigue: 8, soreness: 9, painOrNiggles: 'Left Achilles sore on hills.',
+      ...over,
+    },
+  }), TODAY);
+
+  const kinds = (e: ReturnType<typeof buildEntry>) => e.signals.map((s) => s.kind);
+
+  it('flags an unread, unanswered check-in', () => {
+    const e = flagged();
+    assert.ok(kinds(e).includes('checkin_flagged'));
+    assert.ok(!kinds(e).includes('checkin_unreviewed'), 'flagged supersedes unread');
+  });
+
+  it('keeps the flag after the coach marks it read', () => {
+    // reading "my Achilles is sore" has not made the Achilles better
+    const e = flagged({ acknowledgedAt: `${TODAY}T09:00:00Z` });
+    assert.ok(kinds(e).includes('checkin_flagged'),
+      'a flagged check-in is settled by answering it, not by reading it');
+  });
+
+  it('clears the flag once the coach has replied', () => {
+    const e = flagged({
+      acknowledgedAt: `${TODAY}T09:00:00Z`,
+      respondedAt: `${TODAY}T09:05:00Z`,
+    });
+    assert.ok(!kinds(e).includes('checkin_flagged'));
+  });
+
+  it('keeps reported pain visible whatever the coach clicked', () => {
+    // soreness is read from the athlete's own score, never from read state
+    for (const state of [
+      {},
+      { acknowledgedAt: `${TODAY}T09:00:00Z` },
+      { acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:05:00Z` },
+    ]) {
+      const e = flagged(state);
+      assert.ok(kinds(e).includes('soreness_reported'),
+        `pain disappeared for ${JSON.stringify(state)}`);
+    }
+  });
+
+  it('clears only the "to read" signal when a routine check-in is read', () => {
+    const routine = (acknowledgedAt: string | null) => buildEntry(facts({
+      checkIn: {
+        id: 'ci-2', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'none', reasons: [], acknowledgedAt, respondedAt: null,
+        fatigue: 4, soreness: 3, painOrNiggles: null,
+      },
+    }), TODAY);
+
+    assert.ok(kinds(routine(null)).includes('checkin_unreviewed'));
+    assert.ok(!kinds(routine(`${TODAY}T09:00:00Z`)).includes('checkin_unreviewed'),
+      'which is the whole point: the queue can be emptied');
+  });
+
+  it('counts check-ins to read by acknowledgement, not by reply', () => {
+    const roster = [
+      flagged({ acknowledgedAt: `${TODAY}T09:00:00Z` }),
+      buildEntry(facts({ athleteId: 'a2', checkIn: {
+        id: 'ci-3', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'none', reasons: [], acknowledgedAt: null, respondedAt: null,
+        fatigue: 4, soreness: 3, painOrNiggles: null,
+      } }), TODAY),
+    ];
+    assert.equal(summariseToday(roster, TODAY).checkInsToRead, 1,
+      'the one nobody has looked at');
   });
 });

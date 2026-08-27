@@ -218,6 +218,9 @@ export async function submitCheckIn(formData: FormData): Promise<Result> {
     attentionLevel: triage.level,
     attentionReasons: triage.reasons,
     reviewedByCoachAt: null,
+    acknowledgedAt: null,
+    acknowledgedBy: null,
+    respondedAt: null,
     coachResponse: null,
   });
 

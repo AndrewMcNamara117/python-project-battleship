@@ -38,8 +38,9 @@ const facts = (over: Partial<RosterFacts> = {}): RosterFacts => ({
 
 const flagged = (over: Partial<RosterFacts> = {}) => facts({
   checkIn: {
+    id: 'ci-fixture',
     weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'attention',
-    reasons: ['fatigue up', 'soreness reported'], reviewedAt: null,
+    reasons: ['fatigue up', 'soreness reported'], acknowledgedAt: null, respondedAt: null,
     fatigue: 8, soreness: 7, painOrNiggles: null,
   },
   ...over,
@@ -145,8 +146,9 @@ describe('which signals interrupt a coach', () => {
   it('alerts on a reported niggle, in the athlete\'s own words', () => {
     const roster = [buildEntry(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: `${TODAY}T09:00:00Z`,
+        reasons: [], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:00:00Z`,
         fatigue: 4, soreness: 8, painOrNiggles: 'Left calf tight after the long run',
       },
     }), TODAY)];
@@ -165,8 +167,9 @@ describe('which signals interrupt a coach', () => {
     // through untouched either way.
     const roster = [buildEntry(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: `${TODAY}T09:00:00Z`,
+        reasons: [], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:00:00Z`,
         fatigue: 3, soreness: 2, painOrNiggles: 'Nothing to report.',
       },
     }), TODAY)];
@@ -223,8 +226,9 @@ describe('not sending the same news twice', () => {
     const thisWeek = buildEntry(flagged(), TODAY);
     const nextWeek = buildEntry(flagged({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-21', submittedAt: '2026-09-23T08:00:00Z', attention: 'attention',
-        reasons: ['fatigue up'], reviewedAt: null, fatigue: 8, soreness: 7, painOrNiggles: null,
+        reasons: ['fatigue up'], acknowledgedAt: null, respondedAt: null, fatigue: 8, soreness: 7, painOrNiggles: null,
       },
     }), TODAY);
 
@@ -313,8 +317,9 @@ describe('what leaves the building', () => {
   it('keeps an athlete\'s health detail out of an external subject line', () => {
     const roster = [buildEntry(facts({
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'none',
-        reasons: [], reviewedAt: `${TODAY}T09:00:00Z`,
+        reasons: [], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: `${TODAY}T09:00:00Z`,
         fatigue: 9, soreness: 9, painOrNiggles: 'Sharp pain in my left Achilles',
       },
     }), TODAY)];
@@ -349,8 +354,9 @@ describe('a fifty-athlete roster on a bad Monday', () => {
     if (n <= 3) return buildEntry(facts({
       athleteId: id, fullName: `Athlete ${n}`,
       checkIn: {
+        id: 'ci-fixture',
         weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`, attention: 'attention',
-        reasons: ['soreness high'], reviewedAt: null,
+        reasons: ['soreness high'], acknowledgedAt: null, respondedAt: null,
         fatigue: 8, soreness: 9, painOrNiggles: 'Left calf tight',
       },
     }), TODAY);

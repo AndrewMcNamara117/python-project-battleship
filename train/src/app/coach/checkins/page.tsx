@@ -10,6 +10,7 @@ import { attentionLabel } from '@/lib/domain/checkin-rules';
 import { formatDayMonth } from '@/lib/domain/dates';
 import { CheckInResponder } from '../athletes/[id]/CoachControls';
 import { CheckInAdapt } from '@/components/roster/CheckInAdapt';
+import { MarkCheckInRead } from '@/components/roster/MarkCheckInRead';
 
 export const metadata: Metadata = { title: 'Check-in queue' };
 
@@ -18,8 +19,10 @@ export default async function CheckInQueuePage() {
   const repo = await getRepo();
   const queue = await repo.listCheckInQueue(session.userId);
 
-  const pending = queue.filter((c) => !c.reviewedByCoachAt);
-  const reviewed = queue.filter((c) => c.reviewedByCoachAt).slice(0, 12);
+  // "waiting" is now what nobody has looked at. A check-in a coach has read
+  // and chosen not to answer has left the queue — that was the whole problem.
+  const pending = queue.filter((c) => !c.acknowledgedAt);
+  const reviewed = queue.filter((c) => c.acknowledgedAt).slice(0, 12);
 
   return (
     <AppPage>
@@ -104,6 +107,15 @@ export default async function CheckInQueuePage() {
 
               <div className="mt-7 border-t border-line pt-6">
                 <CheckInResponder checkInId={c.id} athleteId={c.athleteId} existing={c.coachResponse} />
+              </div>
+
+              {/* reading is an act. Nothing here happens because a page rendered. */}
+              <div className="mt-5 flex flex-wrap items-center gap-4">
+                <MarkCheckInRead
+                  checkInId={c.id}
+                  athleteId={c.athleteId}
+                  flagged={c.attentionLevel === 'attention'}
+                />
               </div>
 
               {/* the seam the audit found: a coach can change next week from

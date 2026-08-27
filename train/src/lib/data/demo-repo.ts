@@ -494,10 +494,38 @@ export class DemoRepo implements IronMilesRepo {
 
   async respondToCheckIn(id: UUID, coachId: UUID, response: string): Promise<void> {
     const c = dataset().checkins.find((x) => x.id === id);
-    if (!c) return;
+    if (!c) throw new Error('No such check-in.');
+    this.requireCoachOfCheckIn(c, coachId);
+
+    const now = new Date().toISOString();
     c.coachResponse = response;
-    c.reviewedByCoachAt = new Date().toISOString();
-    void coachId;
+    c.respondedAt = now;
+    // you cannot answer what you have not read; the two stay distinct
+    c.acknowledgedAt ??= now;
+    c.acknowledgedBy ??= coachId;
+    c.reviewedByCoachAt ??= now;
+  }
+
+  async acknowledgeCheckIn(id: UUID, coachId: UUID): Promise<boolean> {
+    const c = dataset().checkins.find((x) => x.id === id);
+    if (!c) throw new Error('No such check-in.');
+    this.requireCoachOfCheckIn(c, coachId);
+
+    // already read: keep the moment the coach actually looked
+    if (c.acknowledgedAt) return false;
+
+    const now = new Date().toISOString();
+    c.acknowledgedAt = now;
+    c.acknowledgedBy = coachId;
+    c.reviewedByCoachAt ??= now;
+    return true;
+  }
+
+  /** Per check-in, every time — as im_acknowledge_checkin does in Postgres. */
+  private requireCoachOfCheckIn(c: CheckIn, coachId: UUID) {
+    const linked = dataset().links.some(
+      (l) => l.athleteId === c.athleteId && l.coachId === coachId && l.status === 'active');
+    if (!linked) throw new Error('That athlete is not on your roster.');
   }
 
   async listCheckInQueue(coachId: UUID): Promise<(CheckIn & { athleteName: string })[]> {
@@ -508,7 +536,7 @@ export class DemoRepo implements IronMilesRepo {
       d.checkins
         .filter((c) => names.has(c.athleteId))
         .sort((a, b) => {
-          const rank = (x: CheckIn) => (x.reviewedByCoachAt ? 2 : x.attentionLevel === 'attention' ? 0 : 1);
+          const rank = (x: CheckIn) => (x.acknowledgedAt ? 2 : x.attentionLevel === 'attention' ? 0 : 1);
           return rank(a) - rank(b) || b.weekStart.localeCompare(a.weekStart);
         })
         .map((c) => ({ ...c, athleteName: names.get(c.athleteId) ?? 'Athlete' })),
@@ -2461,7 +2489,9 @@ export class DemoRepo implements IronMilesRepo {
               submittedAt: checkIn.submittedAt,
               attention: checkIn.attentionLevel,
               reasons: checkIn.attentionReasons ?? [],
-              reviewedAt: checkIn.reviewedByCoachAt ?? null,
+              id: checkIn.id,
+              acknowledgedAt: checkIn.acknowledgedAt ?? null,
+              respondedAt: checkIn.respondedAt ?? null,
               fatigue: checkIn.scores?.fatigue ?? null,
               soreness: checkIn.scores?.soreness ?? null,
               painOrNiggles: checkIn.painOrNiggles?.trim() || null,

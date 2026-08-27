@@ -262,3 +262,68 @@ describe('saying back what the coach chose', () => {
       /1 day earlier/);
   });
 });
+
+describe('marking check-ins read', () => {
+  const unread = (id: string) => buildEntry(facts({
+    athleteId: id, fullName: `Athlete ${id}`,
+    checkIn: {
+      id: `ci-${id}`, weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+      attention: 'none', reasons: [], acknowledgedAt: null, respondedAt: null,
+      fatigue: 4, soreness: 3, painOrNiggles: 'Nothing to report.',
+    },
+  }), TODAY);
+
+  const alreadyRead = (id: string) => buildEntry(facts({
+    athleteId: id, fullName: `Athlete ${id}`,
+    checkIn: {
+      id: `ci-${id}`, weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+      attention: 'none', reasons: [], acknowledgedAt: `${TODAY}T09:00:00Z`, respondedAt: null,
+      fatigue: 4, soreness: 3, painOrNiggles: null,
+    },
+  }), TODAY);
+
+  it('is offered when something is unread', () => {
+    assert.ok(availableActions([unread('a1')]).includes('acknowledge_checkin'));
+    assert.equal(unavailableReason('acknowledge_checkin', [unread('a1')]), null);
+  });
+
+  it('is withheld when everything selected has been read', () => {
+    const read = [alreadyRead('a1')];
+    assert.ok(!availableActions(read).includes('acknowledge_checkin'));
+    assert.match(unavailableReason('acknowledge_checkin', read) ?? '', /already been read/);
+  });
+
+  it('is withheld when nobody selected has a check-in at all', () => {
+    assert.ok(!availableActions([entry('a1')]).includes('acknowledge_checkin'));
+  });
+
+  it('says how many will be marked, never how many were selected', () => {
+    const p: BatchPreview = {
+      action: 'acknowledge_checkin',
+      rows: [
+        row({ athleteId: 'a1', outcome: 'applied' }),
+        row({ athleteId: 'a2', outcome: 'applied' }),
+        row({ athleteId: 'a3', outcome: 'skipped', summary: 'Already read.' }),
+      ],
+    };
+    assert.equal(confirmLabel('acknowledge_checkin', tally(p)), 'Mark 2 read');
+    assert.deepEqual(applicableIds(p), ['a1', 'a2']);
+  });
+
+  it('reports afterwards in the language of reading, not answering', () => {
+    const result = {
+      batchId: 'b1',
+      action: 'acknowledge_checkin' as const,
+      rows: [
+        { athleteId: 'a1', athleteName: 'Aoife D.', outcome: 'applied' as const, detail: 'Marked read.' },
+        { athleteId: 'a2', athleteName: 'Cian M.', outcome: 'applied' as const, detail: 'Marked read.' },
+      ],
+    };
+    assert.match(resultSentence(result), /2 athletes marked read/);
+    assert.doesNotMatch(resultSentence(result), /replied|sent|answered/i);
+  });
+
+  it('takes no parameters, so there is nothing to configure wrongly', () => {
+    assert.equal(describeParams({ action: 'acknowledge_checkin' }), 'read, not answered');
+  });
+});

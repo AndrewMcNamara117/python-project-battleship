@@ -50,6 +50,38 @@ export async function respondToCheckIn(
   return { ok: true, message: 'Response sent.' };
 }
 
+/**
+ * A coach states they have read one check-in.
+ *
+ * The same operation the batch loops, so a single click and a batch of
+ * twenty-five cannot diverge. Never called by rendering a page.
+ */
+export async function acknowledgeCheckIn(
+  checkInId: string,
+  athleteId: string,
+): Promise<Result> {
+  const { session, authorised } = await requireCoachOf(athleteId);
+  if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };
+
+  const repo = await getRepo();
+  try {
+    const changed = await repo.acknowledgeCheckIn(checkInId, session.userId);
+    revalidatePath('/coach');
+    revalidatePath('/coach/checkins');
+    revalidatePath(`/coach/athletes/${athleteId}`);
+    revalidatePath('/app/check-in');
+    return {
+      ok: true,
+      message: changed ? 'Marked read.' : 'Already read.',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : 'That could not be marked read.',
+    };
+  }
+}
+
 export async function messageAthlete(athleteId: string, formData: FormData): Promise<Result> {
   const { session, authorised } = await requireCoachOf(athleteId);
   if (!authorised) return { ok: false, message: 'That athlete is not on your roster.' };

@@ -693,6 +693,9 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       attentionLevel: triage.level,
       attentionReasons: triage.reasons,
       reviewedByCoachAt: offset < -1 ? `${addDays(weekEnd, 1)}T09:00:00.000Z` : null,
+      acknowledgedAt: offset < -1 ? `${addDays(weekEnd, 1)}T09:00:00.000Z` : null,
+      acknowledgedBy: offset < -1 ? DEMO_COACH_ID : null,
+      respondedAt: offset < -1 ? `${addDays(weekEnd, 1)}T09:00:00.000Z` : null,
       coachResponse:
         offset === -2
           ? 'Good week. We hold volume where it is for one more block, then step up.'

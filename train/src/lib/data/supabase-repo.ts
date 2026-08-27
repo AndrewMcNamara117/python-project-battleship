@@ -256,6 +256,9 @@ export class SupabaseRepo implements IronMilesRepo {
     attentionLevel: r.attention_level,
     attentionReasons: r.attention_reasons ?? [],
     reviewedByCoachAt: r.reviewed_by_coach_at,
+    acknowledgedAt: r.acknowledged_at ?? null,
+    acknowledgedBy: r.acknowledged_by ?? null,
+    respondedAt: r.responded_at ?? null,
     coachResponse: r.coach_response,
     submittedAt: r.submitted_at,
   });
@@ -633,13 +636,20 @@ export class SupabaseRepo implements IronMilesRepo {
     return this.toCheckIn(data);
   }
 
-  async respondToCheckIn(id: UUID, coachId: UUID, response: string) {
-    void coachId;
-    const { error } = await this.db
-      .from('checkins')
-      .update({ coach_response: response, reviewed_by_coach_at: new Date().toISOString() })
-      .eq('id', id);
+  async respondToCheckIn(id: UUID, coachId: UUID, response: string): Promise<void> {
+    // through the function, so a reply records itself as a reply and as a read
+    const { error } = await this.db.rpc('im_respond_to_checkin', {
+      p_checkin: id, p_response: response,
+    });
     if (error) throw new Error(error.message);
+    void coachId;
+  }
+
+  async acknowledgeCheckIn(id: UUID, coachId: UUID): Promise<boolean> {
+    const { data, error } = await this.db.rpc('im_acknowledge_checkin', { p_checkin: id });
+    if (error) throw new Error(error.message);
+    void coachId;
+    return data === true;
   }
 
   async listCheckInQueue(coachId: UUID): Promise<(CheckIn & { athleteName: string })[]> {
@@ -658,7 +668,7 @@ export class SupabaseRepo implements IronMilesRepo {
     return rows
       .map((c) => ({ ...c, athleteName: names.get(c.athleteId) ?? 'Athlete' }))
       .sort((a, b) => {
-        const rank = (x: CheckIn) => (x.reviewedByCoachAt ? 2 : x.attentionLevel === 'attention' ? 0 : 1);
+        const rank = (x: CheckIn) => (x.acknowledgedAt ? 2 : x.attentionLevel === 'attention' ? 0 : 1);
         return rank(a) - rank(b) || b.weekStart.localeCompare(a.weekStart);
       });
   }
@@ -2313,11 +2323,13 @@ export class SupabaseRepo implements IronMilesRepo {
 
       checkIn: r.checkin_week_start
         ? {
+            id: r.checkin_id,
             weekStart: r.checkin_week_start,
             submittedAt: r.checkin_submitted_at,
             attention: r.checkin_attention,
             reasons: r.checkin_reasons ?? [],
-            reviewedAt: r.checkin_reviewed_at ?? null,
+            acknowledgedAt: r.checkin_acknowledged_at ?? null,
+            respondedAt: r.checkin_responded_at ?? null,
             fatigue: r.checkin_fatigue ?? null,
             soreness: r.checkin_soreness ?? null,
             painOrNiggles: r.checkin_pain ?? null,

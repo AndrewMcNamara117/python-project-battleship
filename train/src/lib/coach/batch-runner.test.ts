@@ -233,3 +233,119 @@ describe('what a batch refuses to touch', () => {
     assert.ok(sawProtected, 'the fixture contains completed training to protect');
   });
 });
+
+describe('marking check-ins read, in bulk', () => {
+  const unreadAthletes = async () => {
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    return roster.filter((e) => e.checkIn && !e.checkIn.acknowledgedAt).map((e) => e.athleteId);
+  };
+
+  it('previews without writing anything', async () => {
+    const ids = await unreadAthletes();
+    if (!ids.length) return;
+    const repo = await getRepo();
+
+    const preview = await previewBatch(DEMO_COACH_ID, ids, { action: 'acknowledge_checkin' });
+    assert.equal(preview.rows.length, ids.length);
+
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    assert.ok(roster.filter((e) => e.checkIn && !e.checkIn.acknowledgedAt).length === ids.length,
+      'still unread after a preview');
+  });
+
+  it('warns when a flagged check-in is in the batch', async () => {
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    const flagged = roster.filter((e) =>
+      e.checkIn && !e.checkIn.acknowledgedAt && e.checkIn.attention === 'attention');
+    if (!flagged.length) return;
+
+    const preview = await previewBatch(DEMO_COACH_ID,
+      flagged.map((e) => e.athleteId), { action: 'acknowledge_checkin' });
+
+    for (const row of preview.rows) {
+      assert.ok(row.warnings.some((w) => /stays on your roster until you reply/i.test(w)),
+        'the coach is told reading is not settling');
+    }
+  });
+
+  it('marks them read and says so per athlete', async () => {
+    const ids = await unreadAthletes();
+    if (!ids.length) return;
+
+    const result = await runBatch(DEMO_COACH_ID, ids, { action: 'acknowledge_checkin' });
+    assert.equal(result.rows.length, ids.length);
+    assert.ok(result.rows.every((r) => r.outcome === 'applied'));
+    assert.ok(result.rows.every((r) => /Marked read/.test(r.detail)));
+    assert.match(resultSentence(result), /marked read/);
+  });
+
+  it('leaves a flagged athlete on the roster afterwards', async () => {
+    const ids = await unreadAthletes();
+    if (!ids.length) return;
+    await runBatch(DEMO_COACH_ID, ids, { action: 'acknowledge_checkin' });
+
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    const stillFlagged = roster.filter((e) =>
+      e.signals.some((s) => s.kind === 'checkin_flagged'));
+    const nowRead = roster.filter((e) => e.checkIn?.acknowledgedAt);
+
+    assert.ok(nowRead.length > 0, 'the batch did read them');
+    for (const e of stillFlagged) {
+      assert.ok(e.checkIn?.acknowledgedAt, 'read');
+      assert.equal(e.checkIn?.respondedAt, null, 'and still unanswered, so still flagged');
+    }
+  });
+
+  it('empties the "to read" signal for the routine ones', async () => {
+    const ids = await unreadAthletes();
+    if (!ids.length) return;
+    await runBatch(DEMO_COACH_ID, ids, { action: 'acknowledge_checkin' });
+
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    assert.equal(
+      roster.filter((e) => e.signals.some((s) => s.kind === 'checkin_unreviewed')).length, 0,
+      'nothing is waiting to be read');
+  });
+
+  it('is idempotent: a second run changes nothing', async () => {
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    const withCheckIns = roster.filter((e) => e.checkIn).map((e) => e.athleteId);
+    if (!withCheckIns.length) return;
+
+    await runBatch(DEMO_COACH_ID, withCheckIns, { action: 'acknowledge_checkin' });
+    const again = await runBatch(DEMO_COACH_ID, withCheckIns, { action: 'acknowledge_checkin' });
+    assert.ok(again.rows.every((r) => r.outcome === 'skipped'));
+    assert.ok(again.rows.every((r) => /Already read/.test(r.detail)));
+    assert.equal(resultSentence(again), 'Nothing needed changing.');
+  });
+
+  it('refuses an athlete the coach does not have, and only that athlete', async () => {
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    const mine = roster.filter((e) => e.checkIn).slice(0, 2).map((e) => e.athleteId);
+    if (mine.length < 2) return;
+
+    const result = await runBatch(DEMO_COACH_ID, [mine[0], 'not-mine', mine[1]],
+      { action: 'acknowledge_checkin' });
+
+    assert.equal(result.rows.find((r) => r.athleteId === 'not-mine')?.outcome, 'unauthorised');
+    assert.ok(result.rows.filter((r) => r.athleteId !== 'not-mine')
+      .every((r) => r.outcome !== 'unauthorised'));
+  });
+
+  it('skips an athlete with no check-in rather than failing', async () => {
+    const repo = await getRepo();
+    const roster = await repo.listRoster(DEMO_COACH_ID, today);
+    const none = roster.filter((e) => !e.checkIn).map((e) => e.athleteId);
+    if (!none.length) return;
+
+    const result = await runBatch(DEMO_COACH_ID, none, { action: 'acknowledge_checkin' });
+    assert.ok(result.rows.every((r) => r.outcome === 'skipped'));
+    assert.ok(result.rows.every((r) => /No check-in to read/.test(r.detail)));
+  });
+});

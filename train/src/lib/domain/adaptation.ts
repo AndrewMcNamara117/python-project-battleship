@@ -212,7 +212,8 @@ export interface CheckInContext {
   motivation: number | null;
   painOrNiggles: string | null;
   feltDifficult: string | null;
-  reviewedAt: ISOTimestamp | null;
+  acknowledgedAt: ISOTimestamp | null;
+  respondedAt: ISOTimestamp | null;
 }
 
 /**
@@ -229,7 +230,8 @@ export function toCheckInContext(c: {
   scores?: { fatigue?: number; soreness?: number; sleep?: number; motivation?: number } | null;
   painOrNiggles?: string | null;
   feltDifficult?: string | null;
-  reviewedByCoachAt?: ISOTimestamp | null;
+  acknowledgedAt?: ISOTimestamp | null;
+  respondedAt?: ISOTimestamp | null;
 }): CheckInContext {
   return {
     weekStart: c.weekStart,
@@ -242,6 +244,7 @@ export function toCheckInContext(c: {
     motivation: c.scores?.motivation ?? null,
     painOrNiggles: c.painOrNiggles?.trim() || null,
     feltDifficult: c.feltDifficult?.trim() || null,
-    reviewedAt: c.reviewedByCoachAt ?? null,
+    acknowledgedAt: c.acknowledgedAt ?? null,
+    respondedAt: c.respondedAt ?? null,
   };
 }

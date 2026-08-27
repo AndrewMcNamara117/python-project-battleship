@@ -348,7 +348,7 @@ function AthleteRow({ entry, today, selected, onToggle }: {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          {entry.checkIn && !entry.checkIn.reviewedAt && (
+          {entry.checkIn && !entry.checkIn.acknowledgedAt && (
             <Badge tone={entry.checkIn.attention === 'attention' ? 'neutral' : 'neutral'}>
               Check-in
             </Badge>
@@ -363,7 +363,7 @@ function AthleteRow({ entry, today, selected, onToggle }: {
       </div>
 
       {/* what the athlete actually said, not a number derived from it */}
-      {entry.checkIn && !entry.checkIn.reviewedAt && (
+      {entry.checkIn && !entry.checkIn.acknowledgedAt && (
         <CheckInDetail checkIn={entry.checkIn} athleteId={entry.athleteId} />
       )}
     </Panel>

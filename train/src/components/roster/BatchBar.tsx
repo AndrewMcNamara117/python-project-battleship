@@ -90,6 +90,7 @@ export function BatchBar({
     }
     if (action === 'scale_volume') return { action, from, to, factor: percent / 100 };
     if (action === 'shift_sessions') return { action, from, to, days };
+    if (action === 'acknowledge_checkin') return { action };
     return null;
   };
 
@@ -163,7 +164,7 @@ export function BatchBar({
 
       {/* what to do with them */}
       <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {(['assign_template', 'scale_volume', 'shift_sessions'] as BatchAction[]).map((key) => {
+        {(['assign_template', 'scale_volume', 'shift_sessions', 'acknowledge_checkin'] as BatchAction[]).map((key) => {
           const usable = offered.includes(key);
           const why = unavailableReason(key, selected);
           return (
@@ -231,6 +232,13 @@ export function BatchBar({
                   onFrom={(v) => { setFrom(v); setPreview(null); }}
                   onTo={(v) => { setTo(v); setPreview(null); }} />
               </>
+            )}
+
+            {action === 'acknowledge_checkin' && (
+              <p className="text-[13px] leading-relaxed text-ink-secondary sm:col-span-2">
+                Records that you have read these check-ins. Nothing is sent, and a
+                flagged check-in stays on your roster until you reply to it.
+              </p>
             )}
 
             {action === 'shift_sessions' && (
