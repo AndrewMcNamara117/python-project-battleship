@@ -165,7 +165,7 @@ describe('the digest job', () => {
 
 describe('the delivery job', () => {
   it('delivers in-app and records that it did', async () => {
-    await quietPrefs();
+    await quietPrefs({ channels: ['in_app'] });
     const { repo } = await getServiceRepo();
     await runCoachDigest(morning());
 
@@ -177,18 +177,31 @@ describe('the delivery job', () => {
     assert.equal(item.deliveries[0].state, 'delivered');
   });
 
-  it('calls an unconfigured channel unavailable, never delivered', async () => {
-    // the difference matters: "we could not reach you" and "we never had any
-    // way to" are different things to show a coach on their settings screen
+  it('emails by default, without the coach having to opt in', async () => {
+    // the objective of the whole slice: a coach who is not logged in still
+    // finds out. Requiring them to log in and opt into that would be circular.
+    await quietPrefs();
+    await runCoachDigest(morning());
+
+    const report = await runDeliveries();
+    assert.ok(report.items.some((i) => i.kind === 'email'),
+      JSON.stringify(report.items.map((i) => i.kind)));
+  });
+
+  it('simulates email in demo mode and says so, never claiming delivery', async () => {
+    // demo mode has to show a coach where email would appear. What it must
+    // never do is imply one was sent.
     await quietPrefs({ channels: ['in_app', 'email'] });
     await runCoachDigest(morning());
 
     const report = await runDeliveries();
     const email = report.items.find((i) => i.kind === 'email');
     assert.ok(email);
-    assert.equal(email.outcome, 'unavailable');
-    assert.match(email.detail ?? '', /not configured/);
+    assert.equal(email.outcome, 'sent', 'handed off, not delivered');
     assert.notEqual(email.outcome, 'delivered');
+    assert.match(email.detail ?? '', /DEMO/);
+    assert.match(email.detail ?? '', /simulated/i);
+    assert.match(email.detail ?? '', /demo_/, 'and the message id cannot pass for a real one');
   });
 
   it('does not re-deliver what it already delivered', async () => {

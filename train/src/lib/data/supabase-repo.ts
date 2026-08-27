@@ -63,10 +63,11 @@ import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries } from '@/lib/domain/roster';
 import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
+import { MAX_ATTEMPTS } from '@/lib/domain/retry';
 import type {
-  ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
+  ChannelName, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { NotificationItem, PendingDelivery } from './repo';
+import type { DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -2383,8 +2384,8 @@ export class SupabaseRepo implements IronMilesRepo {
       p_athlete: draft.athleteId,
       p_signal_kind: draft.signalKind,
       p_deliver_after: draft.deliverAfter,
-      p_payload: null,
-      p_channels: (await this.getNotificationPreferences(draft.userId)).channels,
+      p_payload: draft.payload,
+      p_channels: draft.channels,
     });
     if (error) throw new Error(error.message);
     return (data as UUID | null) ?? null;
@@ -2427,22 +2428,22 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
   }
 
-  async listPendingDeliveries(limit = 100): Promise<PendingDelivery[]> {
+  async listPendingDeliveries(limit = 100, now = new Date().toISOString()): Promise<PendingDelivery[]> {
     const { data, error } = await this.db
       .from('notification_deliveries')
-      .select('*, notification:notifications(*, athlete:profiles!notifications_athlete_id_fkey(full_name)), recipient:profiles!notification_deliveries_user_id_fkey(email)')
-      .eq('state', 'pending')
-      // three attempts and it stops: a channel that has failed three times is
-      // not going to work on the fourth, and the record says why
-      .lt('attempts', 3)
+      .select('*, notification:notifications(*, athlete:profiles!notifications_athlete_id_fkey(full_name)), recipient:profiles!notification_deliveries_user_id_fkey(email, full_name)')
+      // 'failed' is included on purpose: it means "failed, and worth another
+      // go". Anything given up on is 'failed_permanent' and never returns here.
+      .in('state', ['pending', 'failed'])
+      .lt('attempts', MAX_ATTEMPTS)
       .order('created_at')
       .limit(limit);
     if (error) throw new Error(error.message);
 
-    const now = new Date().toISOString();
     return (data ?? [])
-      // held by quiet hours until their own time comes
+      // held by quiet hours, or backing off after a failure
       .filter((r: any) => !r.notification?.deliver_after || r.notification.deliver_after <= now)
+      .filter((r: any) => !r.next_attempt_at || r.next_attempt_at <= now)
       .map((r: any) => ({
         deliveryId: r.id,
         notificationId: r.notification_id,
@@ -2450,6 +2451,7 @@ export class SupabaseRepo implements IronMilesRepo {
         attempts: r.attempts,
         userId: r.user_id,
         recipientEmail: r.recipient?.email ?? null,
+        recipientName: r.recipient?.full_name ?? null,
         athleteName: r.notification?.athlete?.full_name ?? null,
         draft: {
           userId: r.user_id,
@@ -2462,15 +2464,33 @@ export class SupabaseRepo implements IronMilesRepo {
           href: r.notification?.href ?? '/coach',
           dedupeKey: r.notification?.dedupe_key ?? '',
           deliverAfter: r.notification?.deliver_after ?? null,
+          payload: (r.notification?.payload ?? null) as NotificationPayload | null,
         },
       }));
   }
 
-  async recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void> {
-    const { error } = await this.db.rpc('im_record_delivery', {
-      p_delivery: deliveryId, p_state: state, p_detail: detail,
+  async recordAttempt(deliveryId: UUID, attempt: DeliveryAttempt): Promise<void> {
+    const { error } = await this.db.rpc('im_record_attempt', {
+      p_delivery: deliveryId,
+      p_state: attempt.state,
+      p_detail: attempt.detail,
+      p_provider: attempt.provider ?? null,
+      p_message_id: attempt.providerMessageId ?? null,
+      p_retry_at: attempt.nextAttemptAt ?? null,
     });
     if (error) throw new Error(error.message);
+  }
+
+  async recordProviderStatus(
+    providerMessageId: string, status: string, detail?: string,
+  ): Promise<boolean> {
+    const { data, error } = await this.db.rpc('im_record_provider_status', {
+      p_message_id: providerMessageId,
+      p_status: status,
+      p_detail: detail ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return data === true;
   }
 
   async listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]> {

@@ -7,9 +7,10 @@ import {
   digestDue,
   localParts,
 } from '@/lib/domain/notifications';
-import { channelFor } from './channels';
+import { availableChannels, channelFor } from './channels';
+import { decideRetry, idempotencyKeyFor } from '@/lib/domain/retry';
 import type { IronMilesRepo } from '@/lib/data/repo';
-import type { NotificationDraft } from '@/lib/domain/notifications';
+import type { NotificationDraft, NotificationPreferences } from '@/lib/domain/notifications';
 
 /**
  * THE THREE JOBS
@@ -43,12 +44,19 @@ export interface NotificationJobReport {
   suppressed: number;
   /** Written, but not to be delivered until quiet hours end. */
   held: number;
+  /** Handed to a provider that accepted it. Not the same as delivered. */
+  sent: number;
+  /** Failed and scheduled for another go. */
+  retrying: number;
+  /** Failed for good. Still on the record, never silently dropped. */
+  failed: number;
   /** Per-item detail, so a run can be read rather than trusted. */
   items: {
     userId: string;
     kind: string;
     title: string;
-    outcome: 'created' | 'suppressed' | 'held' | 'delivered' | 'failed' | 'unavailable';
+    outcome: 'created' | 'suppressed' | 'held' | 'sent' | 'delivered'
+           | 'retrying' | 'failed' | 'unavailable';
     detail?: string;
   }[];
 }
@@ -62,6 +70,9 @@ function emptyReport(job: string, dryRun: boolean): NotificationJobReport {
     created: 0,
     suppressed: 0,
     held: 0,
+    sent: 0,
+    retrying: 0,
+    failed: 0,
     items: [],
   };
 }
@@ -70,9 +81,14 @@ function emptyReport(job: string, dryRun: boolean): NotificationJobReport {
 async function record(
   repo: IronMilesRepo,
   draft: NotificationDraft,
+  prefs: NotificationPreferences,
   report: NotificationJobReport,
 ): Promise<string | null> {
-  const id = await repo.createNotification(draft);
+  // the coach's choice, narrowed to what this deployment can attempt
+  const usable = new Set(availableChannels());
+  const channels = prefs.channels.filter((c) => usable.has(c));
+
+  const id = await repo.createNotification({ ...draft, channels });
 
   if (id === null) {
     // the coach has already been told this exact thing; saying it twice is
@@ -117,7 +133,7 @@ export async function runCoachAlerts(now = new Date()): Promise<NotificationJobR
     report.processed += 1;
 
     for (const draft of alertsFor(roster, prefs, now)) {
-      await record(repo, draft, report);
+      await record(repo, draft, prefs, report);
     }
   }
 
@@ -162,7 +178,7 @@ export async function runCoachDigest(now = new Date()): Promise<NotificationJobR
       continue;
     }
 
-    await record(repo, draft, report);
+    await record(repo, draft, prefs, report);
     await repo.markDigestSent(coach.userId, local.date);
   }
 
@@ -177,11 +193,11 @@ export async function runCoachDigest(now = new Date()): Promise<NotificationJobR
  * it because a channel said so. A notification row is not a delivery.
  * ========================================================== */
 
-export async function runDeliveries(limit = 100): Promise<NotificationJobReport> {
+export async function runDeliveries(limit = 100, now = new Date()): Promise<NotificationJobReport> {
   const { repo, dryRun } = await getServiceRepo();
   const report = emptyReport('notification-delivery', dryRun);
 
-  for (const pending of await repo.listPendingDeliveries(limit)) {
+  for (const pending of await repo.listPendingDeliveries(limit, now.toISOString())) {
     report.processed += 1;
     const channel = channelFor(pending.channel);
 
@@ -192,7 +208,7 @@ export async function runDeliveries(limit = 100): Promise<NotificationJobReport>
       const detail = channel
         ? `${pending.channel} is not configured in this environment.`
         : `Unknown channel ${pending.channel}.`;
-      await repo.recordDelivery(pending.deliveryId, 'unavailable', detail);
+      await repo.recordAttempt(pending.deliveryId, { state: 'unavailable', detail });
       report.items.push({
         userId: pending.userId, kind: pending.channel,
         title: pending.draft.title, outcome: 'unavailable', detail,
@@ -203,18 +219,60 @@ export async function runDeliveries(limit = 100): Promise<NotificationJobReport>
     const outcome = await channel.send({
       draft: pending.draft,
       recipientEmail: pending.recipientEmail,
+      recipientName: pending.recipientName,
       athleteName: pending.athleteName,
+      // the delivery row's own id, so a restart between "provider accepted" and
+      // "outcome recorded" cannot produce a second email
+      idempotencyKey: idempotencyKeyFor(pending.deliveryId),
     });
 
-    await repo.recordDelivery(pending.deliveryId, outcome.state, outcome.detail);
+    if (outcome.state === 'failed' || outcome.state === 'failed_permanent') {
+      const decision = decideRetry(
+        pending.attempts,
+        outcome.state === 'failed_permanent',
+        outcome.retryAfterSeconds,
+        now,
+      );
+      const detail = `${outcome.detail} ${decision.note}`;
+
+      await repo.recordAttempt(pending.deliveryId, {
+        state: decision.state,
+        detail,
+        provider: outcome.provider,
+        providerMessageId: outcome.providerMessageId,
+        nextAttemptAt: decision.nextAttemptAt,
+      });
+
+      if (decision.state === 'failed_permanent') report.failed += 1;
+      else report.retrying += 1;
+
+      report.items.push({
+        userId: pending.userId, kind: pending.channel, title: pending.draft.title,
+        outcome: decision.state === 'failed_permanent' ? 'failed' : 'retrying',
+        detail,
+      });
+      continue;
+    }
+
+    await repo.recordAttempt(pending.deliveryId, {
+      state: outcome.state,
+      detail: outcome.detail,
+      provider: outcome.provider,
+      providerMessageId: outcome.providerMessageId,
+      nextAttemptAt: null,
+    });
+
     if (outcome.state === 'delivered') report.created += 1;
+    else report.sent += 1;
 
     report.items.push({
       userId: pending.userId,
       kind: pending.channel,
       title: pending.draft.title,
       outcome: outcome.state,
-      detail: outcome.detail,
+      detail: outcome.providerMessageId
+        ? `${outcome.detail} (${outcome.provider} id ${outcome.providerMessageId})`
+        : outcome.detail,
     });
   }
 

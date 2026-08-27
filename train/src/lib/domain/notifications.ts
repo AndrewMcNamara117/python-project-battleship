@@ -55,12 +55,86 @@ export const DEFAULT_PREFERENCES: Omit<NotificationPreferences, 'userId'> = {
   alertReportedPain: true,
   quietFrom: 22,
   quietUntil: 7,
-  channels: ['in_app'],
+  // Email is on by default, deliberately. The point of an external channel is
+  // reaching a coach who is not looking at Iron Miles — and a coach who has to
+  // log in to opt into being told is exactly the coach it would never reach.
+  // Every switch on this screen is theirs to turn off, and quiet hours are on
+  // by default so "by default" never means "at two in the morning".
+  channels: ['in_app', 'email'],
 };
 
 export type ChannelName = 'in_app' | 'email';
 
-export type DeliveryStatus = 'pending' | 'delivered' | 'failed' | 'unavailable';
+/**
+ * `sent` and `delivered` are deliberately different states. A provider
+ * accepting a message is a handoff; only a delivery webhook is evidence it
+ * reached a mailbox, and a deployment without webhooks stops honestly at
+ * `sent` rather than promoting itself.
+ */
+export type DeliveryStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'failed'
+  | 'failed_permanent'
+  | 'unavailable';
+
+/**
+ * Structured detail travelling with a notification.
+ *
+ * It exists because email must not re-read an athlete's words. The in-app card
+ * shows `body`, which quotes them; an email renders from this instead, which
+ * carries signal *kinds* and never free text. Storing it at creation also
+ * means the email says what the digest said — recomposing at delivery time
+ * would produce a different digest from the one in the coach's feed.
+ */
+export interface AlertPayload {
+  kind: 'alert';
+  athleteName: string;
+  signals: SignalKind[];
+}
+
+export interface DigestPayload {
+  kind: 'digest';
+  digest: Digest;
+}
+
+export type NotificationPayload = AlertPayload | DigestPayload;
+
+/**
+ * What each signal may be called outside a login.
+ *
+ * Every string here goes into an email. None of them names a body part, a
+ * score, or anything an athlete wrote. "Reported a niggle" is the most a
+ * subject line or an unauthenticated preview will ever say.
+ */
+export const EXTERNAL_SIGNAL_LABEL: Record<SignalKind, string> = {
+  no_programme: 'waiting on a programme',
+  no_future_sessions: 'nothing scheduled ahead',
+  programme_ending: 'programme ending soon',
+  checkin_flagged: 'check-in flagged for review',
+  checkin_unreviewed: 'check-in not yet read',
+  soreness_reported: 'reported a niggle',
+  missed_repeated: 'missing sessions',
+  missed_key_session: 'missed a key session',
+  not_training: 'not training',
+  race_approaching: 'race approaching',
+  unread_message: 'unread message',
+};
+
+/**
+ * A name for an external channel: first name, last initial.
+ *
+ * An email subject sitting in a preview pane is read by whoever is near the
+ * screen. "Aoife D." is enough for the coach to know who, and less than a full
+ * name to anyone else.
+ */
+export function externalName(fullName: string | null): string {
+  if (!fullName) return 'An athlete';
+  const [first, ...rest] = fullName.trim().split(/\s+/);
+  const last = rest[rest.length - 1];
+  return last ? `${first} ${last[0].toUpperCase()}.` : first;
+}
 
 /** What one notification says, before any channel gets hold of it. */
 export interface NotificationDraft {
@@ -83,6 +157,15 @@ export interface NotificationDraft {
   dedupeKey: string;
   /** Held until this moment, for quiet hours. Null sends immediately. */
   deliverAfter: ISOTimestamp | null;
+  /** Structured detail for channels that cannot carry the athlete's words. */
+  payload: NotificationPayload | null;
+  /**
+   * Where this one goes: the coach's preference, narrowed to what this
+   * deployment can actually attempt. Queueing a delivery that could only ever
+   * record itself unavailable is litter, not honesty — the settings screen is
+   * where a coach is told a channel is not set up.
+   */
+  channels: ChannelName[];
 }
 
 /* ---------- local time, without lying about offsets ---------- */
@@ -231,6 +314,14 @@ export function alertsFor(
       href: lead.href,
       dedupeKey: alertKey(entry),
       deliverAfter: held,
+      payload: {
+        kind: 'alert',
+        athleteName: entry.fullName,
+        signals: raised.map((s) => s.kind),
+      },
+      // the coach's stated preference; the job narrows it to what this
+      // deployment can actually attempt
+      channels: prefs.channels,
     });
   }
 
@@ -259,7 +350,10 @@ export interface DigestItem {
   athleteId: UUID;
   athleteName: string;
   priority: Severity;
+  /** Full sentences, for the notification centre. May quote the athlete. */
   reasons: string[];
+  /** The same reasons as kinds, for channels that must not quote anyone. */
+  kinds: SignalKind[];
   href: string;
 }
 
@@ -311,6 +405,7 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
       athleteName: entry.fullName,
       priority: entry.topSignal?.severity ?? 'information',
       reasons: entry.signals.filter((s) => s.severity !== 'information').map((s) => s.detail),
+      kinds: entry.signals.filter((s) => s.severity !== 'information').map((s) => s.kind),
       href: `/coach/athletes/${entry.athleteId}`,
     })),
     // stated once, in the roster's own words
@@ -350,6 +445,8 @@ export function digestDraft(digest: Digest, prefs: NotificationPreferences): Not
     // one digest per coach per local day, whatever else happens
     dedupeKey: `digest:${digest.localDate}`,
     deliverAfter: null,
+    payload: { kind: 'digest', digest },
+    channels: prefs.channels,
   };
 }
 

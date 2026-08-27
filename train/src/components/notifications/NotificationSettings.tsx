@@ -37,9 +37,12 @@ const CHANNEL_LABEL: Record<ChannelName, string> = {
 export function NotificationSettings({
   preferences,
   available,
+  descriptions,
 }: {
   preferences: NotificationPreferences;
   available: ChannelName[];
+  /** What each channel would actually do here, in words. */
+  descriptions: Record<ChannelName, string>;
 }) {
   const [form, setForm] = useState({
     digestEnabled: preferences.digestEnabled,
@@ -191,24 +194,31 @@ export function NotificationSettings({
       <Panel className="p-6">
         <h2 className="im-display text-[17px]">Where</h2>
         <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-ink-secondary">
-          Only channels this deployment can actually send on are offered. If a
-          channel is not set up, it is shown here as unavailable rather than
-          switched on and quietly ignored.
+          Only channels this deployment can actually send on are offered, and
+          each one says what it would really do. A channel that is not set up is
+          shown as unavailable rather than switched on and quietly ignored.
         </p>
 
         <div className="mt-5 space-y-4">
           {(['in_app', 'email'] as ChannelName[]).map((channel) => {
             const usable = available.includes(channel);
+            const simulated = /simulated/i.test(descriptions[channel]);
             return (
-              <div key={channel} className="flex flex-wrap items-center gap-3">
-                <Checkbox
-                  label={CHANNEL_LABEL[channel]}
-                  checked={usable && form.channels.includes(channel)}
-                  disabled={!usable || channel === 'in_app'}
-                  onChange={(e) => toggleChannel(channel, e.target.checked)}
-                />
-                {channel === 'in_app' && <Badge tone="green">Always on</Badge>}
-                {!usable && <Badge tone="warn">Not set up on this deployment</Badge>}
+              <div key={channel} className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <Checkbox
+                    label={CHANNEL_LABEL[channel]}
+                    checked={usable && form.channels.includes(channel)}
+                    disabled={!usable || channel === 'in_app'}
+                    onChange={(e) => toggleChannel(channel, e.target.checked)}
+                  />
+                  {channel === 'in_app' && <Badge tone="green">Always on</Badge>}
+                  {simulated && <Badge tone="warn">Simulated</Badge>}
+                  {!usable && <Badge tone="warn">Not set up on this deployment</Badge>}
+                </div>
+                <p className="pl-7 text-[12px] leading-relaxed text-ink-tertiary">
+                  {descriptions[channel]}
+                </p>
               </div>
             );
           })}

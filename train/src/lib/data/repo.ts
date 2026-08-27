@@ -122,11 +122,24 @@ export interface PendingDelivery {
   deliveryId: UUID;
   notificationId: UUID;
   channel: ChannelName;
+  /** Attempts already recorded. Drives the backoff and the give-up point. */
   attempts: number;
   userId: UUID;
   recipientEmail: string | null;
+  recipientName: string | null;
   athleteName: string | null;
-  draft: NotificationDraft;
+  /** Without `channels`: a pending delivery is already about exactly one. */
+  draft: Omit<NotificationDraft, 'channels'>;
+}
+
+/** One send attempt and everything worth keeping about it. */
+export interface DeliveryAttempt {
+  state: DeliveryStatus;
+  detail: string;
+  provider?: string;
+  providerMessageId?: string;
+  /** Set only for a retryable failure. Null clears any existing backoff. */
+  nextAttemptAt?: ISOTimestamp | null;
 }
 
 export interface IronMilesRepo {
@@ -436,8 +449,20 @@ export interface IronMilesRepo {
   setNotificationState(id: UUID, state: 'pending' | 'read' | 'dismissed'): Promise<void>;
 
   /** Deliveries waiting to go out, past any quiet-hours hold. */
-  listPendingDeliveries(limit?: number): Promise<PendingDelivery[]>;
-  recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void>;
+  /**
+   * Deliveries the worker may attempt right now: never attempted, or failed
+   * and past their backoff. Anything sent, delivered, given up on or held for
+   * quiet hours is excluded.
+   */
+  listPendingDeliveries(limit?: number, now?: ISOTimestamp): Promise<PendingDelivery[]>;
+  recordAttempt(deliveryId: UUID, attempt: DeliveryAttempt): Promise<void>;
+
+  /**
+   * A provider's later report about a message it already accepted. Returns
+   * true when it changed the delivery's state — a duplicate or out-of-order
+   * event returns false rather than raising.
+   */
+  recordProviderStatus(providerMessageId: string, status: string, detail?: string): Promise<boolean>;
 
   /** Which coaches have a roster to summarise, for the digest job. */
   listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]>;

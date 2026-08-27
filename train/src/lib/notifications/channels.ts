@@ -1,7 +1,7 @@
 import 'server-only';
-import { optionalServerEnv } from '@/lib/env';
-import { externalPreview, externalSubject } from '@/lib/domain/notifications';
-import type { ChannelName, NotificationDraft } from '@/lib/domain/notifications';
+import { emailProvider } from './email';
+import { renderEmail } from './email/render';
+import type { ChannelName, NotificationDraft, NotificationPayload } from '@/lib/domain/notifications';
 
 /**
  * How a notification reaches a coach.
@@ -13,21 +13,38 @@ import type { ChannelName, NotificationDraft } from '@/lib/domain/notifications'
  */
 
 export interface DeliveryOutcome {
-  state: 'delivered' | 'failed' | 'unavailable';
+  /**
+   * `delivered` is only claimed when the channel genuinely knows. Email
+   * reports `sent` — the provider accepted it — and is upgraded to
+   * `delivered` later by a webhook, or never, honestly.
+   */
+  state: 'sent' | 'delivered' | 'failed' | 'failed_permanent' | 'unavailable';
   detail: string;
-  /** Worth trying again — a timeout, a 500. A bad address is not. */
-  retryable: boolean;
+  /** Recorded on the delivery row so "which provider handled it" is answerable. */
+  provider?: string;
+  providerMessageId?: string;
+  /** The provider's own hint, honoured over our backoff schedule. */
+  retryAfterSeconds?: number;
+}
+
+export interface ChannelSendInput {
+  draft: Pick<NotificationDraft, 'kind' | 'priority' | 'href' | 'title' | 'body'> & {
+    payload: NotificationPayload | null;
+  };
+  recipientEmail: string | null;
+  recipientName: string | null;
+  athleteName: string | null;
+  /** Stable across retries of this delivery. */
+  idempotencyKey: string;
 }
 
 export interface Channel {
   name: ChannelName;
   /** False when nothing is configured. Honest, rather than a silent no-op. */
   available(): boolean;
-  send(input: {
-    draft: NotificationDraft;
-    recipientEmail: string | null;
-    athleteName: string | null;
-  }): Promise<DeliveryOutcome>;
+  /** What a coach is told this channel will do, on the settings screen. */
+  describe(): string;
+  send(input: ChannelSendInput): Promise<DeliveryOutcome>;
 }
 
 /**
@@ -40,67 +57,84 @@ export interface Channel {
 export const inAppChannel: Channel = {
   name: 'in_app',
   available: () => true,
+  describe: () => 'Always on.',
   async send() {
-    return { state: 'delivered', detail: 'Shown in Iron Miles.', retryable: false };
+    return { state: 'delivered', detail: 'Shown in Iron Miles.', provider: 'in_app' };
   },
 };
 
 /**
  * Email.
  *
- * No provider is configured in this environment, and this says so rather than
- * reporting a send that did not happen. When one is added, only the `send`
- * body below changes — the domain, the jobs and the preference model already
- * treat email as a real channel.
+ * Everything vendor-specific lives under `./email`. This function's job is the
+ * part that must not vary by vendor: refuse when nothing is configured, refuse
+ * when there is nobody to send to, and render from the structured payload so
+ * an athlete's own words can never reach an inbox.
  */
 export const emailChannel: Channel = {
   name: 'email',
 
-  available: () => Boolean(optionalServerEnv('EMAIL_PROVIDER_KEY')),
+  available: () => emailProvider() !== null,
 
-  async send({ draft, recipientEmail, athleteName }) {
-    if (!emailChannel.available()) {
+  describe() {
+    const provider = emailProvider();
+    if (!provider) return 'Not set up on this deployment.';
+    if (provider.name === 'demo') return 'Simulated in demo mode — nothing is sent.';
+
+    const sender = provider.sender();
+    return sender.verified
+      ? `Sent from ${sender.from.address}.`
+      : `Set up, but ${sender.from.address} is not verified yet.`;
+  },
+
+  async send({ draft, recipientEmail, recipientName, idempotencyKey }): Promise<DeliveryOutcome> {
+    const provider = emailProvider();
+    if (!provider) {
       return {
         state: 'unavailable',
         detail: 'No email provider is configured, so nothing was sent.',
-        retryable: false,
       };
     }
     if (!recipientEmail) {
-      return { state: 'failed', detail: 'That coach has no email address.', retryable: false };
-    }
-
-    // What would go out. Composed here so the privacy rule — no health detail
-    // in a subject line or preview — is enforced at the boundary rather than
-    // trusted to whoever writes the provider call.
-    const subject = externalSubject(draft, athleteName);
-    const preview = externalPreview(draft);
-
-    try {
-      const outcome = await sendViaProvider({ to: recipientEmail, subject, preview, href: draft.href });
-      return outcome;
-    } catch (error) {
       return {
-        state: 'failed',
-        detail: error instanceof Error ? error.message : 'The email provider did not respond.',
-        retryable: true,
+        state: 'failed_permanent',
+        detail: 'That coach has no email address on their profile.',
+        provider: provider.name,
       };
     }
+
+    // A notification with no payload cannot be rendered without falling back to
+    // `body`, which quotes the athlete. Refusing is the correct outcome: the
+    // coach still has it in Iron Miles, and nothing private left the building.
+    const rendered = renderEmail(draft, recipientName);
+    if (!rendered) {
+      return {
+        state: 'failed_permanent',
+        detail: 'Nothing to render: this notification carries no email payload.',
+        provider: provider.name,
+      };
+    }
+
+    const result = await provider.send({
+      to: recipientEmail,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      replyTo: provider.sender().replyTo ?? undefined,
+      idempotencyKey,
+      // labels for the provider's dashboard; nothing here names a person
+      tags: { kind: draft.kind, priority: draft.priority },
+    });
+
+    return {
+      state: result.state,
+      detail: result.detail,
+      provider: provider.name,
+      providerMessageId: result.providerMessageId,
+      retryAfterSeconds: result.retryAfterSeconds,
+    };
   },
 };
-
-/**
- * The one place a vendor would appear.
- *
- * Unreachable today: `available()` returns false without a key, so nothing
- * calls this. It is here so the shape of the integration is settled and the
- * failure paths around it are already written and tested.
- */
-async function sendViaProvider(_input: {
-  to: string; subject: string; preview: string; href: string;
-}): Promise<DeliveryOutcome> {
-  throw new Error('No email provider is wired up yet.');
-}
 
 const CHANNELS: Record<ChannelName, Channel> = {
   in_app: inAppChannel,
@@ -114,4 +148,12 @@ export function channelFor(name: ChannelName): Channel {
 /** What a coach can actually choose, so the settings screen cannot offer a lie. */
 export function availableChannels(): ChannelName[] {
   return (Object.keys(CHANNELS) as ChannelName[]).filter((name) => CHANNELS[name].available());
+}
+
+/** What each channel would do here, in words a coach can read. */
+export function channelDescriptions(): Record<ChannelName, string> {
+  return {
+    in_app: inAppChannel.describe(),
+    email: emailChannel.describe(),
+  };
 }

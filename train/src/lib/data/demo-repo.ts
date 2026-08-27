@@ -77,10 +77,11 @@ import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries, KEY_SESSION_TYPES } from '@/lib/domain/roster';
 import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
+import { MAX_ATTEMPTS } from '@/lib/domain/retry';
 import type {
-  ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
+  ChannelName, DeliveryStatus, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { NotificationItem, PendingDelivery } from './repo';
+import type { DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -172,10 +173,17 @@ export function resetDemoData(): void {
  */
 interface DemoNotificationStore {
   prefs: Map<UUID, NotificationPreferences>;
-  notifications: (NotificationItem & { dedupeKey: string; deliverAfter: string | null })[];
+  notifications: (NotificationItem & {
+    dedupeKey: string;
+    deliverAfter: string | null;
+    payload: NotificationPayload | null;
+  })[];
   deliveries: {
     id: UUID; notificationId: UUID; userId: UUID; channel: ChannelName;
     state: DeliveryStatus; attempts: number; detail: string | null;
+    provider: string | null; providerMessageId: string | null;
+    providerStatus: string | null; nextAttemptAt: string | null;
+    deliveredAt: string | null;
   }[];
   owners: Map<UUID, UUID>;
   lastDigest: Map<UUID, ISODate>;
@@ -2494,13 +2502,16 @@ export class DemoRepo implements IronMilesRepo {
       deliveries: [],
       dedupeKey: draft.dedupeKey,
       deliverAfter: draft.deliverAfter,
+      payload: draft.payload,
     });
     notes().owners.set(id, draft.userId);
 
-    for (const channel of (await this.getNotificationPreferences(draft.userId)).channels) {
+    for (const channel of draft.channels) {
       notes().deliveries.push({
         id: uid('del'), notificationId: id, userId: draft.userId,
         channel, state: 'pending', attempts: 0, detail: null,
+        provider: null, providerMessageId: null, providerStatus: null,
+        nextAttemptAt: null, deliveredAt: null,
       });
     }
     return id;
@@ -2530,10 +2541,14 @@ export class DemoRepo implements IronMilesRepo {
     if (note) note.state = state;
   }
 
-  async listPendingDeliveries(limit = 100): Promise<PendingDelivery[]> {
-    const now = new Date().toISOString();
+  async listPendingDeliveries(
+    limit = 100, now = new Date().toISOString(),
+  ): Promise<PendingDelivery[]> {
     return notes().deliveries
-      .filter((d) => d.state === 'pending' && d.attempts < 3)
+      // 'failed' means "failed, and worth another go"; 'failed_permanent'
+      // never comes back here, and stays visible with its last reason
+      .filter((d) => (d.state === 'pending' || d.state === 'failed') && d.attempts < MAX_ATTEMPTS)
+      .filter((d) => !d.nextAttemptAt || d.nextAttemptAt <= now)
       .map((d) => ({ d, n: notes().notifications.find((x) => x.id === d.notificationId) }))
       .filter(({ n }) => n && (!n.deliverAfter || n.deliverAfter <= now))
       .slice(0, limit)
@@ -2544,22 +2559,58 @@ export class DemoRepo implements IronMilesRepo {
         attempts: d.attempts,
         userId: d.userId,
         recipientEmail: dataset().profiles.find((p) => p.id === d.userId)?.email ?? null,
+        recipientName: dataset().profiles.find((p) => p.id === d.userId)?.fullName ?? null,
         athleteName: n!.athleteName,
         draft: {
           userId: d.userId, kind: n!.kind, priority: n!.priority,
           athleteId: n!.athleteId, signalKind: n!.signalKind as never,
           title: n!.title, body: n!.body, href: n!.href,
           dedupeKey: n!.dedupeKey, deliverAfter: n!.deliverAfter,
+          payload: n!.payload,
         },
       }));
   }
 
-  async recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void> {
+  async recordAttempt(deliveryId: UUID, attempt: DeliveryAttempt): Promise<void> {
     const delivery = notes().deliveries.find((d) => d.id === deliveryId);
     if (!delivery) return;
-    delivery.state = state;
-    delivery.detail = detail;
+
+    delivery.state = attempt.state;
+    delivery.detail = attempt.detail;
     delivery.attempts += 1;
+    delivery.provider = attempt.provider ?? delivery.provider;
+    // never overwrite a real id with a null from a later failed attempt
+    delivery.providerMessageId = attempt.providerMessageId ?? delivery.providerMessageId;
+    delivery.nextAttemptAt = attempt.state === 'failed' ? (attempt.nextAttemptAt ?? null) : null;
+    if (attempt.state === 'delivered') delivery.deliveredAt = new Date().toISOString();
+  }
+
+  async recordProviderStatus(
+    providerMessageId: string, status: string, detail?: string,
+  ): Promise<boolean> {
+    const delivery = notes().deliveries.find((d) => d.providerMessageId === providerMessageId);
+    // an event for a message this deployment never sent is not an error
+    if (!delivery) return false;
+
+    delivery.providerStatus = status;
+
+    if (status === 'delivered' && delivery.state === 'sent') {
+      delivery.state = 'delivered';
+      delivery.detail = detail ?? 'Delivered to the mailbox.';
+      delivery.deliveredAt = new Date().toISOString();
+      delivery.nextAttemptAt = null;
+      return true;
+    }
+
+    if ((status === 'bounced' || status === 'complained')
+        && (delivery.state === 'sent' || delivery.state === 'failed')) {
+      delivery.state = 'failed_permanent';
+      delivery.detail = detail ?? 'The provider reported a permanent failure.';
+      delivery.nextAttemptAt = null;
+      return true;
+    }
+
+    return false;
   }
 
   async listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]> {

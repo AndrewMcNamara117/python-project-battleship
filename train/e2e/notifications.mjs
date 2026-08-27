@@ -140,11 +140,24 @@ try {
   /* ---- honest about what this deployment can do ---- */
 
   console.log('\nhonesty about channels');
-  check('email is shown as unavailable rather than offered',
-    /not set up on this deployment/i.test(body));
+  // This suite runs against both shapes of deployment: with an email provider
+  // configured and without one. The claim is not that email is off — it is
+  // that whatever the screen says is true of this deployment.
   const emailBox = p.getByLabel('Email');
-  check('and the switch cannot be turned on', await emailBox.isDisabled());
+  const emailOffered = !(await emailBox.isDisabled());
+
   check('in-app is always on', /always on/i.test(body));
+
+  if (emailOffered) {
+    check('a configured channel says what it would really do',
+      /sent from|not verified yet|simulated/i.test(body));
+    check('and it is not claimed as verified unless it is',
+      !/not verified yet/i.test(body) || !/sent from/i.test(body));
+  } else {
+    check('an unavailable channel is shown as unavailable rather than offered',
+      /not set up on this deployment/i.test(body));
+    check('and its switch cannot be turned on', await emailBox.isDisabled());
+  }
 
   /* ---- saving ---- */
 

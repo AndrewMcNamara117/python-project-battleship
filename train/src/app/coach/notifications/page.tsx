@@ -4,7 +4,7 @@ import { NotificationFeed } from '@/components/notifications/NotificationFeed';
 import { NotificationSettings } from '@/components/notifications/NotificationSettings';
 import { requireCoach } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
-import { availableChannels } from '@/lib/notifications/channels';
+import { availableChannels, channelDescriptions } from '@/lib/notifications/channels';
 
 export const metadata: Metadata = { title: 'Notifications' };
 
@@ -41,7 +41,11 @@ export default async function NotificationsPage() {
 
         <section aria-label="Notification preferences">
           <h2 className="im-eyebrow mb-4">How you are told</h2>
-          <NotificationSettings preferences={preferences} available={availableChannels()} />
+          <NotificationSettings
+            preferences={preferences}
+            available={availableChannels()}
+            descriptions={channelDescriptions()}
+          />
         </section>
       </div>
     </AppPage>
