@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { IronMilesLogo } from '@/components/brand/IronMilesLogo';
 import { NavIcon } from './NavIcon';
-import { MOBILE_NAV, NAV_GROUPS, type NavItem } from './nav-config';
+import { NAV_GROUPS, type NavItem } from './nav-config';
 
 function isActive(pathname: string, href: string) {
   return href === '/app' || href === '/coach' ? pathname === href : pathname.startsWith(href);
@@ -65,7 +65,7 @@ function Rail({ items, sub }: { items: NavItem[]; sub: string }) {
 }
 
 /** Mobile bottom navigation — five destinations, thumb-reachable, safe-area aware. */
-function BottomNav() {
+function BottomNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const reduced = useReducedMotion();
 
@@ -75,7 +75,7 @@ function BottomNav() {
       className="im-safe-b fixed inset-x-0 bottom-0 z-60 border-t border-hairline bg-onyx/95 backdrop-blur-xl lg:hidden"
     >
       <ul className="grid grid-cols-5">
-        {MOBILE_NAV.map((item) => {
+        {items.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <li key={item.href}>
@@ -108,11 +108,14 @@ function BottomNav() {
 export function AppShell({
   children,
   items,
+  mobileItems,
   sub,
   topBar,
 }: {
   children: ReactNode;
   items: NavItem[];
+  /** Five destinations for the bottom bar — the same app the rail is showing. */
+  mobileItems: NavItem[];
   sub: string;
   topBar: ReactNode;
 }) {
@@ -125,7 +128,7 @@ export function AppShell({
           {children}
         </main>
       </div>
-      <BottomNav />
+      <BottomNav items={mobileItems} />
     </div>
   );
 }

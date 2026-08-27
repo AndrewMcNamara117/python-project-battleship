@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app/AppShell';
 import { TopBar } from '@/components/app/TopBar';
-import { ATHLETE_NAV } from '@/components/app/nav-config';
+import { ATHLETE_NAV, MOBILE_NAV } from '@/components/app/nav-config';
 import { getSession } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
 
@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AppShell
       items={ATHLETE_NAV}
+      mobileItems={MOBILE_NAV}
       sub="Training"
       topBar={
         <TopBar

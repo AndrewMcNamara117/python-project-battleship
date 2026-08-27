@@ -113,12 +113,37 @@ import type {
  * credentials are configured.
  */
 
-let cache: { day: ISODate; data: DemoDataset } | null = null;
+/**
+ * Held on globalThis rather than in a module variable.
+ *
+ * Next builds server components, server actions and route handlers into
+ * separate module graphs, so a plain module-scope variable is a *different*
+ * variable in each. That was invisible until the notification jobs arrived:
+ * the cron route wrote a digest into its own copy of the store and the
+ * coach's notification page, rendered in another, showed an empty feed —
+ * while both reported success. One object, reachable from every layer.
+ */
+const globalState = globalThis as typeof globalThis & {
+  __imDemoState?: {
+    cache: { day: ISODate; data: DemoDataset } | null;
+    notes: DemoNotificationStore | null;
+  };
+};
+
+function state() {
+  globalState.__imDemoState ??= { cache: null, notes: null };
+  return globalState.__imDemoState;
+}
 
 function dataset(): DemoDataset {
   const day = toISODate(new Date());
-  if (!cache || cache.day !== day) cache = { day, data: buildDemoDataset(day) };
-  return cache.data;
+  const s = state();
+  if (!s.cache || s.cache.day !== day) {
+    s.cache = { day, data: buildDemoDataset(day) };
+    // the feed belongs to the day it was built for
+    s.notes = null;
+  }
+  return s.cache.data;
 }
 
 /**
@@ -130,8 +155,8 @@ function dataset(): DemoDataset {
  * app does, because a coach mid-session would not thank us for it.
  */
 export function resetDemoData(): void {
-  cache = null;
-  noteStore = null;
+  state().cache = null;
+  state().notes = null;
 }
 
 /**
@@ -156,18 +181,15 @@ interface DemoNotificationStore {
   lastDigest: Map<UUID, ISODate>;
 }
 
-let noteStore: DemoNotificationStore | null = null;
-
 function notes(): DemoNotificationStore {
   // reading the dataset first so a date rollover clears the feed with it
   dataset();
-  if (!noteStore) {
-    noteStore = {
-      prefs: new Map(), notifications: [], deliveries: [],
-      owners: new Map(), lastDigest: new Map(),
-    };
-  }
-  return noteStore;
+  const s = state();
+  s.notes ??= {
+    prefs: new Map(), notifications: [], deliveries: [],
+    owners: new Map(), lastDigest: new Map(),
+  };
+  return s.notes;
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;

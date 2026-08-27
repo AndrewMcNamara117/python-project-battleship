@@ -42,7 +42,7 @@ export const NAV_GROUPS: { key: NavItem['group']; label: string }[] = [
   { key: 'account', label: 'Account' },
 ];
 
-export const COACH_NAV: NavItem[] = [
+const COACH_NAV_ITEMS: NavItem[] = [
   { href: '/coach', label: 'Overview', short: 'Home', icon: 'home', group: 'train' },
   { href: '/coach/athletes', label: 'Athletes', short: 'Athletes', icon: 'athletes', group: 'train' },
   { href: '/coach/applications', label: 'Applications', short: 'Intake', icon: 'checkin', group: 'train' },
@@ -53,4 +53,23 @@ export const COACH_NAV: NavItem[] = [
   { href: '/coach/strength', label: 'S&C library', short: 'Strength', icon: 'strength', group: 'progress' },
   { href: '/coach/races', label: 'Race calendar', short: 'Races', icon: 'board', group: 'club' },
   { href: '/coach/analytics', label: 'Analytics', short: 'Analytics', icon: 'chart', group: 'club' },
+  { href: '/coach/notifications', label: 'Notifications', short: 'Alerts', icon: 'checkin', group: 'account' },
+];
+
+export const COACH_NAV = COACH_NAV_ITEMS;
+
+/**
+ * The coach's five, for a phone.
+ *
+ * Coaches were being given the athlete's bottom bar — Today, Plan, Progress,
+ * FORGE, You — every one of which redirects them back out of the coach app.
+ * On a phone that made the notification centre unreachable, which is the one
+ * place a coach reads an alert.
+ */
+export const COACH_MOBILE_NAV: NavItem[] = [
+  COACH_NAV_ITEMS[0],  // Overview
+  COACH_NAV_ITEMS[1],  // Athletes
+  COACH_NAV_ITEMS[3],  // Check-ins
+  COACH_NAV_ITEMS[4],  // Messages
+  COACH_NAV_ITEMS[10], // Notifications
 ];

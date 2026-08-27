@@ -2,6 +2,10 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Next writes its own AGENTS.md and CLAUDE.md on every dev start. This
+  // repository already documents itself, and a generated file appearing in
+  // `git status` after every `npm run dev` is noise, not guidance.
+  agentRules: false,
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [{ protocol: 'https', hostname: 'ironmiles.ie' }],
