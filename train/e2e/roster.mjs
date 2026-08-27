@@ -97,17 +97,33 @@ try {
     /Check-in flagged/i,
     /Programme ends in \d+ days?\./i,
     /Nothing logged in \d+ days?\./i,
-    /in \d+ days?\./i,
     /nothing scheduled from today/i,
     /Joined .* no programme yet\./i,
+    // one problem several athletes share is stated once
+    /\d+ athletes are waiting on a programme\./i,
+    /\d+ programmes end within the month\./i,
+    /\d+ athletes have a race coming up\./i,
   ];
-  check('every athlete surfaced says why in a sentence',
-    explained.some((r) => r.test(attentionText)), attentionText.slice(0, 200));
+  check('everything surfaced says why in a sentence',
+    explained.some((r) => r.test(attentionText)), attentionText.replace(/\n/g, ' | ').slice(0, 220));
+
+  /* ---- a problem shared by the squad is one line, not twenty ---- */
+
+  const grouped = p.getByRole('list', { name: 'Shared across the squad' }).locator('> li');
+  const groupCount = await grouped.count();
+  if (groupCount > 0) {
+    const groupText = await grouped.first().innerText();
+    check('a shared problem is stated once', /\d+ athletes|\d+ programmes/i.test(groupText),
+      groupText.replace(/\n/g, ' | ').slice(0, 120));
+    check('and names who it covers', groupText.split('\n').length > 1);
+    check('and can be acted on', (await grouped.first().getByRole('link').count()) > 0);
+    check('and can be expanded to the individuals',
+      (await grouped.first().getByRole('button', { name: /Show them/i }).count()) > 0);
+  }
 
   /* ---- signals lead somewhere ---- */
 
-  const signalLinks = await p.getByRole('list', { name: 'Athletes' })
-    .locator('a[href^="/coach/"]').all();
+  const signalLinks = await p.locator('main a[href^="/coach/"]').all();
   check('signals are links, not dead ends', signalLinks.length > 0);
 
   const hrefs = await Promise.all(signalLinks.slice(0, 12).map((l) => l.getAttribute('href')));
@@ -159,10 +175,20 @@ try {
     document.documentElement.scrollWidth - document.documentElement.clientWidth);
   check('the roster does not scroll sideways at 360px', overflow <= 0, `overflow ${overflow}px`);
 
+  // the default view groups a shared problem into one line; the individual
+  // rows are what this check is about
+  await mp.locator('button[aria-pressed]').filter({ hasText: /Everyone/i }).click();
+  await mp.waitForTimeout(500);
+
   const mobileRow = mp.getByRole('list', { name: 'Athletes' }).locator('> li').first();
   check('a row still carries athlete, signal and a way in at 360px',
     (await mobileRow.innerText()).length > 0
       && (await mobileRow.getByRole('link', { name: /^Open$/ }).count()) > 0);
+
+  const mobileOverflowAfter = await mp.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check('and the full roster does not scroll sideways either', mobileOverflowAfter <= 0,
+    `overflow ${mobileOverflowAfter}px`);
 } finally {
   await browser.close();
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  applyFilter, buildEntry, classify, filterCounts, rankEntries, summariseToday,
+  applyFilter, buildEntry, classify, filterCounts, partitionRoster, rankEntries, summariseToday,
 } from './roster.ts';
 import type { RosterFacts } from './roster.ts';
 
@@ -302,5 +302,50 @@ describe('today', () => {
     assert.equal(today.checkInsToRead, 1);
     assert.equal(today.racesWithin.length, 1);
     assert.equal(today.racesWithin[0].days, 4);
+  });
+});
+
+describe('grouping a shared problem', () => {
+  const withNoProgramme = (id: string) =>
+    buildEntry(facts({ athleteId: id, fullName: `Athlete ${id}`, programmeId: null }), TODAY);
+
+  it('leaves a couple of athletes as individual rows', () => {
+    const { individual, groups } = partitionRoster([withNoProgramme('1'), withNoProgramme('2')]);
+    assert.equal(groups.length, 0, 'two is not a backlog');
+    assert.equal(individual.length, 2);
+  });
+
+  it('collapses several into one line a coach can act on', () => {
+    const roster = ['1', '2', '3', '4', '5'].map(withNoProgramme);
+    const { individual, groups } = partitionRoster(roster);
+
+    assert.equal(individual.length, 0);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].kind, 'no_programme');
+    assert.equal(groups[0].detail, '5 athletes are waiting on a programme.');
+    assert.equal(groups[0].entries.length, 5);
+    assert.equal(groups[0].href, '/coach/programs');
+  });
+
+  it('never groups away an athlete with something else going on', () => {
+    const roster = [
+      ...['1', '2', '3'].map(withNoProgramme),
+      buildEntry(facts({
+        athleteId: '4', fullName: 'Also Missing', programmeId: null, missedFourteenDays: 4,
+      }), TODAY),
+    ];
+    const { individual, groups } = partitionRoster(roster);
+
+    assert.equal(groups[0].entries.length, 3);
+    assert.deepEqual(individual.map((e) => e.fullName), ['Also Missing'],
+      'an athlete with a second problem is still read one at a time');
+  });
+
+  it('does not group a signal that needs reading individually', () => {
+    const roster = ['1', '2', '3', '4'].map((id) =>
+      buildEntry(facts({ athleteId: id, fullName: `A${id}`, missedFourteenDays: 4 }), TODAY));
+    const { individual, groups } = partitionRoster(roster);
+    assert.equal(groups.length, 0, 'four athletes missing training is four conversations');
+    assert.equal(individual.length, 4);
   });
 });

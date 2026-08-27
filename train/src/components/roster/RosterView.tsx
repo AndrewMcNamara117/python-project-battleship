@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
 import {
-  applyFilter, FILTER_LABELS, filterCounts, summariseToday,
+  applyFilter, FILTER_LABELS, filterCounts, partitionRoster, summariseToday,
 } from '@/lib/domain/roster';
-import type { RosterEntry, RosterFilter, Severity } from '@/lib/domain/roster';
+import type { RosterEntry, RosterFilter, RosterGroup, Severity } from '@/lib/domain/roster';
 import { formatDayMonth } from '@/lib/domain/dates';
 
 /**
@@ -38,6 +38,14 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
 
   const counts = useMemo(() => filterCounts(roster), [roster]);
   const visible = useMemo(() => applyFilter(roster, filter, search), [roster, filter, search]);
+
+  // A backlog shared by half the squad is one fact, not fifteen rows. Grouping
+  // it is what keeps the athlete whose long run went badly visible.
+  const { individual, groups } = useMemo(
+    () => (filter === 'attention' && !search
+      ? partitionRoster(visible)
+      : { individual: visible, groups: [] as RosterGroup[] }),
+    [visible, filter, search]);
   const summary = useMemo(() => summariseToday(roster, today), [roster, today]);
 
   return (
@@ -89,15 +97,71 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
           </p>
         </Panel>
       ) : (
-        <ul className="mt-6 grid gap-3" aria-label="Athletes">
-          {visible.map((entry) => (
-            <li key={entry.athleteId}>
-              <AthleteRow entry={entry} today={today} />
-            </li>
-          ))}
-        </ul>
+        <>
+          {groups.length > 0 && (
+            <ul className="mt-6 grid gap-3" aria-label="Shared across the squad">
+              {groups.map((group) => (
+                <li key={group.kind}>
+                  <GroupRow group={group} onShow={() => { setFilter('all'); setSearch(''); }} />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {individual.length > 0 ? (
+            <ul className="mt-3 grid gap-3" aria-label="Athletes">
+              {individual.map((entry) => (
+                <li key={entry.athleteId}>
+                  <AthleteRow entry={entry} today={today} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Panel className="mt-3 p-6 text-center">
+              <p className="text-[13px] leading-relaxed text-ink-secondary">
+                Nobody else needs reading one at a time.
+              </p>
+            </Panel>
+          )}
+        </>
       )}
     </>
+  );
+}
+
+/** One problem several athletes share, stated once and actionable once. */
+function GroupRow({ group, onShow }: { group: RosterGroup; onShow: () => void }) {
+  return (
+    <Panel className="min-w-0 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <span aria-hidden className={`size-2 shrink-0 rounded-full ${SEVERITY_DOT[group.severity]}`} />
+            <p className="text-[14px] font-semibold text-ink">{group.detail}</p>
+          </div>
+          <p className="mt-1.5 min-w-0 break-words text-[12px] leading-relaxed text-ink-tertiary">
+            {group.entries.slice(0, 6).map((e) => e.fullName).join(', ')}
+            {group.entries.length > 6 && ` and ${group.entries.length - 6} more`}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={onShow}
+            className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-secondary hover:text-mint"
+          >
+            Show them
+          </button>
+          <Link
+            href={group.href}
+            className="inline-flex items-center rounded-xs border border-hairline-strong px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-ink-body transition-colors hover:border-mint hover:text-mint"
+          >
+            Assign
+          </Link>
+        </div>
+      </div>
+    </Panel>
   );
 }
 

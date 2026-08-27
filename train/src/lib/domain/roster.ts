@@ -382,3 +382,75 @@ export function summariseToday(entries: RosterEntry[], today: ISODate): RosterTo
     programmesEnding: entries.filter((e) => e.signals.some((s) => s.kind === 'programme_ending')).length,
   };
 }
+
+/**
+ * When many athletes share one problem, that is one fact about the squad —
+ * not twenty rows a coach has to scroll past.
+ *
+ * A backlog of athletes waiting on a programme is the obvious case: it is real
+ * and worth acting on, but listing each one individually buries the athlete
+ * whose long run went badly. So a signal that is an athlete's *only* reason for
+ * surfacing, and is shared by several of them, collapses into a single line.
+ *
+ * An athlete with anything else going on is never grouped away.
+ */
+export const GROUP_THRESHOLD = 3;
+
+export interface RosterGroup {
+  kind: SignalKind;
+  severity: Severity;
+  detail: string;
+  href: string;
+  entries: RosterEntry[];
+}
+
+export interface RosterPartition {
+  /** Athletes to read one at a time. */
+  individual: RosterEntry[];
+  /** Shared problems, stated once. */
+  groups: RosterGroup[];
+}
+
+const GROUP_DETAIL: Partial<Record<SignalKind, (n: number) => string>> = {
+  no_programme: (n) => `${n} athletes are waiting on a programme.`,
+  programme_ending: (n) => `${n} programmes end within the month.`,
+  race_approaching: (n) => `${n} athletes have a race coming up.`,
+};
+
+export function partitionRoster(entries: RosterEntry[]): RosterPartition {
+  const raised = (e: RosterEntry) => e.signals.filter((s) => s.severity !== 'information');
+
+  // an athlete is groupable only when one signal is their whole story
+  const soleKind = (e: RosterEntry): SignalKind | null => {
+    const loud = raised(e);
+    return loud.length === 1 && GROUP_DETAIL[loud[0].kind] ? loud[0].kind : null;
+  };
+
+  const byKind = new Map<SignalKind, RosterEntry[]>();
+  for (const entry of entries) {
+    const kind = soleKind(entry);
+    if (!kind) continue;
+    byKind.set(kind, [...(byKind.get(kind) ?? []), entry]);
+  }
+
+  const grouped = new Set<UUID>();
+  const groups: RosterGroup[] = [];
+
+  for (const [kind, members] of byKind) {
+    if (members.length < GROUP_THRESHOLD) continue;
+    const signal = members[0].signals.find((s) => s.kind === kind)!;
+    groups.push({
+      kind,
+      severity: signal.severity,
+      detail: GROUP_DETAIL[kind]!(members.length),
+      href: signal.href,
+      entries: members,
+    });
+    for (const m of members) grouped.add(m.athleteId);
+  }
+
+  return {
+    individual: entries.filter((e) => !grouped.has(e.athleteId)),
+    groups: groups.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]),
+  };
+}
