@@ -15,11 +15,11 @@ import { createTestDatabase } from '../supabase/test/harness.mjs';
 
 const EASY = 'Easy Run', REC = 'Recovery Run', LONG = 'Long Run';
 const THR = 'Threshold Intervals', VO2 = 'VO2 Intervals', HILLS = 'Hill Repeats';
-const TEMPO = 'Tempo', PROG = 'Progression Run', RACEPACE = 'Race Pace';
+const TEMPO = 'Tempo', _PROG = 'Progression Run', RACEPACE = 'Race Pace';
 const BIKE = 'Bike — Endurance', SWIM = 'Swim — Technique + Endurance';
-const CROSS = 'Cross Training', MOB = 'Mobility', BRICK = 'Brick Session';
+const _CROSS = 'Cross Training', _MOB = 'Mobility', BRICK = 'Brick Session';
 const FA = 'Foundation A', FB = 'Foundation B', MAINT = 'Maintenance';
-const PERF = 'Performance A', ULTRA = 'Ultra Prep', TRI = 'Triathlon Support';
+const _PERF = 'Performance A', ULTRA = 'Ultra Prep', TRI = 'Triathlon Support';
 
 const run = (name, extra = {}) => ({ kind: 'workout', name, ...extra });
 const str = (name, extra = {}) => ({ kind: 'strength', name, ...extra });

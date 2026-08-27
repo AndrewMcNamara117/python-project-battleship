@@ -76,6 +76,11 @@ import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries, KEY_SESSION_TYPES } from '@/lib/domain/roster';
+import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
+import type {
+  ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
+} from '@/lib/domain/notifications';
+import type { NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -126,6 +131,43 @@ function dataset(): DemoDataset {
  */
 export function resetDemoData(): void {
   cache = null;
+  noteStore = null;
+}
+
+/**
+ * The demo notification store.
+ *
+ * It lives at module scope beside the dataset rather than on the repo
+ * instance, for the same two reasons the dataset does: resetDemoData must be
+ * able to clear it, and every DemoRepo must be looking at the same feed. On
+ * the instance, `new DemoRepo()` in a test saw a different set of
+ * notifications from the one the jobs had just written to, and a reset left
+ * yesterday's alerts in place — so dedupe appeared to work when it had simply
+ * never been asked.
+ */
+interface DemoNotificationStore {
+  prefs: Map<UUID, NotificationPreferences>;
+  notifications: (NotificationItem & { dedupeKey: string; deliverAfter: string | null })[];
+  deliveries: {
+    id: UUID; notificationId: UUID; userId: UUID; channel: ChannelName;
+    state: DeliveryStatus; attempts: number; detail: string | null;
+  }[];
+  owners: Map<UUID, UUID>;
+  lastDigest: Map<UUID, ISODate>;
+}
+
+let noteStore: DemoNotificationStore | null = null;
+
+function notes(): DemoNotificationStore {
+  // reading the dataset first so a date rollover clears the feed with it
+  dataset();
+  if (!noteStore) {
+    noteStore = {
+      prefs: new Map(), notifications: [], deliveries: [],
+      owners: new Map(), lastDigest: new Map(),
+    };
+  }
+  return noteStore;
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
@@ -2382,6 +2424,134 @@ export class DemoRepo implements IronMilesRepo {
     }));
 
     return rankEntries(entries);
+  }
+
+  /* ================= notifications ================= */
+
+
+  async getNotificationPreferences(userId: UUID): Promise<NotificationPreferences> {
+    return clone(notes().prefs.get(userId) ?? { userId, ...DEFAULT_PREFERENCES });
+  }
+
+  async saveNotificationPreferences(prefs: NotificationPreferences): Promise<void> {
+    notes().prefs.set(prefs.userId, clone(prefs));
+  }
+
+  async createNotification(draft: NotificationDraft): Promise<UUID | null> {
+    // an athlete-specific notification only ever goes to that athlete's coach
+    if (draft.athleteId) {
+      const linked = dataset().links.some(
+        (l) => l.athleteId === draft.athleteId && l.coachId === draft.userId && l.status === 'active',
+      );
+      if (!linked) throw new Error("That athlete is not on that coach's roster.");
+    }
+
+    // the same news is never reported twice, whatever runs the job
+    if (notes().notifications.some((n) => n.dedupeKey === draft.dedupeKey && n.athleteId === draft.athleteId
+      && this.notificationOwner(n) === draft.userId)) {
+      return null;
+    }
+
+    const athlete = draft.athleteId
+      ? dataset().profiles.find((p) => p.id === draft.athleteId) ?? null
+      : null;
+
+    const id = uid('note');
+    notes().notifications.push({
+      id,
+      kind: draft.kind,
+      priority: draft.priority,
+      athleteId: draft.athleteId,
+      athleteName: athlete?.fullName ?? null,
+      signalKind: draft.signalKind,
+      title: draft.title,
+      body: draft.body,
+      href: draft.href,
+      state: 'pending',
+      createdAt: new Date().toISOString(),
+      deliveries: [],
+      dedupeKey: draft.dedupeKey,
+      deliverAfter: draft.deliverAfter,
+    });
+    notes().owners.set(id, draft.userId);
+
+    for (const channel of (await this.getNotificationPreferences(draft.userId)).channels) {
+      notes().deliveries.push({
+        id: uid('del'), notificationId: id, userId: draft.userId,
+        channel, state: 'pending', attempts: 0, detail: null,
+      });
+    }
+    return id;
+  }
+
+  private notificationOwner(n: { id: UUID }): UUID | undefined {
+    return notes().owners.get(n.id);
+  }
+
+  async listNotificationFeed(userId: UUID, limit = 40): Promise<NotificationItem[]> {
+    return clone(
+      notes().notifications
+        .filter((n) => this.notificationOwner(n) === userId && n.state !== 'dismissed')
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, limit)
+        .map((n) => ({
+          ...n,
+          deliveries: notes().deliveries
+            .filter((d) => d.notificationId === n.id)
+            .map((d) => ({ channel: d.channel, state: d.state, detail: d.detail })),
+        })),
+    );
+  }
+
+  async setNotificationState(id: UUID, state: 'pending' | 'read' | 'dismissed'): Promise<void> {
+    const note = notes().notifications.find((n) => n.id === id);
+    if (note) note.state = state;
+  }
+
+  async listPendingDeliveries(limit = 100): Promise<PendingDelivery[]> {
+    const now = new Date().toISOString();
+    return notes().deliveries
+      .filter((d) => d.state === 'pending' && d.attempts < 3)
+      .map((d) => ({ d, n: notes().notifications.find((x) => x.id === d.notificationId) }))
+      .filter(({ n }) => n && (!n.deliverAfter || n.deliverAfter <= now))
+      .slice(0, limit)
+      .map(({ d, n }) => ({
+        deliveryId: d.id,
+        notificationId: d.notificationId,
+        channel: d.channel,
+        attempts: d.attempts,
+        userId: d.userId,
+        recipientEmail: dataset().profiles.find((p) => p.id === d.userId)?.email ?? null,
+        athleteName: n!.athleteName,
+        draft: {
+          userId: d.userId, kind: n!.kind, priority: n!.priority,
+          athleteId: n!.athleteId, signalKind: n!.signalKind as never,
+          title: n!.title, body: n!.body, href: n!.href,
+          dedupeKey: n!.dedupeKey, deliverAfter: n!.deliverAfter,
+        },
+      }));
+  }
+
+  async recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void> {
+    const delivery = notes().deliveries.find((d) => d.id === deliveryId);
+    if (!delivery) return;
+    delivery.state = state;
+    delivery.detail = detail;
+    delivery.attempts += 1;
+  }
+
+  async listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]> {
+    return dataset().profiles
+      .filter((p) => p.role === 'coach' || p.role === 'admin')
+      .map((p) => ({ userId: p.id, email: p.email ?? null }));
+  }
+
+  async markDigestSent(userId: UUID, localDate: ISODate): Promise<void> {
+    notes().lastDigest.set(userId, localDate);
+  }
+
+  async lastDigestDate(userId: UUID): Promise<ISODate | null> {
+    return notes().lastDigest.get(userId) ?? null;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

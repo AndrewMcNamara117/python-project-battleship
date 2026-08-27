@@ -62,6 +62,11 @@ import { buildAssignmentPreview } from '@/lib/domain/assignment-preview';
 import { buildExtractionPreview } from '@/lib/domain/extraction-preview';
 import { buildSessionHistory, toCheckInContext } from '@/lib/domain/adaptation';
 import { buildEntry, rankEntries } from '@/lib/domain/roster';
+import { DEFAULT_PREFERENCES } from '@/lib/domain/notifications';
+import type {
+  ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
+} from '@/lib/domain/notifications';
+import type { NotificationItem, PendingDelivery } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -96,7 +101,13 @@ import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
 export class SupabaseRepo implements IronMilesRepo {
   readonly mode = 'supabase' as const;
 
-  constructor(private readonly db: SupabaseClient) {}
+  private readonly db: SupabaseClient;
+
+  // written out rather than as a parameter property so the file can be loaded
+  // by node's type-stripping test runner, which does not support that syntax
+  constructor(db: SupabaseClient) {
+    this.db = db;
+  }
 
   private async rows<T>(query: PromiseLike<{ data: any; error: any }>, map: (row: any) => T): Promise<T[]> {
     const { data, error } = await query;
@@ -2319,6 +2330,169 @@ export class SupabaseRepo implements IronMilesRepo {
       unreadFromAthlete: Number(r.unread_from_athlete ?? 0),
       recentAdaptations: Number(r.recent_adaptations ?? 0),
     }, today)));
+  }
+
+  /* ================= notifications ================= */
+
+  async getNotificationPreferences(userId: UUID): Promise<NotificationPreferences> {
+    const { data, error } = await this.db
+      .from('notification_preferences').select('*').eq('user_id', userId).single();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    // a coach who has never opened settings still gets a digest; opting in by
+    // default is the point of the slice, and every switch is theirs to turn off
+    if (!data) return { userId, ...DEFAULT_PREFERENCES };
+
+    return {
+      userId,
+      digestEnabled: data.digest_enabled,
+      digestHour: data.digest_hour,
+      timezone: data.timezone,
+      alertFlaggedCheckIn: data.alert_flagged_checkin,
+      alertReportedPain: data.alert_reported_pain,
+      quietFrom: data.quiet_from ?? null,
+      quietUntil: data.quiet_until ?? null,
+      channels: (data.channels ?? ['in_app']) as ChannelName[],
+    };
+  }
+
+  async saveNotificationPreferences(prefs: NotificationPreferences): Promise<void> {
+    const { error } = await this.db.from('notification_preferences').upsert({
+      user_id: prefs.userId,
+      digest_enabled: prefs.digestEnabled,
+      digest_hour: prefs.digestHour,
+      timezone: prefs.timezone,
+      alert_flagged_checkin: prefs.alertFlaggedCheckIn,
+      alert_reported_pain: prefs.alertReportedPain,
+      quiet_from: prefs.quietFrom,
+      quiet_until: prefs.quietUntil,
+      channels: prefs.channels,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async createNotification(draft: NotificationDraft): Promise<UUID | null> {
+    const { data, error } = await this.db.rpc('im_notify', {
+      p_user: draft.userId,
+      p_kind: draft.kind,
+      p_priority: draft.priority,
+      p_title: draft.title,
+      p_body: draft.body,
+      p_href: draft.href,
+      p_dedupe_key: draft.dedupeKey,
+      p_athlete: draft.athleteId,
+      p_signal_kind: draft.signalKind,
+      p_deliver_after: draft.deliverAfter,
+      p_payload: null,
+      p_channels: (await this.getNotificationPreferences(draft.userId)).channels,
+    });
+    if (error) throw new Error(error.message);
+    return (data as UUID | null) ?? null;
+  }
+
+  async listNotificationFeed(userId: UUID, limit = 40): Promise<NotificationItem[]> {
+    const { data, error } = await this.db
+      .from('notifications')
+      .select('*, notification_deliveries(*), athlete:profiles!notifications_athlete_id_fkey(full_name)')
+      .eq('user_id', userId)
+      .neq('state', 'dismissed')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      kind: r.notification_kind,
+      priority: r.priority,
+      athleteId: r.athlete_id ?? null,
+      athleteName: r.athlete?.full_name ?? null,
+      signalKind: r.signal_kind ?? null,
+      title: r.title,
+      body: r.body,
+      href: r.href,
+      state: r.state,
+      createdAt: r.created_at,
+      deliveries: (r.notification_deliveries ?? []).map((d: any) => ({
+        channel: d.channel,
+        state: d.state,
+        detail: d.detail ?? null,
+      })),
+    }));
+  }
+
+  async setNotificationState(id: UUID, state: 'pending' | 'read' | 'dismissed'): Promise<void> {
+    const { error } = await this.db.rpc('im_notification_state', {
+      p_notification: id, p_state: state,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async listPendingDeliveries(limit = 100): Promise<PendingDelivery[]> {
+    const { data, error } = await this.db
+      .from('notification_deliveries')
+      .select('*, notification:notifications(*, athlete:profiles!notifications_athlete_id_fkey(full_name)), recipient:profiles!notification_deliveries_user_id_fkey(email)')
+      .eq('state', 'pending')
+      // three attempts and it stops: a channel that has failed three times is
+      // not going to work on the fourth, and the record says why
+      .lt('attempts', 3)
+      .order('created_at')
+      .limit(limit);
+    if (error) throw new Error(error.message);
+
+    const now = new Date().toISOString();
+    return (data ?? [])
+      // held by quiet hours until their own time comes
+      .filter((r: any) => !r.notification?.deliver_after || r.notification.deliver_after <= now)
+      .map((r: any) => ({
+        deliveryId: r.id,
+        notificationId: r.notification_id,
+        channel: r.channel,
+        attempts: r.attempts,
+        userId: r.user_id,
+        recipientEmail: r.recipient?.email ?? null,
+        athleteName: r.notification?.athlete?.full_name ?? null,
+        draft: {
+          userId: r.user_id,
+          kind: r.notification?.notification_kind,
+          priority: r.notification?.priority,
+          athleteId: r.notification?.athlete_id ?? null,
+          signalKind: r.notification?.signal_kind ?? null,
+          title: r.notification?.title ?? '',
+          body: r.notification?.body ?? '',
+          href: r.notification?.href ?? '/coach',
+          dedupeKey: r.notification?.dedupe_key ?? '',
+          deliverAfter: r.notification?.deliver_after ?? null,
+        },
+      }));
+  }
+
+  async recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void> {
+    const { error } = await this.db.rpc('im_record_delivery', {
+      p_delivery: deliveryId, p_state: state, p_detail: detail,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  async listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]> {
+    const { data, error } = await this.db
+      .from('profiles').select('id, email').in('role', ['coach', 'admin']);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({ userId: r.id, email: r.email ?? null }));
+  }
+
+  async markDigestSent(userId: UUID, localDate: ISODate): Promise<void> {
+    const { error } = await this.db
+      .from('notification_preferences')
+      .upsert({ user_id: userId, last_digest_local_date: localDate });
+    if (error) throw new Error(error.message);
+  }
+
+  /** The coach's own local date of their last digest, for the once-a-day rule. */
+  async lastDigestDate(userId: UUID): Promise<ISODate | null> {
+    const { data, error } = await this.db
+      .from('notification_preferences').select('last_digest_local_date').eq('user_id', userId).single();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return (data?.last_digest_local_date as ISODate | null) ?? null;
   }
 
   async deleteAthleteData(athleteId: UUID): Promise<void> {

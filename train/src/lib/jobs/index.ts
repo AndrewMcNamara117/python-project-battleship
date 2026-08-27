@@ -3,8 +3,10 @@ import { getRepo } from '@/lib/data';
 import { hasSupabase } from '@/lib/env';
 import { createAdminSupabase } from '@/lib/supabase/server';
 import { countsForAdherence } from '@/lib/domain/analytics';
-import { addDays, daysBetween, endOfWeek, startOfWeek, toISODate } from '@/lib/domain/dates';
+import { daysBetween, endOfWeek, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { dailyMessage, weeklySummary } from '@/lib/forge/assistant';
+import { runCoachAlerts, runCoachDigest, runDeliveries } from '@/lib/notifications/jobs';
+import type { NotificationJobReport } from '@/lib/notifications/jobs';
 
 /**
  * Scheduled jobs.
@@ -30,6 +32,8 @@ export const JOB_NAMES = [
   'weekly-summary',
   'race-countdown',
   'coach-alerts',
+  'coach-digest',
+  'notification-delivery',
 ] as const;
 
 export type JobName = (typeof JOB_NAMES)[number];
@@ -66,7 +70,20 @@ async function allAthletes() {
   return roster.map((p) => p.id);
 }
 
-export async function runJob(job: JobName): Promise<JobReport> {
+export async function runJob(job: JobName): Promise<JobReport | NotificationJobReport> {
+  // Coach-facing signals are not decided here.
+  //
+  // There used to be a `coach-alerts` case in the switch below with its own
+  // idea of what needed a coach's attention: three missed sessions in fourteen
+  // days, or an unreviewed flagged check-in. The roster had a different idea,
+  // built from eleven signals. The two disagreed, which meant a coach could be
+  // emailed about an athlete whose row was green, or see a red row and never
+  // hear about it. One definition survives, and it is the one the coach's
+  // screen renders from.
+  if (job === 'coach-alerts') return runCoachAlerts();
+  if (job === 'coach-digest') return runCoachDigest();
+  if (job === 'notification-delivery') return runDeliveries();
+
   const repo = await getRepo();
   const today = toISODate(new Date());
   const weekStart = startOfWeek(today);
@@ -206,28 +223,6 @@ export async function runJob(job: JobName): Promise<JobReport> {
         break;
       }
 
-      case 'coach-alerts': {
-        const coach = await repo.getCoachForAthlete(athleteId);
-        if (!coach) break;
-
-        const recent = await repo.listScheduled(athleteId, addDays(weekStart, -14), today);
-        const missed = recent.filter((w) => w.status === 'missed' && countsForAdherence(w)).length;
-        const checkins = await repo.listCheckIns(athleteId, 1);
-        const flagged = checkins[0]?.attentionLevel === 'attention' && !checkins[0].reviewedByCoachAt;
-
-        if (missed < 3 && !flagged) break;
-
-        report.notifications.push({
-          userId: coach.id,
-          kind: 'coach_alert',
-          title: `${profile.fullName} needs a look`,
-          body: flagged
-            ? `Check-in flagged: ${checkins[0].attentionReasons.slice(0, 2).join('; ')}.`
-            : `${missed} prescribed sessions missed in the last two weeks.`,
-          href: `/coach/athletes/${athleteId}`,
-        });
-        break;
-      }
     }
   }
 

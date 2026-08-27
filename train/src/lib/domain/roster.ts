@@ -30,6 +30,13 @@ export type Severity = 'urgent' | 'attention' | 'information';
 
 const SEVERITY_RANK: Record<Severity, number> = { urgent: 0, attention: 1, information: 2 };
 
+/**
+ * The soreness score, out of ten, at which a written niggle stops being a
+ * note and starts being something to look at. The athlete sets it themselves
+ * on the check-in; this is not an assessment of them.
+ */
+const SORENESS_RAISES = 7;
+
 export type SignalKind =
   | 'no_programme'
   | 'no_future_sessions'
@@ -208,9 +215,17 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
     }
 
     if (c.painOrNiggles) {
+      // Severity comes from the athlete's own soreness score, not from
+      // whether they typed anything. An athlete who writes "nothing to
+      // report" in the niggles box was raising a signal that read
+      // "Reported: Nothing to report." — and once this fed notifications it
+      // would have woken a coach at midnight to tell them nobody was hurt.
+      //
+      // Their words are still carried through exactly as written. Nothing
+      // here reads them, and nothing here decides what they mean.
       signals.push({
         kind: 'soreness_reported',
-        severity: 'information',
+        severity: (c.soreness ?? 0) >= SORENESS_RAISES ? 'attention' : 'information',
         detail: `Reported: ${c.painOrNiggles}`,
         href: `${athlete}#checkins`,
       });

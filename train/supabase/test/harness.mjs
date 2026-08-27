@@ -86,6 +86,7 @@ export async function createTestDatabase({ verbose = false } = {}) {
   const asUser = async (userId, sql, params = []) => {
     await db.exec(`set role authenticated;`);
     await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [userId ?? '']);
+    await db.query(`select set_config('request.jwt.claim.role', 'authenticated', false)`);
     try {
       return await db.query(sql, params);
     } finally {
@@ -100,10 +101,15 @@ export async function createTestDatabase({ verbose = false } = {}) {
    * without this the service role keeps whichever user acted last, and
    * anything reading auth.uid() — guard triggers, audit attribution — sees a
    * stale identity instead of no identity.
+   *
+   * The role claim is set to service_role to match the JWT Supabase issues for
+   * a service-role client. Without it the shim would report this caller as an
+   * ordinary authenticated user and im_is_service() could never be tested.
    */
   const asService = async (sql, params = []) => {
     await db.exec('reset role;');
     await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
+    await db.query(`select set_config('request.jwt.claim.role', 'service_role', false)`);
     return await db.query(sql, params);
   };
 

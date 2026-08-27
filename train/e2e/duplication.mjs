@@ -58,7 +58,7 @@ try {
   const ap = await athleteCtx.newPage();
   await ap.goto(`${BASE}/app/calendar`, { waitUntil: 'networkidle' });
   await ap.waitForTimeout(1200);
-  const copied = await ap.evaluate(async (iso) => {
+  const copied = await ap.evaluate(async (_iso) => {
     const res = await fetch(`/app/calendar`, { headers: { 'x-probe': '1' } });
     return res.ok;
   }, targetISO);

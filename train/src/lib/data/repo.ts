@@ -16,6 +16,9 @@ import type {
 } from '@/lib/domain/library';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
+  ChannelName, DeliveryStatus, NotificationDraft, NotificationPreferences,
+} from '@/lib/domain/notifications';
+import type {
   CheckInContext,
   SessionHistory,
   ShiftRow,
@@ -52,6 +55,7 @@ import type {
   LeaderboardEntry,
   LeaderboardScope,
   Message,
+  ISOTimestamp,
   Notification,
   OnboardingData,
   Profile,
@@ -95,6 +99,35 @@ export type TemplateWeekDraft = Omit<ProgramTemplateWeek, 'id' | 'createdAt'> &
   Partial<Pick<ProgramTemplateWeek, 'id'>>;
 export type TemplateSlotDraft = Omit<ProgramTemplateSlot, 'id'> &
   Partial<Pick<ProgramTemplateSlot, 'id'>>;
+
+/** One line in a coach's notification centre. */
+export interface NotificationItem {
+  id: UUID;
+  kind: 'digest' | 'alert';
+  priority: 'urgent' | 'attention' | 'information';
+  athleteId: UUID | null;
+  athleteName: string | null;
+  signalKind: string | null;
+  title: string;
+  body: string;
+  href: string;
+  state: 'pending' | 'read' | 'dismissed';
+  createdAt: ISOTimestamp;
+  /** How it went out, so "why did I not get this" is answerable. */
+  deliveries: { channel: ChannelName; state: DeliveryStatus; detail: string | null }[];
+}
+
+/** A delivery the worker still has to attempt. */
+export interface PendingDelivery {
+  deliveryId: UUID;
+  notificationId: UUID;
+  channel: ChannelName;
+  attempts: number;
+  userId: UUID;
+  recipientEmail: string | null;
+  athleteName: string | null;
+  draft: NotificationDraft;
+}
 
 export interface IronMilesRepo {
   readonly mode: 'supabase' | 'demo';
@@ -384,6 +417,34 @@ export interface IronMilesRepo {
    * attention".
    */
   listRoster(coachId: UUID, today: ISODate): Promise<RosterEntry[]>;
+
+  /* ---- notifications ---- */
+
+  getNotificationPreferences(userId: UUID): Promise<NotificationPreferences>;
+  saveNotificationPreferences(prefs: NotificationPreferences): Promise<void>;
+
+  /**
+   * Record that a coach should be told something.
+   *
+   * Returns null when they have already been told: the dedupe key identifies
+   * the news, so the same thing cannot be reported twice however often the
+   * job runs.
+   */
+  createNotification(draft: NotificationDraft): Promise<UUID | null>;
+
+  listNotificationFeed(userId: UUID, limit?: number): Promise<NotificationItem[]>;
+  setNotificationState(id: UUID, state: 'pending' | 'read' | 'dismissed'): Promise<void>;
+
+  /** Deliveries waiting to go out, past any quiet-hours hold. */
+  listPendingDeliveries(limit?: number): Promise<PendingDelivery[]>;
+  recordDelivery(deliveryId: UUID, state: DeliveryStatus, detail: string): Promise<void>;
+
+  /** Which coaches have a roster to summarise, for the digest job. */
+  listCoachesForDigest(): Promise<{ userId: UUID; email: string | null }[]>;
+  markDigestSent(userId: UUID, localDate: ISODate): Promise<void>;
+
+  /** The coach's own local date of their last digest — the once-a-day rule. */
+  lastDigestDate(userId: UUID): Promise<ISODate | null>;
 
   /* privacy */
   exportAthleteData(athleteId: UUID): Promise<Record<string, unknown>>;
