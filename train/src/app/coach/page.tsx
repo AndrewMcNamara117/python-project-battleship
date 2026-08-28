@@ -3,6 +3,7 @@ import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { RosterView } from '@/components/roster/RosterView';
 import { loadCoachContext } from '@/lib/coach-data';
 import { greeting } from '@/lib/domain/dates';
+import { parseFilter } from '@/lib/domain/roster';
 
 export const metadata: Metadata = { title: 'Coach' };
 
@@ -13,8 +14,15 @@ export const metadata: Metadata = { title: 'Coach' };
  * signal come first, each signal says what it is and leads to where the coach
  * can act on it, and an athlete with nothing going on says nothing.
  */
-export default async function CoachOverviewPage() {
+export default async function CoachOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const ctx = await loadCoachContext();
+  // A concern can be linked to. It selects among athletes already loaded for
+  // this coach, so it narrows and never widens.
+  const filter = parseFilter((await searchParams).filter);
   const firstName = ctx.coach.fullName.split(' ')[0] || 'Coach';
 
   const attention = ctx.roster.filter((e) =>
@@ -35,7 +43,7 @@ export default async function CoachOverviewPage() {
       />
 
       <div className="mt-8">
-        <RosterView roster={ctx.roster} today={ctx.today} />
+        <RosterView roster={ctx.roster} today={ctx.today} initialFilter={filter} />
       </div>
     </AppPage>
   );

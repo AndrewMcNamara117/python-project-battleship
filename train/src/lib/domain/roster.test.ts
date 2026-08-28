@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  applyFilter, buildEntry, classify, filterCounts, partitionRoster, rankEntries, summariseToday,
+  applyFilter, attentionRoster, buildEntry, classify, concernsFor, filterCounts,
+  rankEntries, rosterWorkload, summariseToday,
 } from './roster.ts';
 import type { RosterFacts } from './roster.ts';
 
@@ -311,48 +312,139 @@ describe('today', () => {
   });
 });
 
-describe('grouping a shared problem', () => {
+describe('the workload, by the thing that needs doing', () => {
   const withNoProgramme = (id: string) =>
     buildEntry(facts({ athleteId: id, fullName: `Athlete ${id}`, programmeId: null }), TODAY);
 
-  it('leaves a couple of athletes as individual rows', () => {
-    const { individual, groups } = partitionRoster([withNoProgramme('1'), withNoProgramme('2')]);
-    assert.equal(groups.length, 0, 'two is not a backlog');
-    assert.equal(individual.length, 2);
+  const sore = (id: string, over: Partial<RosterFacts> = {}) => buildEntry(facts({
+    athleteId: id,
+    fullName: `Sore ${id}`,
+    checkIn: {
+      id: `ci-${id}`, weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+      attention: 'attention', reasons: ['Soreness reported at 8 or above'],
+      acknowledgedAt: null, respondedAt: null,
+      fatigue: 8, soreness: 9, painOrNiggles: 'Achilles.',
+    },
+    ...over,
+  }), TODAY);
+
+  it('says nothing about a concern only a couple of athletes share', () => {
+    const rows = rosterWorkload([withNoProgramme('1'), withNoProgramme('2')]);
+    assert.equal(rows.length, 0, 'two is not a backlog');
   });
 
-  it('collapses several into one line a coach can act on', () => {
-    const roster = ['1', '2', '3', '4', '5'].map(withNoProgramme);
-    const { individual, groups } = partitionRoster(roster);
-
-    assert.equal(individual.length, 0);
-    assert.equal(groups.length, 1);
-    assert.equal(groups[0].kind, 'no_programme');
-    assert.equal(groups[0].detail, '5 athletes are waiting on a programme.');
-    assert.equal(groups[0].entries.length, 5);
-    assert.equal(groups[0].href, '/coach/programs');
+  it('states a shared concern once, with everyone in it', () => {
+    const rows = rosterWorkload(['1', '2', '3', '4', '5'].map(withNoProgramme));
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].kind, 'no_training');
+    assert.equal(rows[0].count, 5);
+    assert.equal(rows[0].detail, '5 athletes with nothing scheduled.');
+    assert.equal(rows[0].athleteIds.length, 5);
   });
 
-  it('never groups away an athlete with something else going on', () => {
-    const roster = [
-      ...['1', '2', '3'].map(withNoProgramme),
-      buildEntry(facts({
-        athleteId: '4', fullName: 'Also Missing', programmeId: null, missedFourteenDays: 4,
-      }), TODAY),
+  it('counts an athlete in every concern they carry', () => {
+    // Sarah has missed training, has a programme ending, and flagged her
+    // check-in. The old model filed her under one of those and deleted her
+    // from the other two counts; a coach planning their week was then reading
+    // numbers that were quietly wrong.
+    const sarah = buildEntry(facts({
+      athleteId: 'sarah',
+      fullName: 'Sarah',
+      missedFourteenDays: 4,
+      programmeEndDate: '2026-09-24',
+      checkIn: {
+        id: 'ci-s', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'attention', reasons: ['Soreness reported at 8 or above'],
+        acknowledgedAt: null, respondedAt: null,
+        fatigue: 8, soreness: 9, painOrNiggles: 'Achilles.',
+      },
+    }), TODAY);
+
+    const others = [
+      ...['1', '2'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `Missed ${id}`, missedFourteenDays: 4,
+      }), TODAY)),
+      ...['3', '4'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `Ending ${id}`, programmeEndDate: '2026-09-24',
+      }), TODAY)),
+      ...['5', '6'].map((id) => sore(id)),
     ];
-    const { individual, groups } = partitionRoster(roster);
 
-    assert.equal(groups[0].entries.length, 3);
-    assert.deepEqual(individual.map((e) => e.fullName), ['Also Missing'],
-      'an athlete with a second problem is still read one at a time');
+    const roster = [sarah, ...others];
+    const rows = rosterWorkload(roster);
+    const row = (kind: string) => rows.find((r) => r.kind === kind)!;
+
+    assert.equal(row('missed').count, 3, 'Sarah counts among the missing');
+    assert.equal(row('ending').count, 3, 'and among the programmes ending');
+    assert.equal(row('checkins').count, 3, 'and among the check-ins');
+    assert.equal(row('pain').count, 3, 'and among the athletes reporting pain');
+
+    for (const kind of ['missed', 'ending', 'checkins', 'pain']) {
+      assert.ok(row(kind).athleteIds.includes('sarah'),
+        `Sarah belongs in ${kind} and is not deducted from it to avoid repeating her`);
+    }
   });
 
-  it('does not group a signal that needs reading individually', () => {
-    const roster = ['1', '2', '3', '4'].map((id) =>
-      buildEntry(facts({ athleteId: id, fullName: `A${id}`, missedFourteenDays: 4 }), TODAY));
-    const { individual, groups } = partitionRoster(roster);
-    assert.equal(groups.length, 0, 'four athletes missing training is four conversations');
-    assert.equal(individual.length, 4);
+  it('never removes an athlete from the list because a row counted them', () => {
+    const roster = ['1', '2', '3', '4', '5'].map(withNoProgramme);
+    const rows = rosterWorkload(roster);
+
+    assert.equal(rows[0].count, 5);
+    assert.equal(attentionRoster(roster).length, 5,
+      'a count is a count, not a place to put people');
+  });
+
+  it('every count equals the list that row opens', () => {
+    const roster = [
+      ...['1', '2', '3'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `M${id}`, missedFourteenDays: 4, programmeEndDate: '2026-09-20',
+      }), TODAY)),
+      ...['4', '5', '6'].map((id) => sore(id, { missedFourteenDays: 4 })),
+    ];
+
+    // the promise the screen makes: the number on the row is the number of
+    // rows you get when you tap it
+    for (const row of rosterWorkload(roster)) {
+      assert.equal(row.count, applyFilter(roster, row.kind).length,
+        `the ${row.kind} row and the ${row.kind} filter must not disagree`);
+      assert.equal(row.count, filterCounts(roster)[row.kind]);
+    }
+  });
+
+  it('says how many of a group also need the coach elsewhere', () => {
+    const roster = [
+      ...['1', '2', '3'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `Only missed ${id}`, missedFourteenDays: 4,
+      }), TODAY)),
+      ...['4', '5'].map((id) => sore(id, { missedFourteenDays: 4 })),
+    ];
+    const missed = rosterWorkload(roster).find((r) => r.kind === 'missed')!;
+    assert.equal(missed.count, 5);
+    assert.equal(missed.alsoElsewhere, 2, 'two of the five have a check-in as well');
+  });
+
+  it('an athlete belongs to exactly the rows their own card shows', () => {
+    const sarah = buildEntry(facts({
+      athleteId: 'sarah', fullName: 'Sarah', missedFourteenDays: 4, programmeEndDate: '2026-09-24',
+    }), TODAY);
+    assert.deepEqual(concernsFor(sarah).sort(), ['ending', 'missed']);
+  });
+
+  it('does not bury pain under paperwork', () => {
+    // both are `attention`; the classifier used to push the renewal date first
+    // purely because that code came earlier in the file
+    const both = sore('x', { programmeEndDate: '2026-09-24' });
+    assert.equal(both.topSignal?.kind, 'soreness_reported',
+      'an ending programme never outranks what the athlete said about their body');
+
+    const ordered = rosterWorkload([
+      ...['1', '2', '3'].map((id) => sore(id)),
+      ...['4', '5', '6'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `E${id}`, programmeEndDate: '2026-09-24',
+      }), TODAY)),
+    ]).map((r) => r.kind);
+    assert.ok(ordered.indexOf('pain') < ordered.indexOf('ending'),
+      'and the band reads in the same order');
   });
 });
 

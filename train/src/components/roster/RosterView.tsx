@@ -6,13 +6,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
 import {
-  applyFilter, FILTER_LABELS, filterCounts, partitionRoster, summariseToday,
+  applyFilter, concernsFor, FILTER_LABELS, filterCounts, kindsForFilter,
+  rankEntries, rosterWorkload, summariseToday,
 } from '@/lib/domain/roster';
-import type { RosterEntry, RosterFilter, RosterGroup, Severity } from '@/lib/domain/roster';
+import type {
+  RosterEntry, RosterFilter, Severity, WorkloadKind, WorkloadRow,
+} from '@/lib/domain/roster';
 import { formatDayMonth } from '@/lib/domain/dates';
 import {
-  allSelected, deselectAll, EMPTY_SELECTION, isSelected, reconcile,
-  selectAll, selectedEntries, toggle,
+  allSelected, availableActions, BATCH_ACTION_LABEL, deselectAll, EMPTY_SELECTION,
+  isSelected, reconcile, selectAll, selectedEntries, toggle,
 } from '@/lib/domain/batch';
 import type { Selection } from '@/lib/domain/batch';
 import { BatchBar } from './BatchBar';
@@ -26,6 +29,12 @@ import { BatchBar } from './BatchBar';
  *
  * There is no score. Iron Miles surfaces what it knows; the coach decides what
  * it means.
+ *
+ * The screen answers it in two passes. The band states the week's workload by
+ * concern — how much of each thing there is to do — and the list below states
+ * each athlete once, whole. An athlete carrying three problems is counted in
+ * three of those totals and listed one time, so the totals stay true and the
+ * roster never reads as three copies of the same person.
  */
 
 const SEVERITY_DOT: Record<Severity, string> = {
@@ -34,12 +43,15 @@ const SEVERITY_DOT: Record<Severity, string> = {
   information: 'bg-hairline-strong',
 };
 
-const FILTER_ORDER: RosterFilter[] = [
-  'attention', 'checkins', 'missed', 'ending', 'races', 'no_training', 'all',
-];
+/** The two ways to look at the whole squad. Concerns are chosen in the band. */
+const SCOPES: RosterFilter[] = ['attention', 'all'];
 
-export function RosterView({ roster, today }: { roster: RosterEntry[]; today: string }) {
-  const [filter, setFilter] = useState<RosterFilter>('attention');
+export function RosterView({ roster, today, initialFilter = 'attention' }: {
+  roster: RosterEntry[];
+  today: string;
+  initialFilter?: RosterFilter;
+}) {
+  const [filter, setFilter] = useState<RosterFilter>(initialFilter);
   const [search, setSearch] = useState('');
 
   // Selection is deliberate and it is the coach's. It is never derived from a
@@ -54,13 +66,14 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
   const counts = useMemo(() => filterCounts(roster), [roster]);
   const visible = useMemo(() => applyFilter(roster, filter, search), [roster, filter, search]);
 
-  // A backlog shared by half the squad is one fact, not fifteen rows. Grouping
-  // it is what keeps the athlete whose long run went badly visible.
-  const { individual, groups } = useMemo(
-    () => (filter === 'attention' && !search
-      ? partitionRoster(visible)
-      : { individual: visible, groups: [] as RosterGroup[] }),
-    [visible, filter, search]);
+  // The band is computed from the whole roster, never from what is on screen,
+  // so choosing a concern cannot change the numbers the coach is reading. Each
+  // row's count is the count on the list it opens, because both are applyFilter.
+  const workload = useMemo(() => rosterWorkload(roster), [roster]);
+
+  // Ranked here rather than in the band: every athlete who needs the coach is
+  // in this list exactly once, whatever they are counted in above.
+  const listed = useMemo(() => rankEntries(visible), [visible]);
   const summary = useMemo(() => summariseToday(roster, today), [roster, today]);
 
   const visibleIds = visible.map((e) => e.athleteId);
@@ -70,12 +83,19 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
     <>
       <TodayStrip summary={summary} total={roster.length} />
 
+      <WorkloadBand
+        rows={workload}
+        active={filter}
+        needing={counts.attention}
+        total={roster.length}
+        onShow={(kind) => { setFilter(filter === kind ? 'attention' : kind); setSearch(''); }}
+        onSelect={(row) => setSelection(selectAll(selection, row.athleteIds))}
+        memberOf={(row) => roster.filter((e) => row.athleteIds.includes(e.athleteId))}
+      />
+
       <div className="mt-7 flex flex-wrap items-center gap-2">
-        {FILTER_ORDER.map((key) => {
-          const count = counts[key];
+        {SCOPES.map((key) => {
           const active = filter === key;
-          // a filter with nothing behind it is noise, unless it is where you are
-          if (!count && !active && key !== 'all') return null;
           return (
             <button
               key={key}
@@ -89,7 +109,7 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
               }`}
             >
               {FILTER_LABELS[key]}
-              <span className="ml-2 im-mono text-[10px] opacity-70">{count}</span>
+              <span className="ml-2 im-mono text-[10px] opacity-70">{counts[key]}</span>
             </button>
           );
         })}
@@ -128,41 +148,19 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
         </Panel>
       ) : (
         <>
-          {groups.length > 0 && (
-            <ul className="mt-6 grid gap-3" aria-label="Shared across the squad">
-              {groups.map((group) => (
-                <li key={group.kind}>
-                  <GroupRow
-                    group={group}
-                    onShow={() => { setFilter('all'); setSearch(''); }}
-                    onSelect={() => setSelection(
-                      selectAll(selection, group.entries.map((e) => e.athleteId)))}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {individual.length > 0 ? (
-            <ul className="mt-3 grid gap-3" aria-label="Athletes">
-              {individual.map((entry) => (
-                <li key={entry.athleteId}>
-                  <AthleteRow
-                    entry={entry}
-                    today={today}
-                    selected={isSelected(selection, entry.athleteId)}
-                    onToggle={() => setSelection(toggle(selection, entry.athleteId))}
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Panel className="mt-3 p-6 text-center">
-              <p className="text-[13px] leading-relaxed text-ink-secondary">
-                Nobody else needs reading one at a time.
-              </p>
-            </Panel>
-          )}
+          <ul className="mt-6 grid gap-3" aria-label="Athletes">
+            {listed.map((entry) => (
+              <li key={entry.athleteId}>
+                <AthleteRow
+                  entry={entry}
+                  today={today}
+                  active={filter}
+                  selected={isSelected(selection, entry.athleteId)}
+                  onToggle={() => setSelection(toggle(selection, entry.athleteId))}
+                />
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -175,45 +173,95 @@ export function RosterView({ roster, today }: { roster: RosterEntry[]; today: st
   );
 }
 
-/** One problem several athletes share, stated once and actionable once. */
-function GroupRow({ group, onShow, onSelect }: {
-  group: RosterGroup;
-  onShow: () => void;
-  onSelect: () => void;
+/**
+ * THE WORKLOAD BAND
+ *
+ * What there is to do, by the thing that needs doing.
+ *
+ * Every count here is the count of everyone carrying that concern, including
+ * the athletes who also appear in the row above and the row below. Nobody is
+ * subtracted from one total to keep them out of another, because a coach
+ * planning their morning needs to know there are seventeen people missing
+ * training — not seventeen minus however many of them also have a check-in.
+ *
+ * The band deliberately holds no names. Names belong to the list underneath,
+ * where each athlete appears once with everything that is true of them; if the
+ * band listed them too, an athlete with three concerns would be written across
+ * the screen three times, which is the failure this replaces, in reverse.
+ * "Also need you elsewhere" says how much overlap there is without spending
+ * the space to spell it out.
+ */
+function WorkloadBand({ rows, active, needing, total, onShow, onSelect, memberOf }: {
+  rows: WorkloadRow[];
+  active: RosterFilter;
+  needing: number;
+  total: number;
+  onShow: (kind: WorkloadKind) => void;
+  onSelect: (row: WorkloadRow) => void;
+  memberOf: (row: WorkloadRow) => RosterEntry[];
 }) {
-  return (
-    <Panel className="min-w-0 p-5">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-3">
-            <span aria-hidden className={`size-2 shrink-0 rounded-full ${SEVERITY_DOT[group.severity]}`} />
-            <p className="text-[14px] font-semibold text-ink">{group.detail}</p>
-          </div>
-          <p className="mt-1.5 min-w-0 break-words text-[12px] leading-relaxed text-ink-tertiary">
-            {group.entries.slice(0, 6).map((e) => e.fullName).join(', ')}
-            {group.entries.length > 6 && ` and ${group.entries.length - 6} more`}
-          </p>
-        </div>
+  if (rows.length === 0) return null;
 
-        <div className="flex shrink-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={onShow}
-            className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-ink-secondary hover:text-mint"
-          >
-            Show them
-          </button>
-          {/* the row already knows who these athletes are; the coach should not
-              have to find them one at a time to act on the thing they share */}
-          <button
-            type="button"
-            onClick={onSelect}
-            className="rounded-xs border border-hairline-strong px-3.5 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-ink-body transition-colors hover:border-mint hover:text-mint"
-          >
-            Select all {group.entries.length}
-          </button>
-        </div>
+  return (
+    <Panel className="mt-4 p-5 sm:p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <h2 className="im-micro">What the week needs</h2>
+        <p className="im-mono text-[11px] text-ink-tertiary">
+          {needing} of {total} need you
+        </p>
       </div>
+
+      <ul className="mt-4 grid gap-1">
+        {rows.map((row) => {
+          const on = active === row.kind;
+          // the actions Slice 9 already says are possible for these athletes —
+          // the band offers no action of its own
+          const actions = availableActions(memberOf(row));
+          return (
+            <li
+              key={row.kind}
+              className={`-mx-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xs px-2 py-2 transition-colors ${
+                on ? 'bg-mint/[0.07]' : ''
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onShow(row.kind)}
+                aria-pressed={on}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span aria-hidden className={`size-2 shrink-0 rounded-full ${SEVERITY_DOT[row.severity]}`} />
+                <span className={`min-w-0 break-words text-[13.5px] leading-relaxed ${
+                  on ? 'text-mint' : 'text-ink-body'
+                }`}>
+                  {row.detail}
+                </span>
+                {row.alsoElsewhere > 0 && (
+                  <span className="im-mono shrink-0 text-[10.5px] text-ink-tertiary">
+                    {row.alsoElsewhere} also elsewhere
+                  </span>
+                )}
+              </button>
+
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="im-mono text-[11px] text-ink-tertiary" aria-hidden>
+                  {on ? 'showing' : 'show'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSelect(row)}
+                  title={actions.length
+                    ? `Then: ${actions.map((a) => BATCH_ACTION_LABEL[a]).join(', ')}`
+                    : undefined}
+                  className="rounded-xs border border-hairline-strong px-3 py-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.14em] text-ink-body transition-colors hover:border-mint hover:text-mint"
+                >
+                  Select {row.count}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </Panel>
   );
 }
@@ -264,12 +312,19 @@ function TodayStrip({
  * Enough to decide whether opening them is worth it, and never so much that
  * the roster becomes the athlete page.
  */
-function AthleteRow({ entry, today, selected, onToggle }: {
+function AthleteRow({ entry, today, active, selected, onToggle }: {
   entry: RosterEntry;
   today: string;
+  /** Which concern the coach is looking through, so the row can say why. */
+  active: RosterFilter;
   selected: boolean;
   onToggle: () => void;
 }) {
+  // Every signal is shown whichever concern is being viewed. Filtering to
+  // "missing training" must never hide the fact that this athlete also said
+  // their Achilles hurts — that is the whole point of the list underneath.
+  const concerns = concernsFor(entry);
+  const matched = new Set<string>(kindsForFilter(active));
   // A bare programme name does not tell a coach whether it is running. The
   // three states a programme can be in each read differently.
   const position = !entry.programmeName
@@ -301,6 +356,15 @@ function AthleteRow({ entry, today, selected, onToggle }: {
               />
             )}
             <h3 className="im-display text-[1.05rem]">{entry.fullName}</h3>
+            {/* which of the week's concerns this athlete is part of, named
+                rather than counted: "3 concerns" above six sentences told a
+                coach nothing, and an athlete whose second signal was only
+                informational got no marker at all */}
+            {concerns.length > 1 && (
+              <span className="im-mono text-[10px] uppercase tracking-[0.1em] text-amber">
+                {concerns.map((k) => FILTER_LABELS[k]).join(' · ')}
+              </span>
+            )}
             {entry.recentAdaptations > 0 && (
               <span className="im-mono text-[10px] uppercase tracking-[0.1em] text-ink-tertiary">
                 you changed {entry.recentAdaptations} this week
@@ -317,7 +381,12 @@ function AthleteRow({ entry, today, selected, onToggle }: {
           {entry.signals.length > 0 && (
             <ul className="mt-3 grid gap-1.5">
               {entry.signals.map((signal) => (
-                <li key={signal.kind} className="flex min-w-0 items-baseline gap-2.5">
+                <li
+                  key={signal.kind}
+                  className={`flex min-w-0 items-baseline gap-2.5 ${
+                    matched.has(signal.kind) ? 'border-l-2 border-mint/50 -ml-2.5 pl-2' : ''
+                  }`}
+                >
                   <span
                     aria-hidden
                     className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEVERITY_DOT[signal.severity]}`}

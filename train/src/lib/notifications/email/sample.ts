@@ -46,7 +46,7 @@ export function sampleDigest(): Renderable {
         missedSessions: 5,
         programmesEnding: 2,
         groups: [
-          { kind: 'no_programme', detail: '3 athletes are waiting on a programme.', count: 3 },
+          { kind: 'no_training', detail: '3 athletes are waiting on a programme.', count: 3 },
         ],
         items: [
           {

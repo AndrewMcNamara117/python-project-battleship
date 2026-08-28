@@ -25,7 +25,9 @@
     "test:email": "node e2e/email.mjs",
     "_comment:email": "e2e/email.mjs needs the app started with a provider attached: CRON_SECRET=... RESEND_API_KEY=test-key RESEND_ENDPOINT=http://127.0.0.1:4599/emails RESEND_WEBHOOK_SECRET=whsec_... npm run dev. It stands up a local server that speaks Resend's protocol, so everything but the last hop across the internet is real.",
     "test:batch": "node e2e/batch.mjs",
-    "test:checkins": "node e2e/checkins.mjs"
+    "test:checkins": "node e2e/checkins.mjs",
+    "test:triage": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/checkin-triage-floor.test.mjs",
+    "test:workload": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/roster-workload.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

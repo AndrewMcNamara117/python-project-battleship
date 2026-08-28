@@ -60,7 +60,7 @@ try {
   const chips = await p.locator('button[aria-pressed]').allTextContents();
   check('filters are offered with counts', chips.length >= 2, chips.join(' | '));
   check('needs-attention is where a coach lands',
-    (await p.locator('button[aria-pressed="true"]').innerText()).toLowerCase().includes('attention'));
+    (await p.locator('button[aria-pressed="true"]').first().innerText()).toLowerCase().includes('attention'));
 
   const everyone = p.locator('button[aria-pressed]').filter({ hasText: /Everyone/i });
   await everyone.click();
@@ -99,36 +99,98 @@ try {
     /Nothing logged in \d+ days?\./i,
     /nothing scheduled from today/i,
     /Joined .* no programme yet\./i,
-    // one problem several athletes share is stated once
-    /\d+ athletes are waiting on a programme\./i,
+    // one problem several athletes share is stated once, in the band
+    /\d+ athletes with nothing scheduled\./i,
     /\d+ programmes end within the month\./i,
-    /\d+ athletes have a race coming up\./i,
+    /\d+ athletes missing training\./i,
+    /\d+ athletes reported pain or soreness\./i,
   ];
   check('everything surfaced says why in a sentence',
     explained.some((r) => r.test(attentionText)), attentionText.replace(/\n/g, ' | ').slice(0, 220));
 
-  /* ---- a problem shared by the squad is one line, not twenty ---- */
+  /* ---- the week's workload, stated without hiding anyone ---- */
 
-  const grouped = p.getByRole('list', { name: 'Shared across the squad' }).locator('> li');
-  const groupCount = await grouped.count();
-  if (groupCount > 0) {
-    const groupText = await grouped.first().innerText();
-    check('a shared problem is stated once', /\d+ athletes|\d+ programmes/i.test(groupText),
-      groupText.replace(/\n/g, ' | ').slice(0, 120));
-    check('and names who it covers', groupText.split('\n').length > 1);
-    // Slice 9: the group's action selects everyone it names. It used to be a
-    // link to the first athlete's page, which promised a group action and
-    // delivered a single-athlete one.
-    const groupAction = grouped.first().getByRole('button', { name: /select all \d+/i });
-    check('and can be acted on as a group', (await groupAction.count()) > 0, groupText.slice(0, 80));
-    if (await groupAction.count()) {
-      const named = Number((groupText.match(/(\d+) athletes|(\d+) programmes/i) ?? [0, 0])[1] ?? 0);
-      const offered = Number(((await groupAction.innerText()).match(/(\d+)/) ?? [0, 0])[1]);
-      check('and the action covers everyone it named', offered === named, `${offered} vs ${named}`);
-    }
-    check('and can be expanded to the individuals',
-      (await grouped.first().getByRole('button', { name: /Show them/i }).count()) > 0);
+  // Slice 11. The old model grouped an athlete only when a single signal was
+  // their whole story and then removed them from the list, so at forty
+  // athletes it produced almost no groups and a wall of rows. The band states
+  // every concern up front; the list underneath still holds everyone.
+  const band = p.locator('li').filter({ has: p.getByRole('button', { name: /^Select \d+$/ }) });
+  const bandRows = await band.count();
+  check('the week\'s workload is stated on arrival', bandRows > 0, `${bandRows} rows`);
+  // How many concerns appear depends on the squad, and a quiet squad with one
+  // shared problem is a correct answer, not a failure. What must always hold
+  // is that a stated concern is one several athletes share.
+  const bandCounts = [];
+  for (let i = 0; i < bandRows; i++) {
+    bandCounts.push(Number(((await band.nth(i).innerText()).match(/(\d+)/) ?? [0, 0])[1]));
   }
+  check('and never states a concern only one or two athletes have',
+    bandCounts.every((n) => n >= 3), bandCounts.join(', '));
+
+  const listRows = () => p.getByRole('list', { name: 'Athletes' }).locator('> li').count();
+
+  let truthful = 0, mismatched = [];
+  for (let i = 0; i < bandRows; i++) {
+    const row = band.nth(i);
+    const text = await row.innerText();
+    const claimed = Number((text.match(/(\d+)/) ?? [0, 0])[1]);
+
+    // the promise: the number on the row is the number of athletes behind it
+    await row.locator('button[aria-pressed]').click();
+    await p.waitForTimeout(350);
+    const shown = await listRows();
+    if (shown === claimed) truthful++;
+    else mismatched.push(`${text.split('\n')[0]} claims ${claimed}, shows ${shown}`);
+    await row.locator('button[aria-pressed]').click();
+    await p.waitForTimeout(300);
+  }
+  check('every count is the count of the list it opens', truthful === bandRows,
+    mismatched.join(' · '));
+
+  // An athlete in two concerns must be counted in both. The band states how
+  // many of a row's athletes need the coach elsewhere too — so open each row
+  // and count them on the page. This is the claim that would break if the
+  // band ever went back to filing an athlete under a single problem.
+  const CONCERN = /(Pain or soreness|Check-ins to read|Missed training|Programme ending|Nothing scheduled|Race approaching)/i;
+  let overlapAgrees = 0, overlapChecked = 0, overlapDetail = [];
+
+  for (let i = 0; i < bandRows; i++) {
+    const row = band.nth(i);
+    const rowText = await row.innerText();
+    const claimed = Number((rowText.match(/(\d+) also elsewhere/) ?? [0, 0])[1]);
+
+    await row.locator('button[aria-pressed]').click();
+    await p.waitForTimeout(350);
+    const texts = await p.getByRole('list', { name: 'Athletes' }).locator('> li').allInnerTexts();
+    // an athlete needs the coach elsewhere when their row names more than one
+    // concern — the marker, not the programme line, which also uses a middot
+    const actual = texts.filter((t) => {
+      const marker = t.split('\n')[1] ?? '';
+      return CONCERN.test(marker) && / · /.test(marker);
+    }).length;
+
+    overlapChecked++;
+    if (actual === claimed) overlapAgrees++;
+    else overlapDetail.push(`${rowText.split('\n')[0]}: says ${claimed}, list shows ${actual}`);
+
+    await row.locator('button[aria-pressed]').click();
+    await p.waitForTimeout(300);
+  }
+  check('the overlap each row reports is the overlap in its own list',
+    overlapAgrees === overlapChecked, overlapDetail.join(' · '));
+
+  // the group's action is Slice 9's, not a new one
+  const first = band.first();
+  await first.getByRole('button', { name: /^Select \d+$/ }).click();
+  await p.waitForTimeout(400);
+  const barText = await p.locator('body').innerText();
+  check('selecting a concern fills the existing batch bar', /\d+ selected/i.test(barText));
+  const claimed = Number(((await first.innerText()).match(/(\d+)/) ?? [0, 0])[1]);
+  const selected = Number((barText.match(/(\d+) selected/i) ?? [0, 0])[1]);
+  check('and selects exactly the athletes it counted', selected === claimed,
+    `${selected} vs ${claimed}`);
+  await p.getByRole('button', { name: /^Clear$/i }).first().click();
+  await p.waitForTimeout(300);
 
   /* ---- signals lead somewhere ---- */
 

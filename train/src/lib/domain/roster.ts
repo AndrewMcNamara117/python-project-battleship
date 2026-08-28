@@ -31,6 +31,40 @@ export type Severity = 'urgent' | 'attention' | 'information';
 const SEVERITY_RANK: Record<Severity, number> = { urgent: 0, attention: 1, information: 2 };
 
 /**
+ * Which concern a coach should meet first when two signals are equally severe.
+ *
+ * Severity still decides: this only breaks ties. It exists because severity
+ * alone let an ending programme sit above a flagged check-in — both are
+ * `attention`, and the classifier happened to push the programme first, so
+ * the athlete whose Achilles hurts was listed under an administrative note
+ * about a renewal date. Ordering by the order the code was written in is not
+ * a clinical judgement.
+ *
+ * The rule is readable in one line: what the athlete's body is telling us,
+ * then what they told us, then whether they are training at all, then what is
+ * coming, then paperwork.
+ */
+const SIGNAL_CONCERN: Record<SignalKind, number> = {
+  soreness_reported: 0,
+  checkin_flagged: 1,
+  no_future_sessions: 2,
+  no_programme: 3,
+  not_training: 4,
+  missed_repeated: 5,
+  missed_key_session: 6,
+  race_approaching: 7,
+  unread_message: 8,
+  programme_ending: 9,
+  checkin_unreviewed: 10,
+};
+
+/** Severity first, then the concern order. Nothing else. */
+export function compareSignals(a: Signal, b: Signal): number {
+  return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
+    || SIGNAL_CONCERN[a.kind] - SIGNAL_CONCERN[b.kind];
+}
+
+/**
  * The soreness score, out of ten, at which a written niggle stops being a
  * note and starts being something to look at. The athlete sets it themselves
  * on the check-in; this is not an assessment of them.
@@ -296,7 +330,7 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
     });
   }
 
-  return signals.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
+  return signals.sort(compareSignals);
 }
 
 /** Facts plus what they mean, ready for the screen. */
@@ -320,9 +354,16 @@ export function buildEntry(facts: RosterFacts, today: ISODate): RosterEntry {
  * shifts on its own between two people in the same state.
  */
 export function rankEntries(entries: RosterEntry[]): RosterEntry[] {
-  const worst = (e: RosterEntry) => (e.topSignal ? SEVERITY_RANK[e.topSignal.severity] : 99);
+  // An athlete's place in the list is decided by the same rule that decides
+  // the order of their own signals, so the roster and the row agree.
+  const rank = (a: RosterEntry, b: RosterEntry) => {
+    if (!a.topSignal && !b.topSignal) return 0;
+    if (!a.topSignal) return 1;
+    if (!b.topSignal) return -1;
+    return compareSignals(a.topSignal, b.topSignal);
+  };
   return [...entries].sort((a, b) =>
-    worst(a) - worst(b) ||
+    rank(a, b) ||
     b.signals.length - a.signals.length ||
     a.fullName.localeCompare(b.fullName));
 }
@@ -335,7 +376,8 @@ export type RosterFilter =
   | 'missed'
   | 'ending'
   | 'races'
-  | 'no_training';
+  | 'no_training'
+  | 'pain';
 
 export const FILTER_LABELS: Record<RosterFilter, string> = {
   attention: 'Needs attention',
@@ -345,6 +387,7 @@ export const FILTER_LABELS: Record<RosterFilter, string> = {
   ending: 'Programme ending',
   races: 'Race approaching',
   no_training: 'Nothing scheduled',
+  pain: 'Pain or soreness',
 };
 
 const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
@@ -353,7 +396,13 @@ const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
   ending: ['programme_ending'],
   races: ['race_approaching'],
   no_training: ['no_programme', 'no_future_sessions'],
+  pain: ['soreness_reported'],
 };
+
+/** Which signals answer a given filter. One definition, asked by name. */
+export function kindsForFilter(filter: RosterFilter): SignalKind[] {
+  return FILTER_KINDS[filter] ?? [];
+}
 
 export function applyFilter(entries: RosterEntry[], filter: RosterFilter, search = ''): RosterEntry[] {
   const term = search.trim().toLowerCase();
@@ -408,73 +457,156 @@ export function summariseToday(entries: RosterEntry[], today: ISODate): RosterTo
 }
 
 /**
- * When many athletes share one problem, that is one fact about the squad —
- * not twenty rows a coach has to scroll past.
+ * The squad's workload, by the thing that needs doing.
  *
- * A backlog of athletes waiting on a programme is the obvious case: it is real
- * and worth acting on, but listing each one individually buries the athlete
- * whose long run went badly. So a signal that is an athlete's *only* reason for
- * surfacing, and is shared by several of them, collapses into a single line.
+ * The previous model made a coach choose between two half-truths. It grouped
+ * an athlete only when a single signal was their entire story, and then
+ * *removed* them from the list — so at forty athletes the roster showed no
+ * groups at all and twenty-one individual rows, because twelve of those
+ * twenty-one had more than one thing going on. The view degraded exactly when
+ * the week got hard, which is the only time it matters.
  *
- * An athlete with anything else going on is never grouped away.
+ * So grouping no longer competes with the list. A workload row is a count of
+ * everyone who carries that concern, whatever else they carry; the roster
+ * below still shows each athlete once, with their whole story. Sarah, who has
+ * missed training and has a programme ending and flagged her check-in, is
+ * counted in all three rows and listed once. No count is deflated to keep her
+ * from appearing twice, and she is never filed under one problem and hidden
+ * from the others.
+ *
+ * The counts are the filter counts — the same `applyFilter` a coach gets when
+ * they tap the row — so the number on the row and the list it opens cannot
+ * disagree.
  */
-export const GROUP_THRESHOLD = 3;
+export const WORKLOAD_KINDS = [
+  'pain',
+  'checkins',
+  'no_training',
+  'missed',
+  'races',
+  'ending',
+] as const satisfies readonly RosterFilter[];
 
-export interface RosterGroup {
-  kind: SignalKind;
+export type WorkloadKind = (typeof WORKLOAD_KINDS)[number];
+
+export interface WorkloadRow {
+  kind: WorkloadKind;
+  /** The chip a coach already knows this concern by. */
+  label: string;
+  /** The worst severity actually present, not a severity declared up front. */
   severity: Severity;
   detail: string;
+  /** Everyone carrying this concern. Never reduced to avoid double-counting. */
+  athleteIds: UUID[];
+  count: number;
+  /** How many of them the coach also needs for something else. */
+  alsoElsewhere: number;
   href: string;
-  entries: RosterEntry[];
 }
 
-export interface RosterPartition {
-  /** Athletes to read one at a time. */
-  individual: RosterEntry[];
-  /** Shared problems, stated once. */
-  groups: RosterGroup[];
-}
-
-const GROUP_DETAIL: Partial<Record<SignalKind, (n: number) => string>> = {
-  no_programme: (n) => `${n} athletes are waiting on a programme.`,
-  programme_ending: (n) => `${n} programmes end within the month.`,
-  race_approaching: (n) => `${n} athletes have a race coming up.`,
+const WORKLOAD_DETAIL: Record<WorkloadKind, (n: number) => string> = {
+  pain: (n) => `${plural(n, 'athlete')} reported pain or soreness.`,
+  checkins: (n) => `${plural(n, 'check-in')} to answer or read.`,
+  no_training: (n) => `${plural(n, 'athlete')} with nothing scheduled.`,
+  missed: (n) => `${plural(n, 'athlete')} missing training.`,
+  races: (n) => `${plural(n, 'athlete')} with a race coming up.`,
+  ending: (n) => `${n === 1 ? '1 programme ends' : `${n} programmes end`} within the month.`,
 };
 
-export function partitionRoster(entries: RosterEntry[]): RosterPartition {
-  const raised = (e: RosterEntry) => e.signals.filter((s) => s.severity !== 'information');
+/** A group is worth stating once several athletes share it. */
+export const GROUP_THRESHOLD = 3;
 
-  // an athlete is groupable only when one signal is their whole story
-  const soleKind = (e: RosterEntry): SignalKind | null => {
-    const loud = raised(e);
-    return loud.length === 1 && GROUP_DETAIL[loud[0].kind] ? loud[0].kind : null;
-  };
+export function rosterWorkload(
+  entries: RosterEntry[],
+  { threshold = GROUP_THRESHOLD }: { threshold?: number } = {},
+): WorkloadRow[] {
+  const members = new Map<WorkloadKind, RosterEntry[]>(
+    WORKLOAD_KINDS.map((kind) => [kind, applyFilter(entries, kind)]),
+  );
 
-  const byKind = new Map<SignalKind, RosterEntry[]>();
-  for (const entry of entries) {
-    const kind = soleKind(entry);
-    if (!kind) continue;
-    byKind.set(kind, [...(byKind.get(kind) ?? []), entry]);
+  // how many concerns each athlete carries, counted once across the whole
+  // board so "also needs you elsewhere" is a fact and not an estimate
+  const carried = new Map<UUID, number>();
+  for (const group of members.values()) {
+    for (const e of group) carried.set(e.athleteId, (carried.get(e.athleteId) ?? 0) + 1);
   }
 
-  const grouped = new Set<UUID>();
-  const groups: RosterGroup[] = [];
+  const rows: WorkloadRow[] = [];
+  for (const kind of WORKLOAD_KINDS) {
+    const group = members.get(kind)!;
+    if (group.length < threshold) continue;
 
-  for (const [kind, members] of byKind) {
-    if (members.length < GROUP_THRESHOLD) continue;
-    const signal = members[0].signals.find((s) => s.kind === kind)!;
-    groups.push({
+    const kinds = FILTER_KINDS[kind] ?? [];
+    const matching = group.flatMap((e) => e.signals.filter((s) => kinds.includes(s.kind)));
+    const severity = matching
+      .map((s) => s.severity)
+      .reduce<Severity>((worst, s) => (SEVERITY_RANK[s] < SEVERITY_RANK[worst] ? s : worst), 'information');
+
+    rows.push({
       kind,
-      severity: signal.severity,
-      detail: GROUP_DETAIL[kind]!(members.length),
-      href: signal.href,
-      entries: members,
+      label: FILTER_LABELS[kind],
+      severity,
+      detail: WORKLOAD_DETAIL[kind](group.length),
+      athleteIds: group.map((e) => e.athleteId),
+      count: group.length,
+      alsoElsewhere: group.filter((e) => (carried.get(e.athleteId) ?? 0) > 1).length,
+      href: `/coach?filter=${kind}`,
     });
-    for (const m of members) grouped.add(m.athleteId);
   }
 
-  return {
-    individual: entries.filter((e) => !grouped.has(e.athleteId)),
-    groups: groups.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]),
-  };
+  // WORKLOAD_KINDS is already in concern order; severity may still promote a
+  // row above it, the same way it does for one athlete's own signals.
+  return rows.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]);
+}
+
+/**
+ * Which operational concerns this one athlete belongs to.
+ *
+ * The same membership the workload rows count, asked one athlete at a time —
+ * so a row can never claim someone the athlete's own card does not show, and
+ * the card can never show a concern the row failed to count.
+ */
+/**
+ * A filter named in a URL, or the default.
+ *
+ * A deep link from a digest lands on a concern. It cannot do anything else:
+ * the roster it narrows was already fetched for this coach and nobody else,
+ * so an unrecognised or hand-crafted value can only ever show the coach fewer
+ * of their own athletes.
+ */
+export function parseFilter(value: string | string[] | undefined): RosterFilter {
+  const one = Array.isArray(value) ? value[0] : value;
+  return one && one in FILTER_LABELS ? (one as RosterFilter) : 'attention';
+}
+
+export function concernsFor(
+  entry: RosterEntry,
+  { raisedOnly = false }: { raisedOnly?: boolean } = {},
+): WorkloadKind[] {
+  const signals = raisedOnly
+    ? entry.signals.filter((s) => s.severity !== 'information')
+    : entry.signals;
+  return WORKLOAD_KINDS.filter((kind) =>
+    signals.some((s) => (FILTER_KINDS[kind] ?? []).includes(s.kind)));
+}
+
+/**
+ * Everyone who needs the coach, each appearing once, ranked.
+ *
+ * Deliberately not filtered by what the workload rows already state: a
+ * grouped concern is a count, not a filing cabinet, and an athlete is never
+ * removed from the roster because one of their problems was totalled above.
+ */
+export function attentionRoster(entries: RosterEntry[]): RosterEntry[] {
+  return rankEntries(applyFilter(entries, 'attention'));
+}
+
+/**
+ * The one-line reason this athlete is on the list, and how much else is true
+ * of them. Used where there is room for a row but not for every signal.
+ */
+export function entrySummary(entry: RosterEntry): { lead: Signal | null; more: number } {
+  const raised = entry.signals.filter((s) => s.severity !== 'information');
+  const shown = raised.length ? raised : entry.signals;
+  return { lead: shown[0] ?? null, more: Math.max(0, entry.signals.length - 1) };
 }

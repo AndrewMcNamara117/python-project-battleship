@@ -84,12 +84,15 @@ try {
   await go('/coach');
   const flaggedAtStart = ((await body()).match(/Check-in flagged/gi) ?? []).length;
 
-  // The flagged signal links straight at the athlete whose check-in it is.
-  // The athlete's own page carries one responder, for their latest check-in —
-  // which is exactly the one the roster computes the flag from. The queue has
-  // several cards per athlete and an earlier leg has already marked one read,
-  // so replying there would be replying to whichever card happened to sort first.
-  const flaggedHref = await p.locator('a[href*="#checkins"]').first()
+  // Follow the *flagged* signal's own link, not merely the first link that
+  // happens to point at a check-in. Slice 11 orders an athlete's signals by
+  // concern rather than by the order the classifier was written in, so the
+  // first #checkins link on the page now belongs to whoever reported the
+  // worst soreness — who may have nothing flagged at all. Replying to them
+  // is a real reply to the wrong person, and the flagged count rightly does
+  // not move. Ask for the sentence, not the position.
+  const flaggedHref = await p.locator('a[href*="#checkins"]')
+    .filter({ hasText: /^Check-in flagged/i }).first()
     .getAttribute('href').catch(() => null);
 
   if (flaggedAtStart === 0 || !flaggedHref) {

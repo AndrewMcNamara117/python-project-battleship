@@ -51,6 +51,37 @@ export interface TriageResult {
   athleteGuidance: string | null;
 }
 
+/**
+ * The least attention these scores can be given.
+ *
+ * A strict subset of the rules below — the six score thresholds, counted the
+ * same way, with nothing that depends on free text, on last week, or on what
+ * was prescribed. It exists because `attention_level` is written on a row the
+ * athlete owns, and a level sent by hand must not be able to go under what
+ * their own numbers already say. Postgres enforces the same floor in
+ * migration 0018; supabase/test/checkin-triage-floor.test.mjs runs both over
+ * the same inputs so the two cannot drift apart.
+ */
+export function scoreFloor(scores: CheckInScores): AttentionLevel {
+  const reasons = [
+    scores.soreness >= 8,
+    scores.fatigue >= 8,
+    scores.sleep <= 3,
+    scores.motivation <= 3,
+    scores.stress >= 8,
+    scores.confidence <= 3,
+  ].filter(Boolean).length;
+  return reasons >= 2 ? 'attention' : reasons === 1 ? 'watch' : 'none';
+}
+
+const AT_LEAST: Record<AttentionLevel, number> = { none: 0, watch: 1, attention: 2 };
+
+/** Raise a claimed level to the floor. Never lowers it. */
+export function atLeastFloor(level: AttentionLevel, scores: CheckInScores): AttentionLevel {
+  const floor = scoreFloor(scores);
+  return AT_LEAST[floor] > AT_LEAST[level] ? floor : level;
+}
+
 export function triageCheckIn(input: TriageInput): TriageResult {
   const { scores, freeText, sessionsCompleted, sessionsPrescribed, history } = input;
   const text = freeText.join(' \n ');

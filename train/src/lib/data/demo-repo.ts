@@ -10,6 +10,7 @@ import {
 import { buildDemoDataset, CLUB_MEMBER_META, DEMO_ATHLETE_ID, DEMO_COACH_ID, type DemoDataset } from '@/data/demo-seed';
 import { addDays, daysBetween, formatDayMonth, startOfMonth, startOfWeek, toISODate, weekdayIndex } from '@/lib/domain/dates';
 import { currentStreakWeeks, totalScore } from '@/lib/domain/forge-score';
+import { atLeastFloor } from '@/lib/domain/checkin-rules';
 import { parseTimeToSeconds } from '@/lib/domain/dates';
 import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
 import type {
@@ -476,7 +477,14 @@ export class DemoRepo implements IronMilesRepo {
 
   async submitCheckIn(checkIn: Omit<CheckIn, 'id' | 'submittedAt'>): Promise<CheckIn> {
     const d = dataset();
-    const row: CheckIn = { ...checkIn, id: uid('ci'), submittedAt: new Date().toISOString() };
+    // the same floor Postgres enforces in 0018, so a level that could not be
+    // written against the real database cannot be written against this one
+    const row: CheckIn = {
+      ...checkIn,
+      attentionLevel: atLeastFloor(checkIn.attentionLevel, checkIn.scores),
+      id: uid('ci'),
+      submittedAt: new Date().toISOString(),
+    };
     const i = d.checkins.findIndex((c) => c.athleteId === checkIn.athleteId && c.weekStart === checkIn.weekStart);
     if (i >= 0) d.checkins[i] = row;
     else d.checkins.push(row);

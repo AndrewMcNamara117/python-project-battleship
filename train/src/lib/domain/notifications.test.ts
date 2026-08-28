@@ -266,7 +266,7 @@ describe('the digest', () => {
       buildEntry(facts({ athleteId: id, fullName: id, programmeId: null, programmeName: null }), TODAY));
     const digest = composeDigest([...roster, ...waiting], TODAY);
 
-    const group = digest.groups.find((g) => g.kind === 'no_programme');
+    const group = digest.groups.find((g) => g.kind === 'no_training');
     assert.ok(group, 'five athletes waiting on a programme is one job');
     assert.equal(group.count, 5);
     for (const id of ['w1', 'w5']) {
@@ -275,7 +275,7 @@ describe('the digest', () => {
     }
 
     const body = digestDraft(digest, prefs())!.body;
-    assert.match(body, /5 athletes are waiting on a programme/);
+    assert.match(body, /5 athletes with nothing scheduled/);
     assert.doesNotMatch(body, /8 of 9/, 'a count of everyone is not a summary');
   });
 
@@ -380,14 +380,14 @@ describe('a fifty-athlete roster on a bad Monday', () => {
     const alerts = alertsFor(roster, open, new Date(`${TODAY}T07:30:00Z`));
     const athletes = new Set(alerts.map((a) => a.athleteId));
     assert.equal(athletes.size, alerts.length);
-    assert.match(alerts[0].title, /check-in flagged, reported a niggle/,
-      'and says both things in one');
+    assert.match(alerts[0].title, /reported a niggle, check-in flagged/,
+      'and says both things in one, the niggle first');
   });
 
   it('keeps the digest to a line a coach reads before their coffee', () => {
     const draft = digestDraft(composeDigest(roster, TODAY), open)!;
     assert.ok(draft.body.split(' · ').length <= 4, draft.body);
-    assert.match(draft.body, /waiting on a programme/, 'shared problems said once');
+    assert.match(draft.body, /8 athletes with nothing scheduled/, 'shared problems said once');
   });
 
   it('sends four things in total on the worst morning in this fixture', () => {

@@ -1,5 +1,5 @@
-import { partitionRoster } from './roster';
-import type { RosterEntry, Severity, Signal, SignalKind } from './roster';
+import { concernsFor, rankEntries, rosterWorkload } from './roster';
+import type { RosterEntry, Severity, Signal, SignalKind, WorkloadKind } from './roster';
 import type { ISODate, ISOTimestamp, UUID } from './types';
 
 /**
@@ -367,7 +367,7 @@ export interface Digest {
   programmesEnding: number;
   items: DigestItem[];
   /** Shared problems, said once rather than once per athlete. */
-  groups: { kind: SignalKind; detail: string; count: number }[];
+  groups: { kind: WorkloadKind; detail: string; count: number }[];
 }
 
 /**
@@ -377,14 +377,24 @@ export interface Digest {
  * is a digest a coach skims and stops opening.
  */
 export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest {
-  // The same partition the coach's screen uses. Six athletes waiting on a
-  // programme is one job, not six, and a digest that opens "9 of 10 need
-  // attention" has told a coach nothing except that the list is long.
-  // partitionRoster keeps quiet athletes in `individual` because the coach's
-  // screen shows the whole squad. A digest shows only what needs doing, so
-  // the actionable filter comes first and the partition groups what is left.
+  // Six athletes waiting on a programme is one job, not six, and a digest
+  // that opens "21 of 40 need attention" has told a coach nothing except that
+  // the list is long. So shared work is stated once as a count.
+  //
+  // What changed in Slice 11: the count no longer buys its brevity by hiding
+  // people. Every athlete carrying a concern is counted in it, including the
+  // ones who also have something else wrong. An athlete is left out of the
+  // named list only when a single concern is their whole story and a row
+  // already states it — anyone carrying more than one is named, because no
+  // single row tells their story.
   const actionable = roster.filter((e) => e.signals.some((s) => s.severity !== 'information'));
-  const { individual, groups } = partitionRoster(actionable);
+  const groups = rosterWorkload(actionable);
+  const stated = new Set(groups.map((g) => g.kind));
+
+  const items = actionable.filter((entry) => {
+    const concerns = concernsFor(entry, { raisedOnly: true });
+    return !(concerns.length === 1 && stated.has(concerns[0]));
+  });
 
   const countWith = (kind: SignalKind) =>
     roster.filter((e) => e.signals.some((s) => s.kind === kind)).length;
@@ -392,7 +402,7 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
   return {
     localDate,
     athletes: roster.length,
-    needingAttention: individual.length,
+    needingAttention: actionable.length,
     flaggedCheckIns: countWith('checkin_flagged'),
     reportedPain: roster.filter(
       (e) => e.signals.some((s) => s.kind === 'soreness_reported' && s.severity !== 'information')).length,
@@ -400,7 +410,7 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
       (sum, e) => sum + (e.signals.some((s) => s.kind === 'missed_repeated') ? e.missedFourteenDays : 0), 0),
     programmesEnding: countWith('programme_ending'),
     // already ranked by the roster; the digest keeps that order
-    items: individual.map((entry) => ({
+    items: rankEntries(items).map((entry) => ({
       athleteId: entry.athleteId,
       athleteName: entry.fullName,
       priority: entry.topSignal?.severity ?? 'information',
@@ -409,7 +419,7 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
       href: `/coach/athletes/${entry.athleteId}`,
     })),
     // stated once, in the roster's own words
-    groups: groups.map((g) => ({ kind: g.kind, detail: g.detail, count: g.entries.length })),
+    groups: groups.map((g) => ({ kind: g.kind, detail: g.detail, count: g.count })),
   };
 }
 
