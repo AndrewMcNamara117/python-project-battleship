@@ -20,14 +20,16 @@
     "test:adaptation": "node e2e/adaptation.mjs",
     "test:roster": "node e2e/roster.mjs",
     "_comment:e2e": "Demo state lives in the server process, so order matters. loop drives the athlete-coach loop from a clean seed and must run first; adaptation needs the athlete's current week still intact. email runs before notifications because a digest is once per coach per local day. checkins marks every check-in read, so it runs after anything that reads check-in state; batch runs last because it assigns programmes to everyone waiting for one.",
-    "test:e2e:all": "node e2e/loop.mjs && node e2e/roster.mjs && node e2e/adaptation.mjs && node e2e/guards.mjs && node e2e/duplication.mjs && node e2e/library.mjs && node e2e/programme.mjs && node e2e/extraction.mjs && node e2e/email.mjs && node e2e/notifications.mjs && node e2e/checkins.mjs && node e2e/batch.mjs",
+    "test:e2e:all": "node e2e/loop.mjs && node e2e/roster.mjs && node e2e/adaptation.mjs && node e2e/guards.mjs && node e2e/duplication.mjs && node e2e/library.mjs && node e2e/programme.mjs && node e2e/extraction.mjs && node e2e/email.mjs && node e2e/notifications.mjs && node e2e/checkins.mjs && node e2e/batch.mjs && node e2e/waiting.mjs",
     "test:notifications": "node e2e/notifications.mjs",
     "test:email": "node e2e/email.mjs",
     "_comment:email": "e2e/email.mjs needs the app started with a provider attached: CRON_SECRET=... RESEND_API_KEY=test-key RESEND_ENDPOINT=http://127.0.0.1:4599/emails RESEND_WEBHOOK_SECRET=whsec_... npm run dev. It stands up a local server that speaks Resend's protocol, so everything but the last hop across the internet is real.",
     "test:batch": "node e2e/batch.mjs",
     "test:checkins": "node e2e/checkins.mjs",
     "test:triage": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/checkin-triage-floor.test.mjs",
-    "test:workload": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/roster-workload.test.mjs"
+    "test:workload": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/roster-workload.test.mjs",
+    "test:waiting": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/waiting-replies.test.mjs src/lib/data/waiting-parity.test.ts",
+    "test:waiting:e2e": "node e2e/waiting.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

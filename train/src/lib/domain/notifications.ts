@@ -119,7 +119,7 @@ export const EXTERNAL_SIGNAL_LABEL: Record<SignalKind, string> = {
   missed_key_session: 'missed a key session',
   not_training: 'not training',
   race_approaching: 'race approaching',
-  unread_message: 'unread message',
+  awaiting_reply: 'waiting for a reply',
 };
 
 /**
@@ -365,6 +365,8 @@ export interface Digest {
   reportedPain: number;
   missedSessions: number;
   programmesEnding: number;
+  /** Athletes who wrote and have not been answered. The roster's own count. */
+  waitingReplies: number;
   items: DigestItem[];
   /** Shared problems, said once rather than once per athlete. */
   groups: { kind: WorkloadKind; detail: string; count: number }[];
@@ -409,6 +411,9 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
     missedSessions: roster.reduce(
       (sum, e) => sum + (e.signals.some((s) => s.kind === 'missed_repeated') ? e.missedFourteenDays : 0), 0),
     programmesEnding: countWith('programme_ending'),
+    // the same signal the roster counts, so the two cannot report different
+    // numbers for the same morning
+    waitingReplies: countWith('awaiting_reply'),
     // already ranked by the roster; the digest keeps that order
     items: rankEntries(items).map((entry) => ({
       athleteId: entry.athleteId,
@@ -433,6 +438,8 @@ export function digestDraft(digest: Digest, prefs: NotificationPreferences): Not
       : null,
     ...digest.groups.map((g) => g.detail.replace(/\.$/, '')),
     digest.flaggedCheckIns ? `${digest.flaggedCheckIns} flagged check-in${digest.flaggedCheckIns === 1 ? '' : 's'}` : null,
+    digest.waitingReplies
+      ? `${digest.waitingReplies} waiting on a reply` : null,
     digest.reportedPain ? `${digest.reportedPain} reported a niggle` : null,
     digest.missedSessions ? `${digest.missedSessions} missed sessions` : null,
   ]

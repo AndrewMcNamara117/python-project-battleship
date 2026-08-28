@@ -47,13 +47,16 @@ const SEVERITY_RANK: Record<Severity, number> = { urgent: 0, attention: 1, infor
 const SIGNAL_CONCERN: Record<SignalKind, number> = {
   soreness_reported: 0,
   checkin_flagged: 1,
-  no_future_sessions: 2,
-  no_programme: 3,
-  not_training: 4,
-  missed_repeated: 5,
-  missed_key_session: 6,
-  race_approaching: 7,
-  unread_message: 8,
+  // Someone is sitting there waiting for a human to answer them. That is not
+  // urgent the way an injury is, but it outranks anything about a schedule:
+  // the athlete is already aware of it and already waiting.
+  awaiting_reply: 2,
+  no_future_sessions: 3,
+  no_programme: 4,
+  not_training: 5,
+  missed_repeated: 6,
+  missed_key_session: 7,
+  race_approaching: 8,
   programme_ending: 9,
   checkin_unreviewed: 10,
 };
@@ -82,7 +85,7 @@ export type SignalKind =
   | 'missed_key_session'
   | 'not_training'
   | 'race_approaching'
-  | 'unread_message';
+  | 'awaiting_reply';
 
 export interface Signal {
   kind: SignalKind;
@@ -157,6 +160,32 @@ export interface RosterFacts {
   /** What they are training for, whether or not a race is booked. */
   eventType: string | null;
 
+  /**
+   * The conversation with this coach, as it actually stands.
+   *
+   * Waiting is not unread. `unreadFromAthlete` counts messages nobody has
+   * opened, and on the coach's side nothing has ever set `read_at` — so it
+   * counted every message the athlete had ever sent, for ever, and a coach
+   * who answered still saw "1 unread message" on the roster the next morning.
+   *
+   * Who is waiting is a fact about the conversation, not about a flag: the
+   * athlete is waiting when the last human message in the thread is theirs.
+   * These three fields carry that, derived in the roster query.
+   */
+  conversation: {
+    /**
+     * When the athlete started waiting — the first message they sent after
+     * the coach last spoke, not the most recent one. Someone who wrote three
+     * times yesterday has been waiting since yesterday, not since the last
+     * of the three.
+     */
+    waitingSince: ISOTimestamp;
+    /** Messages in that unanswered run. One conversation, not three items. */
+    unanswered: number;
+    /** What they said, so the coach knows what they are answering. */
+    latest: string;
+  } | null;
+
   unreadFromAthlete: number;
   /** Changes this coach made to their programme in the last week. */
   recentAdaptations: number;
@@ -187,7 +216,12 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * threshold is a plain number rather than a weighting. If a coach disagrees
  * with a threshold they can read it in one line.
  */
-export function classify(facts: RosterFacts, today: ISODate): Signal[] {
+export function classify(
+  facts: RosterFacts,
+  today: ISODate,
+  /** Only a waiting reply needs the clock rather than the calendar. */
+  now: ISOTimestamp = new Date().toISOString(),
+): Signal[] {
   const signals: Signal[] = [];
   const athlete = `/coach/athletes/${facts.athleteId}`;
 
@@ -321,12 +355,20 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
     });
   }
 
-  if (facts.unreadFromAthlete > 0) {
+  if (facts.conversation) {
+    // Constant severity, deliberately. Something that has waited four days is
+    // older, not more dangerous, and letting age climb a severity ladder would
+    // rank a question about parking above a reported injury.
+    const { waitingSince, unanswered } = facts.conversation;
     signals.push({
-      kind: 'unread_message',
+      kind: 'awaiting_reply',
       severity: 'attention',
-      detail: `${plural(facts.unreadFromAthlete, 'unread message')}.`,
-      href: '/coach/messages',
+      detail: unanswered > 1
+        ? `Waiting for a reply · ${waitedFor(waitingSince, now)} · ${unanswered} messages`
+        : `Waiting for a reply · ${waitedFor(waitingSince, now)}`,
+      // to the athlete, where their words and the box to answer them are —
+      // not to a list of everybody
+      href: `${athlete}#messages`,
     });
   }
 
@@ -334,8 +376,12 @@ export function classify(facts: RosterFacts, today: ISODate): Signal[] {
 }
 
 /** Facts plus what they mean, ready for the screen. */
-export function buildEntry(facts: RosterFacts, today: ISODate): RosterEntry {
-  const signals = classify(facts, today);
+export function buildEntry(
+  facts: RosterFacts,
+  today: ISODate,
+  now: ISOTimestamp = new Date().toISOString(),
+): RosterEntry {
+  const signals = classify(facts, today, now);
   return {
     ...facts,
     signals,
@@ -377,7 +423,8 @@ export type RosterFilter =
   | 'ending'
   | 'races'
   | 'no_training'
-  | 'pain';
+  | 'pain'
+  | 'waiting';
 
 export const FILTER_LABELS: Record<RosterFilter, string> = {
   attention: 'Needs attention',
@@ -388,6 +435,7 @@ export const FILTER_LABELS: Record<RosterFilter, string> = {
   races: 'Race approaching',
   no_training: 'Nothing scheduled',
   pain: 'Pain or soreness',
+  waiting: 'Waiting for a reply',
 };
 
 const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
@@ -397,7 +445,24 @@ const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
   races: ['race_approaching'],
   no_training: ['no_programme', 'no_future_sessions'],
   pain: ['soreness_reported'],
+  waiting: ['awaiting_reply'],
 };
+
+/**
+ * How long someone has been waiting, in the words a coach would use.
+ *
+ * Age is information, not priority. This never changes a severity and never
+ * feeds a score: a message four days old is not a clinical concern, it is a
+ * discourtesy, and the two are not the same thing. The coach reads the number
+ * and decides.
+ */
+export function waitedFor(since: ISOTimestamp, now: ISOTimestamp): string {
+  const mins = Math.max(0, Math.round((Date.parse(now) - Date.parse(since)) / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
 
 /** Which signals answer a given filter. One definition, asked by name. */
 export function kindsForFilter(filter: RosterFilter): SignalKind[] {
@@ -480,6 +545,7 @@ export function summariseToday(entries: RosterEntry[], today: ISODate): RosterTo
  */
 export const WORKLOAD_KINDS = [
   'pain',
+  'waiting',
   'checkins',
   'no_training',
   'missed',
@@ -506,6 +572,7 @@ export interface WorkloadRow {
 
 const WORKLOAD_DETAIL: Record<WorkloadKind, (n: number) => string> = {
   pain: (n) => `${plural(n, 'athlete')} reported pain or soreness.`,
+  waiting: (n) => `${plural(n, 'athlete')} waiting for a reply.`,
   checkins: (n) => `${plural(n, 'check-in')} to answer or read.`,
   no_training: (n) => `${plural(n, 'athlete')} with nothing scheduled.`,
   missed: (n) => `${plural(n, 'athlete')} missing training.`,

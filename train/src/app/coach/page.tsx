@@ -43,7 +43,7 @@ export default async function CoachOverviewPage({
       />
 
       <div className="mt-8">
-        <RosterView roster={ctx.roster} today={ctx.today} initialFilter={filter} />
+        <RosterView roster={ctx.roster} today={ctx.today} now={ctx.now} initialFilter={filter} />
       </div>
     </AppPage>
   );

@@ -72,12 +72,24 @@ export function rosterFactsFromRow(r: Record<string, unknown>): RosterFacts {
     raceDate: day(r.race_date),
     eventType: (r.goal_event_type as RosterFacts['eventType']) ?? null,
 
+    conversation: r.waiting_since
+      ? {
+          waitingSince: stamp(r.waiting_since)!,
+          unanswered: n(r.waiting_messages),
+          latest: (r.waiting_latest as string) ?? '',
+        }
+      : null,
+
     unreadFromAthlete: n(r.unread_from_athlete),
     recentAdaptations: n(r.recent_adaptations),
   };
 }
 
 /** Every row of the roster query, classified. */
-export function rosterFromRows(rows: Record<string, unknown>[], today: ISODate): RosterEntry[] {
-  return rows.map((r) => buildEntry(rosterFactsFromRow(r), today));
+export function rosterFromRows(
+  rows: Record<string, unknown>[],
+  today: ISODate,
+  now: string = new Date().toISOString(),
+): RosterEntry[] {
+  return rows.map((r) => buildEntry(rosterFactsFromRow(r), today, now));
 }

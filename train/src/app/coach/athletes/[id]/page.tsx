@@ -30,6 +30,8 @@ import { CoachNoteForm, CheckInResponder } from './CoachControls';
 import { SessionEditor } from './SessionEditor';
 import { SaveAsTemplate } from '@/components/programme/SaveAsTemplate';
 import { WeekAdaptation } from '@/components/adaptation/WeekAdaptation';
+import { ReplyToAthlete } from '@/components/roster/ReplyToAthlete';
+import { waitedFor } from '@/lib/domain/roster';
 import { CoachingContextControl } from './PhaseControl';
 import { AthleteContext } from '@/components/forge/AthleteContext';
 
@@ -62,6 +64,24 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
       repo.listForgeEvents(id),
       repo.listMessages(id),
     ]);
+
+  // Who is waiting, by the same rule the roster and migration 0020 use: the
+  // athlete is waiting when the last human message in the thread is theirs.
+  const now = new Date().toISOString();
+  const human = messages.filter((m) => m.authorKind === 'human');
+  const lastCoachAt = human
+    .filter((m) => m.senderId !== id)
+    .reduce<string | null>((latest, m) => (!latest || m.createdAt > latest ? m.createdAt : latest), null);
+  const unanswered = human
+    .filter((m) => m.senderId === id && (!lastCoachAt || m.createdAt > lastCoachAt))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const waiting = unanswered.length
+    ? {
+        waitingSince: unanswered[0].createdAt,
+        unanswered: unanswered.length,
+        latest: unanswered[unanswered.length - 1].body,
+      }
+    : null;
 
   const race = goal?.raceId ? await repo.getRace(goal.raceId) : null;
 
@@ -380,6 +400,8 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
           </Reveal>
 
           <Reveal delay={0.16}>
+            {/* the anchor the waiting-reply signal points at */}
+            <div id="messages" className="scroll-mt-24">
             <Panel className="p-6">
               <PanelHeader label="Recent messages" />
               <ul className="mt-5 space-y-3.5">
@@ -391,7 +413,20 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                 ))}
                 {!messages.length && <p className="text-[13px] text-muted">No messages.</p>}
               </ul>
+
+              {/* Reading a message on this page and having nowhere to answer it
+                  was the whole reason a coach ended up back at the list. */}
+              {waiting && (
+                <ReplyToAthlete
+                  athleteId={id}
+                  athleteName={profile.fullName}
+                  waited={waitedFor(waiting.waitingSince, now)}
+                  latest={waiting.latest}
+                  unanswered={waiting.unanswered}
+                />
+              )}
             </Panel>
+            </div>
           </Reveal>
         </div>
       </div>

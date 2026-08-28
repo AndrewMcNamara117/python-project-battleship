@@ -669,8 +669,17 @@ export class DemoRepo implements IronMilesRepo {
   }
 
   async sendMessage(msg: Omit<Message, 'id' | 'createdAt' | 'readAt'>): Promise<Message> {
-    const row: Message = { ...msg, id: uid('msg'), createdAt: new Date().toISOString(), readAt: null };
-    dataset().messages.push(row);
+    const all = dataset().messages;
+    // Who is waiting is decided by who spoke last, so two messages must never
+    // claim the same instant. `new Date()` has millisecond resolution and a
+    // loop can beat it, which made a reply look simultaneous with the question
+    // it answered and left the athlete waiting on a coach who had answered.
+    const last = all.reduce((latest, m) => (m.createdAt > latest ? m.createdAt : latest), '');
+    const now = new Date().toISOString();
+    const createdAt = now > last ? now : new Date(Date.parse(last) + 1).toISOString();
+
+    const row: Message = { ...msg, id: uid('msg'), createdAt, readAt: null };
+    all.push(row);
     return clone(row);
   }
 
@@ -2463,6 +2472,17 @@ export class DemoRepo implements IronMilesRepo {
       const race = goal?.raceId ? await this.getRace(goal.raceId) : null;
       const messages = await this.listMessages(profile.id);
 
+      // The same derivation migration 0020 performs in SQL: the athlete is
+      // waiting when the last human message is theirs, and they have been
+      // waiting since the first message of that unanswered run.
+      const human = messages.filter((m) => m.authorKind === 'human');
+      const lastCoachAt = human
+        .filter((m) => m.senderId === coachId)
+        .reduce<string | null>((latest, m) => (!latest || m.createdAt > latest ? m.createdAt : latest), null);
+      const unanswered = human
+        .filter((m) => m.senderId === profile.id && (!lastCoachAt || m.createdAt > lastCoachAt))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
       return buildEntry({
         athleteId: profile.id,
         fullName: profile.fullName,
@@ -2510,6 +2530,14 @@ export class DemoRepo implements IronMilesRepo {
         raceName: race && race.date >= today ? race.name : null,
         raceDate: race && race.date >= today ? race.date : null,
         eventType: goal?.eventType ?? null,
+
+        conversation: unanswered.length
+          ? {
+              waitingSince: unanswered[0].createdAt,
+              unanswered: unanswered.length,
+              latest: unanswered[unanswered.length - 1].body,
+            }
+          : null,
 
         unreadFromAthlete: messages.filter((m) => m.recipientId === coachId && !m.readAt).length,
         recentAdaptations: this.revisions.filter(

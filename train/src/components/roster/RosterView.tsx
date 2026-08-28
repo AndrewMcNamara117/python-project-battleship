@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
 import {
   applyFilter, concernsFor, FILTER_LABELS, filterCounts, kindsForFilter,
-  rankEntries, rosterWorkload, summariseToday,
+  rankEntries, rosterWorkload, summariseToday, waitedFor,
 } from '@/lib/domain/roster';
 import type {
   RosterEntry, RosterFilter, Severity, WorkloadKind, WorkloadRow,
@@ -19,6 +19,7 @@ import {
 } from '@/lib/domain/batch';
 import type { Selection } from '@/lib/domain/batch';
 import { BatchBar } from './BatchBar';
+import { ReplyToAthlete } from './ReplyToAthlete';
 
 /**
  * THE ROSTER
@@ -46,9 +47,11 @@ const SEVERITY_DOT: Record<Severity, string> = {
 /** The two ways to look at the whole squad. Concerns are chosen in the band. */
 const SCOPES: RosterFilter[] = ['attention', 'all'];
 
-export function RosterView({ roster, today, initialFilter = 'attention' }: {
+export function RosterView({ roster, today, now, initialFilter = 'attention' }: {
   roster: RosterEntry[];
   today: string;
+  /** Stamped on the server so a waiting time does not drift as the tab sits open. */
+  now: string;
   initialFilter?: RosterFilter;
 }) {
   const [filter, setFilter] = useState<RosterFilter>(initialFilter);
@@ -154,6 +157,7 @@ export function RosterView({ roster, today, initialFilter = 'attention' }: {
                 <AthleteRow
                   entry={entry}
                   today={today}
+                  now={now}
                   active={filter}
                   selected={isSelected(selection, entry.athleteId)}
                   onToggle={() => setSelection(toggle(selection, entry.athleteId))}
@@ -312,9 +316,11 @@ function TodayStrip({
  * Enough to decide whether opening them is worth it, and never so much that
  * the roster becomes the athlete page.
  */
-function AthleteRow({ entry, today, active, selected, onToggle }: {
+function AthleteRow({ entry, today, now, active, selected, onToggle }: {
   entry: RosterEntry;
   today: string;
+  /** For waiting times, which are a clock rather than a calendar. */
+  now: string;
   /** Which concern the coach is looking through, so the row can say why. */
   active: RosterFilter;
   selected: boolean;
@@ -434,6 +440,17 @@ function AthleteRow({ entry, today, active, selected, onToggle }: {
       {/* what the athlete actually said, not a number derived from it */}
       {entry.checkIn && !entry.checkIn.acknowledgedAt && (
         <CheckInDetail checkIn={entry.checkIn} athleteId={entry.athleteId} />
+      )}
+
+      {/* and if they are waiting on an answer, the answer is written here */}
+      {entry.conversation && (
+        <ReplyToAthlete
+          athleteId={entry.athleteId}
+          athleteName={entry.fullName}
+          waited={waitedFor(entry.conversation.waitingSince, now)}
+          latest={entry.conversation.latest}
+          unanswered={entry.conversation.unanswered}
+        />
       )}
     </Panel>
   );

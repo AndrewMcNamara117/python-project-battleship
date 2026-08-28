@@ -44,6 +44,7 @@ export function sampleDigest(): Renderable {
         flaggedCheckIns: 1,
         reportedPain: 1,
         missedSessions: 5,
+        waitingReplies: 2,
         programmesEnding: 2,
         groups: [
           { kind: 'no_training', detail: '3 athletes are waiting on a programme.', count: 3 },

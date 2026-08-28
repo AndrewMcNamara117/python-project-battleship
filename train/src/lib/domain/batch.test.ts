@@ -21,6 +21,7 @@ const facts = (over: Partial<RosterFacts> = {}): RosterFacts => ({
   lastCompletedDate: '2026-09-15', lastCompletedName: 'Easy Run',
   nextSessionDate: '2026-09-17', nextSessionName: 'Threshold', futureSessions: 40,
   checkIn: null, raceId: null, raceName: null, raceDate: null, eventType: 'marathon',
+  conversation: null,
   unreadFromAthlete: 0, recentAdaptations: 0, ...over,
 });
 

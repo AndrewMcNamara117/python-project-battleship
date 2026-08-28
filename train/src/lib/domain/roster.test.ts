@@ -42,6 +42,7 @@ const facts = (over: Partial<RosterFacts> = {}): RosterFacts => ({
   raceName: null,
   raceDate: null,
   eventType: 'marathon',
+  conversation: null,
   unreadFromAthlete: 0,
   recentAdaptations: 0,
   ...over,
@@ -194,11 +195,17 @@ describe('signals', () => {
 
   it('gives every signal somewhere to go', () => {
     const signals = classify(facts({
-      futureSessions: 0, missedFourteenDays: 3, unreadFromAthlete: 2,
+      futureSessions: 0, missedFourteenDays: 3,
+      conversation: { waitingSince: `${TODAY}T08:00:00Z`, unanswered: 1, latest: 'Can I move Thursday?' },
       raceName: 'Dublin', raceDate: '2026-09-20',
-    }), TODAY);
+    }), TODAY, `${TODAY}T12:00:00Z`);
     assert.ok(signals.length >= 4);
     assert.ok(signals.every((s) => s.href.startsWith('/coach/')), 'no dead ends');
+    // Slice 12: every signal leads to the athlete it is about, or to the one
+    // screen that acts on it. A waiting reply used to lead to a list of
+    // everybody, which is a dead end wearing a link's clothes.
+    assert.equal(signals.find((s) => s.kind === 'awaiting_reply')!.href,
+      '/coach/athletes/a1#messages');
   });
 });
 
@@ -232,7 +239,10 @@ describe('ordering', () => {
   it('puts the athlete carrying more signals first, at the same severity', () => {
     const ranked = rankEntries([
       entry('One', { missedFourteenDays: 4 }),
-      entry('Two', { missedFourteenDays: 4, unreadFromAthlete: 1 }),
+      entry('Two', {
+        missedFourteenDays: 4,
+        conversation: { waitingSince: `${TODAY}T08:00:00Z`, unanswered: 1, latest: 'Quick question.' },
+      }),
     ]);
     assert.deepEqual(ranked.map((e) => e.fullName), ['Two', 'One']);
   });
@@ -520,5 +530,106 @@ describe('read is not resolved', () => {
     ];
     assert.equal(summariseToday(roster, TODAY).checkInsToRead, 1,
       'the one nobody has looked at');
+  });
+});
+
+describe('waiting for a reply', () => {
+  const NOW = `${TODAY}T12:00:00.000Z`;
+  const waiting = (over: Partial<RosterFacts> = {}, since = `${TODAY}T08:00:00.000Z`, n = 1) =>
+    buildEntry(facts({
+      conversation: { waitingSince: since, unanswered: n, latest: 'Can I move Thursday to Friday?' },
+      ...over,
+    }), TODAY, NOW);
+
+  const kinds = (e: ReturnType<typeof buildEntry>) => e.signals.map((s) => s.kind);
+
+  it('raises the signal when the athlete spoke last', () => {
+    assert.ok(kinds(waiting()).includes('awaiting_reply'));
+  });
+
+  it('says nothing when nobody is waiting', () => {
+    const answered = buildEntry(facts({ conversation: null }), TODAY, NOW);
+    assert.ok(!kinds(answered).includes('awaiting_reply'),
+      'a conversation the coach has answered is not workload');
+  });
+
+  it('leads to the athlete, not to a list of everybody', () => {
+    // the whole point of the slice: the one signal that did not take the
+    // coach to the person it was about
+    const signal = waiting().signals.find((s) => s.kind === 'awaiting_reply')!;
+    assert.equal(signal.href, '/coach/athletes/a1#messages');
+  });
+
+  it('dates the wait from the first unanswered message, not the last', () => {
+    // someone who wrote three times yesterday has been waiting since
+    // yesterday; dating them from the newest would reward giving up
+    const e = waiting({}, `${TODAY}T04:00:00.000Z`, 3);
+    const signal = e.signals.find((s) => s.kind === 'awaiting_reply')!;
+    assert.match(signal.detail, /8h/);
+    assert.match(signal.detail, /3 messages/, 'one conversation, and it says how much was said');
+  });
+
+  it('counts one conversation, not one item per message', () => {
+    const e = waiting({}, `${TODAY}T08:00:00.000Z`, 4);
+    assert.equal(e.signals.filter((s) => s.kind === 'awaiting_reply').length, 1);
+  });
+
+  it('reads the wait in the words a coach would use', () => {
+    const at = (since: string) => waiting({}, since).signals
+      .find((s) => s.kind === 'awaiting_reply')!.detail;
+    assert.match(at(`${TODAY}T11:30:00.000Z`), /30m/);
+    assert.match(at(`${TODAY}T10:00:00.000Z`), /2h/);
+    assert.match(at('2026-09-15T18:00:00.000Z'), /18h/);
+    assert.match(at('2026-09-13T12:00:00.000Z'), /3d/);
+  });
+
+  it('does not let age become urgency', () => {
+    // age is information; a four-day-old question about parking is not a
+    // clinical concern, and a ladder would rank it above one
+    const fresh = waiting({}, `${TODAY}T11:00:00.000Z`);
+    const ancient = waiting({}, '2026-09-01T08:00:00.000Z');
+    const sev = (e: ReturnType<typeof buildEntry>) =>
+      e.signals.find((s) => s.kind === 'awaiting_reply')!.severity;
+    assert.equal(sev(fresh), sev(ancient));
+    assert.equal(sev(ancient), 'attention');
+  });
+
+  it('never buries a waiting reply under an ending programme', () => {
+    const e = waiting({ programmeEndDate: '2026-09-24' });
+    assert.equal(e.topSignal?.kind, 'awaiting_reply');
+  });
+
+  it('but does not outrank what the athlete said about their body', () => {
+    const e = waiting({
+      checkIn: {
+        id: 'ci-1', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'attention', reasons: ['Soreness reported at 8 or above'],
+        acknowledgedAt: null, respondedAt: null,
+        fatigue: 8, soreness: 9, painOrNiggles: 'Left Achilles sore on hills.',
+      },
+    });
+    assert.equal(e.topSignal?.kind, 'soreness_reported');
+    assert.ok(kinds(e).includes('awaiting_reply'), 'and it is still there, below');
+  });
+
+  it('is a concern the band counts and the filter opens', () => {
+    const roster = ['1', '2', '3'].map((id) =>
+      buildEntry(facts({
+        athleteId: id, fullName: `A${id}`,
+        conversation: { waitingSince: `${TODAY}T08:00:00.000Z`, unanswered: 1, latest: 'Hi' },
+      }), TODAY, NOW));
+
+    const row = rosterWorkload(roster).find((r) => r.kind === 'waiting')!;
+    assert.ok(row, 'three athletes waiting is a shared concern');
+    assert.equal(row.count, 3);
+    assert.equal(row.detail, '3 athletes waiting for a reply.');
+    assert.equal(row.count, applyFilter(roster, 'waiting').length);
+  });
+
+  it('counts an athlete who is waiting AND flagged in both', () => {
+    const sarah = waiting({
+      athleteId: 'sarah', fullName: 'Sarah', missedFourteenDays: 4,
+    });
+    assert.deepEqual(concernsFor(sarah).sort(), ['missed', 'waiting']);
   });
 });

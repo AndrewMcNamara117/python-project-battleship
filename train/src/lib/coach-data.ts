@@ -36,6 +36,8 @@ export interface CoachContext {
   session: Session;
   coach: Profile;
   today: string;
+  /** One clock for the render, so waiting times agree down the page. */
+  now: string;
   weekStart: string;
   athletes: AthleteRow[];
   /** The same athletes, with their signals, for the operating view. */
@@ -111,6 +113,9 @@ export async function loadCoachContext(): Promise<CoachContext> {
     session,
     coach,
     today,
+    // One clock for the whole render, stamped on the server. A waiting time
+    // computed per component would disagree with itself down the page.
+    now: new Date().toISOString(),
     weekStart,
     // already ranked by the roster: loudest signal, then most signals, then name
     athletes,
