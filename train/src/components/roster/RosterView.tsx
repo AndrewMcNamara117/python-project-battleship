@@ -10,7 +10,7 @@ import {
   rankEntries, rosterWorkload, summariseToday, waitedFor,
 } from '@/lib/domain/roster';
 import type {
-  RosterEntry, RosterFilter, Severity, WorkloadKind, WorkloadRow,
+  RosterEntry, RosterFilter, Severity, Signal, WorkloadKind, WorkloadRow,
 } from '@/lib/domain/roster';
 import { formatDayMonth } from '@/lib/domain/dates';
 import {
@@ -62,6 +62,15 @@ export function RosterView({ roster, today, now, initialFilter = 'attention' }: 
   // changes underneath them between the review and the confirmation. It does
   // survive filtering, so four athletes chosen, then a filter, then back, are
   // still the same four.
+  // Which athletes the coach has opened up. Kept by id, so filtering or
+  // acting on somebody does not close everything the coach was reading.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleExpanded = (id: string) => setExpanded((open) => {
+    const next = new Set(open);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
+
   const [rawSelection, setSelection] = useState<Selection>(EMPTY_SELECTION);
   const selection = useMemo(() => reconcile(rawSelection, roster), [rawSelection, roster]);
   const chosen = useMemo(() => selectedEntries(selection, roster), [selection, roster]);
@@ -161,6 +170,8 @@ export function RosterView({ roster, today, now, initialFilter = 'attention' }: 
                   active={filter}
                   selected={isSelected(selection, entry.athleteId)}
                   onToggle={() => setSelection(toggle(selection, entry.athleteId))}
+                  open={expanded.has(entry.athleteId)}
+                  onOpen={() => toggleExpanded(entry.athleteId)}
                 />
               </li>
             ))}
@@ -316,7 +327,7 @@ function TodayStrip({
  * Enough to decide whether opening them is worth it, and never so much that
  * the roster becomes the athlete page.
  */
-function AthleteRow({ entry, today, now, active, selected, onToggle }: {
+function AthleteRow({ entry, today, now, active, selected, onToggle, open, onOpen }: {
   entry: RosterEntry;
   today: string;
   /** For waiting times, which are a clock rather than a calendar. */
@@ -325,12 +336,43 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
   active: RosterFilter;
   selected: boolean;
   onToggle: () => void;
+  /** Whether the coach has opened this athlete up. */
+  open: boolean;
+  onOpen: () => void;
 }) {
   // Every signal is shown whichever concern is being viewed. Filtering to
   // "missing training" must never hide the fact that this athlete also said
   // their Achilles hurts — that is the whole point of the list underneath.
-  const concerns = concernsFor(entry);
   const matched = new Set<string>(kindsForFilter(active));
+
+  /**
+   * PROGRESSIVE DISCLOSURE.
+   *
+   * The collapsed row leads. It carries whatever the coach needs to triage —
+   * who, the two loudest reasons, and where to act — and says how much else
+   * is true rather than printing it. Opening the athlete adds the rest.
+   *
+   * Nothing is removed by collapsing: every signal, every supporting fact and
+   * the check-in itself are one keystroke away on the same row, and the
+   * counts above are computed from the whole roster regardless of what is
+   * open. This is about how much a coach has to read, not what is true.
+   */
+  const LEAD = 2;
+  const lead = entry.signals.slice(0, LEAD);
+  // The chips name the concerns this athlete belongs to. Naming one the
+  // leading lines already state is the same repetition this slice exists to
+  // remove — on a phone those chips wrapped to six lines saying what was
+  // written directly underneath. So they name what is NOT yet visible.
+  const covered = new Set(lead.flatMap((sig) =>
+    concernsFor(entry).filter((k) => kindsForFilter(k).includes(sig.kind))));
+  const alsoIn = concernsFor(entry).filter((k) => !covered.has(k));
+  const rest = entry.signals.slice(LEAD);
+  const extraFacts = entry.signals.reduce((n, sig) => n + (sig.supporting?.length ?? 0), 0);
+  const hasCheckIn = Boolean(entry.checkIn && !entry.checkIn.acknowledgedAt);
+  const more = rest.length + extraFacts + (hasCheckIn ? 1 : 0)
+    + (entry.conversation ? 1 : 0);
+  const panelId = `athlete-${entry.athleteId}-detail`;
+  const [replying, setReplying] = useState(false);
   // A bare programme name does not tell a coach whether it is running. The
   // three states a programme can be in each read differently.
   const position = !entry.programmeName
@@ -344,7 +386,10 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
   return (
     <Panel className={`min-w-0 p-5 transition-colors ${selected ? 'border-mint/40' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="flex min-w-0 flex-1 gap-3.5">
+        {/* basis-64 so the actions wrap BELOW on a phone rather than squeezing
+            this column to nothing: with min-w-0 and no basis, a long sentence
+            wrapped to one character per line and a card ran to 1053px. */}
+        <div className="flex min-w-0 flex-1 basis-64 gap-3.5">
           {/* a real checkbox: keyboard reachable, and it says whose it is */}
           <input
             type="checkbox"
@@ -366,9 +411,9 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
                 rather than counted: "3 concerns" above six sentences told a
                 coach nothing, and an athlete whose second signal was only
                 informational got no marker at all */}
-            {concerns.length > 1 && (
+            {alsoIn.length > 0 && (
               <span className="im-mono text-[10px] uppercase tracking-[0.1em] text-amber">
-                {concerns.map((k) => FILTER_LABELS[k]).join(' · ')}
+                also {alsoIn.map((k) => FILTER_LABELS[k]).join(' · ')}
               </span>
             )}
             {entry.recentAdaptations > 0 && (
@@ -384,28 +429,42 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
           </p>
 
           {/* the signals, each a sentence and a way to act on it */}
-          {entry.signals.length > 0 && (
+          {lead.length > 0 && (
             <ul className="mt-3 grid gap-1.5">
-              {entry.signals.map((signal) => (
-                <li
-                  key={signal.kind}
-                  className={`flex min-w-0 items-baseline gap-2.5 ${
-                    matched.has(signal.kind) ? 'border-l-2 border-mint/50 -ml-2.5 pl-2' : ''
-                  }`}
-                >
-                  <span
-                    aria-hidden
-                    className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEVERITY_DOT[signal.severity]}`}
-                  />
-                  <Link
-                    href={signal.href}
-                    className="min-w-0 break-words text-[13px] leading-relaxed text-ink-body hover:text-mint focus-visible:text-mint"
-                  >
-                    {signal.detail}
-                  </Link>
-                </li>
+              {lead.map((signal) => (
+                <SignalLine key={signal.kind} signal={signal} matched={matched} open={open} />
               ))}
             </ul>
+          )}
+
+          {/* the rest, on the same row, one keystroke away */}
+          {more > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={onOpen}
+                aria-expanded={open}
+                aria-controls={panelId}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-xs text-[12px] text-ink-tertiary transition-colors hover:text-mint focus-visible:text-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
+              >
+                <span aria-hidden className={`transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+                {/* The name is for screen readers, which read this button out
+                    of the context of the card it sits on. On screen the name
+                    is two lines above and does not need repeating. */}
+                <span>{open ? 'Show less' : `${more} more`}</span>
+                <span className="sr-only"> about {entry.fullName}</span>
+              </button>
+
+              <div id={panelId} hidden={!open}>
+                {rest.length > 0 && (
+                  <ul className="mt-2 grid gap-1.5">
+                    {rest.map((signal) => (
+                      <SignalLine key={signal.kind} signal={signal} matched={matched} open />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
           )}
 
           {/* context: what they did last, what is next */}
@@ -423,6 +482,18 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {entry.conversation && (
+            <button
+              type="button"
+              onClick={() => { setReplying(true); if (!open) onOpen(); }}
+              className="rounded-xs border border-mint/40 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-mint transition-colors hover:border-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green"
+            >
+              Reply
+              <span className="ml-1.5 opacity-60">
+                {waitedFor(entry.conversation.waitingSince, now)}
+              </span>
+            </button>
+          )}
           {entry.checkIn && !entry.checkIn.acknowledgedAt && (
             <Badge tone={entry.checkIn.attention === 'attention' ? 'neutral' : 'neutral'}>
               Check-in
@@ -437,22 +508,71 @@ function AthleteRow({ entry, today, now, active, selected, onToggle }: {
         </div>
       </div>
 
-      {/* what the athlete actually said, not a number derived from it */}
-      {entry.checkIn && !entry.checkIn.acknowledgedAt && (
-        <CheckInDetail checkIn={entry.checkIn} athleteId={entry.athleteId} />
+      {/* What the athlete actually said. Detail, so it waits to be asked for
+          — unlike the reply box below, which is an action and stays put. */}
+      {hasCheckIn && open && (
+        <CheckInDetail checkIn={entry.checkIn!} athleteId={entry.athleteId} />
       )}
 
-      {/* and if they are waiting on an answer, the answer is written here */}
-      {entry.conversation && (
+      {/* The answer is written here, with their words above it. It opens with
+          the rest of the row rather than standing open on all fourteen waiting
+          athletes at once — on a phone that was 186px of reply box per card.
+          It costs the coach nothing: Reply opens the row AND puts the cursor
+          in the box, which is the same one click as clicking into a box that
+          was already there. */}
+      {entry.conversation && open && (
         <ReplyToAthlete
           athleteId={entry.athleteId}
           athleteName={entry.fullName}
           waited={waitedFor(entry.conversation.waitingSince, now)}
           latest={entry.conversation.latest}
           unanswered={entry.conversation.unanswered}
+          focusOnMount={replying}
         />
       )}
     </Panel>
+  );
+}
+
+/**
+ * One signal, and the facts it is made of.
+ *
+ * The supporting lines are the sentences a canonical signal replaced —
+ * "13 sessions missed", "Missed Threshold" — kept exact and shown when the
+ * coach opens the athlete. The headline says the situation; these say what it
+ * is made of.
+ */
+function SignalLine({ signal, matched, open }: {
+  signal: Signal;
+  matched: Set<string>;
+  open: boolean;
+}) {
+  // No min-w-0 on the grid item itself: it lets the row shrink below its own
+  // content, and a `break-words` link inside then wraps to one character per
+  // line — 697px tall for a single sentence, on a phone.
+  return (
+    <li className={matched.has(signal.kind) ? 'border-l-2 border-mint/50 -ml-2.5 pl-2' : ''}>
+      <div className="flex min-w-0 items-baseline gap-2.5">
+        <span
+          aria-hidden
+          className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEVERITY_DOT[signal.severity]}`}
+        />
+        <Link
+          href={signal.href}
+          className="min-w-0 break-words text-[13px] leading-relaxed text-ink-body hover:text-mint focus-visible:text-mint"
+        >
+          {signal.detail}
+        </Link>
+      </div>
+
+      {open && signal.supporting && signal.supporting.length > 0 && (
+        <ul className="mt-1 ml-5 grid gap-0.5">
+          {signal.supporting.map((line) => (
+            <li key={line} className="text-[12.5px] leading-relaxed text-ink-tertiary">{line}</li>
+          ))}
+        </ul>
+      )}
+    </li>
   );
 }
 

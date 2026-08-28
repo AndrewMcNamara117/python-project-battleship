@@ -56,6 +56,16 @@ before(async () => {
      values ($1,$2,9,3,9,9,2,2,8,'Achilles.','attention','{"Soreness reported at 8 or above"}')`,
     [athlete, week]);
 
+  // one athlete who has genuinely stopped training: three missed sessions in
+  // the fortnight, one of them a key session. This is the shape that used to
+  // produce three separate roster lines.
+  for (let d = 2; d <= 8; d += 3) {
+    await t.asService(
+      `insert into scheduled_workouts (athlete_id, date, slot, status, name, type, basis, intensity, distance_km)
+       values ($1, current_date - $2::int, $2, 'missed', $3, $4::im_workout_type, 'distance', 'easy', 10)`,
+      [aths.tom, d, d === 5 ? 'Long Run 22K' : `Easy ${d}`, d === 5 ? 'long_run' : 'easy_run']);
+  }
+
   await sore(bAthlete, MON);
   await sore(aths.sarah, MON);   // pain + check-in
   await sore(aths.tom, MON);
@@ -210,5 +220,66 @@ describe('what TypeScript can ask for, Postgres can store', () => {
         `select im_open_batch($1::im_batch_action, '{}'::jsonb, 1) as id`, [action]);
       assert.ok(rows[0].id, `${action} could not open a batch`);
     }
+  });
+});
+
+describe('consolidation changes what is said, not who can see it', () => {
+  it('states one adherence concern per athlete, not three', async () => {
+    const mine = await entriesFor(coachA);
+    for (const e of mine) {
+      const adherence = e.signals.filter((sig) => sig.kind === 'training_adherence');
+      assert.ok(adherence.length <= 1, `${e.fullName} has ${adherence.length} adherence signals`);
+    }
+  });
+
+  it('keeps the missing-training count exactly what it was', async () => {
+    // the consolidated signal fires when ANY of the three used to, so the
+    // filter finds the same athletes it always did
+    const mine = await entriesFor(coachA);
+    const byFilter = applyFilter(mine, 'missed').map((e) => e.athleteId).sort();
+    const byFacts = mine.filter((e) =>
+      e.missedFourteenDays >= 3
+      || e.missedKeySession
+      || (e.programmeId && e.plannedFourWeeks > 0
+          && (e.lastCompletedDate === null
+              || (Date.parse(iso(new Date())) - Date.parse(e.lastCompletedDate)) / 864e5 >= 10)))
+      .map((e) => e.athleteId).sort();
+    assert.deepEqual(byFilter, byFacts,
+      'the filter and the underlying facts must find the same athletes');
+  });
+
+  it('carries the supporting facts rather than discarding them', async () => {
+    const mine = await entriesFor(coachA);
+    const withDetail = mine
+      .flatMap((e) => e.signals)
+      .filter((sig) => sig.kind === 'training_adherence' && (sig.supporting?.length ?? 0) > 0);
+    for (const sig of withDetail) {
+      assert.ok(sig.supporting.every((line) => line !== sig.detail),
+        'a supporting line never repeats the headline');
+      assert.ok(sig.supporting.every((line) => line.length > 0));
+    }
+  });
+
+  it('never puts another coach\'s athlete in a consolidated row', async () => {
+    const mine = await entriesFor(coachA);
+    assert.ok(!mine.some((e) => e.athleteId === bAthlete));
+    for (const e of mine) {
+      for (const sig of e.signals) {
+        assert.ok(!(sig.supporting ?? []).some((line) => /Not Yours|Anyone there/.test(line)));
+      }
+    }
+  });
+
+  it('needs no second query to show the detail', async () => {
+    // Expanding an athlete reveals supporting facts that came down with the
+    // roster. If it ever needed a fetch, that fetch would be a new place to
+    // get authorisation wrong — and an N+1 across the whole squad.
+    const { rows } = await t.asUser(coachA, `select * from im_coach_roster()`);
+    const built = rosterFromRows(rows, iso(new Date()));
+    const adherence = built.flatMap((e) => e.signals)
+      .filter((sig) => sig.kind === 'training_adherence');
+    assert.ok(adherence.length > 0, 'the fixture has an athlete who stopped training');
+    assert.ok(adherence.some((sig) => (sig.supporting?.length ?? 0) > 0),
+      'and the detail behind the headline came down with the roster, unasked');
   });
 });

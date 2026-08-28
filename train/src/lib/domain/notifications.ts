@@ -115,9 +115,7 @@ export const EXTERNAL_SIGNAL_LABEL: Record<SignalKind, string> = {
   checkin_flagged: 'check-in flagged for review',
   checkin_unreviewed: 'check-in not yet read',
   soreness_reported: 'reported a niggle',
-  missed_repeated: 'missing sessions',
-  missed_key_session: 'missed a key session',
-  not_training: 'not training',
+  training_adherence: 'missing training',
   race_approaching: 'race approaching',
   awaiting_reply: 'waiting for a reply',
 };
@@ -408,8 +406,10 @@ export function composeDigest(roster: RosterEntry[], localDate: ISODate): Digest
     flaggedCheckIns: countWith('checkin_flagged'),
     reportedPain: roster.filter(
       (e) => e.signals.some((s) => s.kind === 'soreness_reported' && s.severity !== 'information')).length,
+    // the roster's own canonical adherence concern, counted the same way it
+    // is filtered — so "17 missing training" means the same thing in both
     missedSessions: roster.reduce(
-      (sum, e) => sum + (e.signals.some((s) => s.kind === 'missed_repeated') ? e.missedFourteenDays : 0), 0),
+      (sum, e) => sum + (e.signals.some((s) => s.kind === 'training_adherence') ? e.missedFourteenDays : 0), 0),
     programmesEnding: countWith('programme_ending'),
     // the same signal the roster counts, so the two cannot report different
     // numbers for the same morning

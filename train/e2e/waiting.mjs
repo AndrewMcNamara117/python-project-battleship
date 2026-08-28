@@ -73,10 +73,10 @@ try {
     /Waiting for a reply/i.test(await andrew().innerText()));
 
   const card = await andrew().innerText();
-  check('their own words are on the card', card.includes(words.slice(0, 30)),
-    card.split('\n').slice(0, 6).join(' | '));
   check('with how long they have waited', /Waiting for a reply · \d+[mhd]/.test(card),
     card.split('\n').find((l) => /Waiting/.test(l)));
+  check('and a way to answer them without leaving',
+    await andrew().getByRole('button', { name: /^Reply/i }).count() > 0);
 
   /* ---- age is information, not a severity ---- */
 
@@ -119,9 +119,15 @@ try {
   check('no horizontal overflow at 390px', overflow <= 1, `${overflow}px`);
   check('the wait is still readable at 390px',
     /Waiting for a reply · \d+[mhd]/.test(await andrew().innerText()));
+  const mobileReply = andrew().getByRole('button', { name: /^Reply/i });
+  check('and the reply action is still reachable', await mobileReply.count() > 0);
+  await mobileReply.click();
+  await p.waitForTimeout(450);
   const w = await andrew().locator('textarea').evaluate(
     (t) => Math.round(t.getBoundingClientRect().width)).catch(() => 0);
   check('and a reply can still be written', w > 200, `${w}px wide`);
+  await andrew().getByRole('button', { name: /show less/i }).click().catch(() => {});
+  await p.waitForTimeout(300);
   await p.setViewportSize({ width: 1440, height: 1200 });
 
   /* ---- answering, without leaving the roster ---- */
@@ -135,9 +141,20 @@ try {
     flagged: (body.match(/Check-in flagged/gi) ?? []).length,
   };
 
-  const reply = p.getByRole('list', { name: 'Athletes' }).locator('> li')
-    .filter({ hasText: /ANDREW/i }).first().locator('textarea');
-  check('the reply box is on the roster, not a page away', await reply.count() > 0);
+  // Slice 13 moved the box into the row's disclosure. Reply opens the row and
+  // puts the cursor in the box — the same one click as clicking into a box
+  // that was already sitting open, and 186px per card cheaper on a phone.
+  const replyBtn = andrew().getByRole('button', { name: /^Reply/i });
+  check('the reply action is on the roster, not a page away', await replyBtn.count() > 0);
+  await replyBtn.click();
+  await p.waitForTimeout(500);
+
+  const reply = andrew().locator('textarea');
+  check('and one click opens it with the cursor already in it',
+    await reply.count() > 0 && await reply.evaluate((el) => document.activeElement === el));
+  check('with the athlete\'s own words above it',
+    (await andrew().innerText()).includes(words.slice(0, 30)));
+
   await reply.fill('Skip the intervals. Easy 40 minutes, and we look at the calf Thursday.');
   await andrew().getByRole('button', { name: /send reply/i }).click();
   await p.waitForTimeout(2500);

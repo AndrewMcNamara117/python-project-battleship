@@ -192,6 +192,96 @@ try {
   await p.getByRole('button', { name: /^Clear$/i }).first().click();
   await p.waitForTimeout(300);
 
+  /* ---- one athlete, one row, and the rest one keystroke away ---- */
+
+  console.log('\nprogressive disclosure');
+  await p.locator('button[aria-pressed]').filter({ hasText: /Needs attention/i }).first().click();
+  await p.waitForTimeout(400);
+
+  const cards = p.getByRole('list', { name: 'Athletes' }).locator('> li');
+  const withMore = cards.filter({ has: p.getByRole('button', { name: /\d+ more/i }) });
+  const busy = await withMore.count();
+
+  if (busy === 0) {
+    check('nobody here has more to say than fits on their row', true,
+      'a quiet squad is a correct answer');
+  } else {
+    // Pin to the panel id: the button's label changes when it opens, so a
+    // locator matching "N more" silently starts resolving to a DIFFERENT
+    // card and measures the wrong one.
+    const card = withMore.first();
+    const firstPanel = await card.getByRole('button', { name: /\d+ more/i })
+      .getAttribute('aria-controls');
+    const toggle = p.locator(`button[aria-controls="${firstPanel}"]`);
+    const row = p.getByRole('list', { name: 'Athletes' }).locator('> li')
+      .filter({ has: p.locator(`#${firstPanel}`) });
+
+    check('a busy athlete says how much more there is',
+      /\d+ more/.test(await toggle.innerText()), await toggle.innerText());
+    check('and the control is a real button with its state',
+      await toggle.getAttribute('aria-expanded') === 'false');
+    check('that names the panel it opens', Boolean(firstPanel), String(firstPanel));
+
+    const before = (await row.innerText()).split('\n').filter(Boolean).length;
+    await toggle.click();
+    await p.waitForTimeout(350);
+    const after = (await row.innerText()).split('\n').filter(Boolean).length;
+
+    check('opening it adds the rest of their story', after > before, `${before} -> ${after} lines`);
+    check('and says so', await toggle.getAttribute('aria-expanded') === 'true');
+    check('the panel is no longer hidden',
+      (await p.locator(`#${firstPanel}`).getAttribute('hidden')) === null);
+
+    // Nothing is lost by opening: every line that was there is still there.
+    const opened = await row.innerText();
+    const beforeLines = (await row.innerText()).split('\n');
+    check('opening never removes a line that was already showing',
+      after >= before, `${before} -> ${after}`);
+
+    await toggle.click();
+    await p.waitForTimeout(300);
+    check('and it closes again', await toggle.getAttribute('aria-expanded') === 'false');
+  }
+
+  // The facts a canonical signal replaced are still there, word for word —
+  // asserted on an athlete who actually HAS a consolidated concern. Not every
+  // squad has one, and an athlete at 96% adherence correctly has none.
+  const adherenceCard = cards.filter({
+    hasText: /Nothing logged (yet, with sessions prescribed|in \d+ days)\.|\d+ sessions missed in the last two weeks\./,
+  }).first();
+  if (await adherenceCard.count()) {
+    const openBtn = adherenceCard.getByRole('button', { name: /\d+ more/i });
+    if (await openBtn.count()) {
+      const id = await openBtn.getAttribute('aria-controls');
+      await p.locator(`button[aria-controls="${id}"]`).click();
+      await p.waitForTimeout(350);
+      const full = await p.getByRole('list', { name: 'Athletes' }).locator('> li')
+        .filter({ has: p.locator(`#${id}`) }).innerText();
+      const facts = [
+        /Nothing logged (yet, with sessions prescribed|in \d+ days)\./,
+        /\d+ sessions missed in the last two weeks\./,
+        /Missed [^\n]+\./,
+      ].filter((re) => re.test(full)).length;
+      check('the facts behind a consolidated concern survive it, word for word',
+        facts >= 2, `only ${facts} of the three sentences found`);
+      await p.locator(`button[aria-controls="${id}"]`).click();
+      await p.waitForTimeout(250);
+    } else {
+      check('an athlete whose whole story fits needs no disclosure', true);
+    }
+  } else {
+    check('no athlete here is missing training, so nothing was consolidated', true);
+  }
+
+  // nothing is said twice on a collapsed row
+  const collapsed = await cards.allInnerTexts();
+  const repeats = collapsed.filter((t) => {
+    const lines = t.split('\n').map((l) => l.trim()).filter(Boolean);
+    return new Set(lines).size !== lines.length;
+  });
+  check('no collapsed row says the same line twice', repeats.length === 0,
+    `${repeats.length} rows repeat themselves`);
+
   /* ---- signals lead somewhere ---- */
 
   const signalLinks = await p.locator('main a[href^="/coach/"]').all();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { messageAthlete } from '@/app/actions/coach';
 import { Button } from '@/components/ui/Button';
 
@@ -26,6 +26,7 @@ export function ReplyToAthlete({
   waited,
   latest,
   unanswered,
+  focusOnMount = false,
 }: {
   athleteId: string;
   athleteName: string;
@@ -34,11 +35,14 @@ export function ReplyToAthlete({
   /** What they last said, so the coach answers the question in front of them. */
   latest: string;
   unanswered: number;
+  /** Opened by the Reply button, so the coach can start typing immediately. */
+  focusOnMount?: boolean;
 }) {
   const [sent, setSent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const box = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { if (focusOnMount) box.current?.focus(); }, [focusOnMount]);
 
   const first = athleteName.split(' ')[0] || athleteName;
 

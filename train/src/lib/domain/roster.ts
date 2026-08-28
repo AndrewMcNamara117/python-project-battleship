@@ -53,9 +53,7 @@ const SIGNAL_CONCERN: Record<SignalKind, number> = {
   awaiting_reply: 2,
   no_future_sessions: 3,
   no_programme: 4,
-  not_training: 5,
-  missed_repeated: 6,
-  missed_key_session: 7,
+  training_adherence: 5,
   race_approaching: 8,
   programme_ending: 9,
   checkin_unreviewed: 10,
@@ -81,9 +79,7 @@ export type SignalKind =
   | 'checkin_flagged'
   | 'checkin_unreviewed'
   | 'soreness_reported'
-  | 'missed_repeated'
-  | 'missed_key_session'
-  | 'not_training'
+  | 'training_adherence'
   | 'race_approaching'
   | 'awaiting_reply';
 
@@ -94,6 +90,15 @@ export interface Signal {
   detail: string;
   /** Where the coach goes to act on it. Never a dead end. */
   href: string;
+  /**
+   * The facts behind the headline, when one concern has several.
+   *
+   * A canonical signal states the situation once; these are what it is made
+   * of. Nothing is thrown away — the roster shows them when the coach expands
+   * an athlete, and anything else that wants the underlying facts (the digest,
+   * a future analytics view) reads them here rather than re-deriving them.
+   */
+  supporting?: string[];
 }
 
 /**
@@ -311,33 +316,58 @@ export function classify(
 
   /* ---- what they actually did ---- */
 
-  if (facts.missedFourteenDays >= 3) {
-    signals.push({
-      kind: 'missed_repeated',
-      severity: 'attention',
-      detail: `${plural(facts.missedFourteenDays, 'session')} missed in the last two weeks.`,
-      href: athlete,
-    });
-  }
-
-  if (facts.missedKeySession) {
-    signals.push({
-      kind: 'missed_key_session',
-      severity: 'attention',
-      detail: `Missed ${facts.missedKeySession.name}.`,
-      href: athlete,
-    });
-  }
-
+  /**
+   * TRAINING ADHERENCE — one concern, not three.
+   *
+   * Three signals used to fire here: "Nothing logged in 12 days", "13 sessions
+   * missed in the last two weeks", and "Missed Threshold — 6 x 5 min". Each
+   * can occur alone, so they were built as three; but in a real squad they
+   * arrived together for 17 of 17 athletes, and they are three altitudes of
+   * one fact — how far the athlete has drifted (extremity), how much of it
+   * there is (the measure), and which of it mattered (the detail). A coach
+   * does one thing about all three: talk to them, or change the programme.
+   *
+   * So the roster states it once and carries the rest as supporting detail.
+   * Nothing is deleted: every sentence that used to be a separate line is
+   * still produced, still exact, and still reachable — it is the headline
+   * that changed, not the facts.
+   *
+   * The classification that got here is in SIGNALS.md, along with the pairs
+   * that were tested and deliberately NOT merged.
+   */
   const idle = facts.lastCompletedDate ? daysBetween(facts.lastCompletedDate, today) : null;
-  if (facts.programmeId && facts.plannedFourWeeks > 0 && (idle == null || idle >= 10)) {
+  const stalled = facts.programmeId != null
+    && facts.plannedFourWeeks > 0
+    && (idle == null || idle >= 10);
+
+  if (stalled || facts.missedFourteenDays >= 3 || facts.missedKeySession) {
+    // Every sentence the three signals used to say, still said.
+    const stalledLine = idle == null
+      ? 'Nothing logged yet, with sessions prescribed.'
+      : `Nothing logged in ${plural(idle, 'day')}.`;
+    const missedLine = `${plural(facts.missedFourteenDays, 'session')} missed in the last two weeks.`;
+    const keyLine = facts.missedKeySession ? `Missed ${facts.missedKeySession.name}.` : null;
+
+    // The headline is the strongest true statement of the same axis: having
+    // logged nothing at all outranks a count of misses, which outranks the
+    // identity of one of them.
+    const headline = stalled ? stalledLine
+      : facts.missedFourteenDays >= 3 ? missedLine
+        : keyLine!;
+
     signals.push({
-      kind: 'not_training',
+      kind: 'training_adherence',
       severity: 'attention',
-      detail: idle == null
-        ? 'Nothing logged yet, with sessions prescribed.'
-        : `Nothing logged in ${plural(idle, 'day')}.`,
+      detail: headline,
       href: athlete,
+      // Only facts that are true and are not already the headline. The
+      // "nothing logged" line is never here: when they have stalled it IS the
+      // headline, and when they have not, it would be a sentence about an
+      // athlete who trained on Tuesday.
+      supporting: [
+        facts.missedFourteenDays >= 3 && headline !== missedLine ? missedLine : null,
+        keyLine && headline !== keyLine ? keyLine : null,
+      ].filter((line): line is string => line !== null),
     });
   }
 
@@ -440,7 +470,7 @@ export const FILTER_LABELS: Record<RosterFilter, string> = {
 
 const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
   checkins: ['checkin_flagged', 'checkin_unreviewed'],
-  missed: ['missed_repeated', 'missed_key_session', 'not_training'],
+  missed: ['training_adherence'],
   ending: ['programme_ending'],
   races: ['race_approaching'],
   no_training: ['no_programme', 'no_future_sessions'],

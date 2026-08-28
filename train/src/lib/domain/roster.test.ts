@@ -85,15 +85,16 @@ describe('signals', () => {
 
   it('raises three missed sessions, and counts them out loud', () => {
     const [signal] = classify(facts({ missedFourteenDays: 3 }), TODAY);
-    assert.equal(signal.kind, 'missed_repeated');
+    assert.equal(signal.kind, 'training_adherence');
     assert.equal(signal.severity, 'attention');
     assert.equal(signal.detail, '3 sessions missed in the last two weeks.');
+    assert.deepEqual(signal.supporting, [], 'nothing else is true of them yet');
   });
 
   it('names a missed key session', () => {
     const [signal] = classify(
       facts({ missedKeySession: { name: 'Long Run', date: '2026-09-13' } }), TODAY);
-    assert.equal(signal.kind, 'missed_key_session');
+    assert.equal(signal.kind, 'training_adherence');
     assert.equal(signal.detail, 'Missed Long Run.');
   });
 
@@ -156,7 +157,7 @@ describe('signals', () => {
       'a week off is not yet a signal');
 
     const [signal] = classify(facts({ lastCompletedDate: '2026-09-06' }), TODAY);
-    assert.equal(signal.kind, 'not_training');
+    assert.equal(signal.kind, 'training_adherence');
     assert.equal(signal.detail, 'Nothing logged in 10 days.');
   });
 
@@ -631,5 +632,134 @@ describe('waiting for a reply', () => {
       athleteId: 'sarah', fullName: 'Sarah', missedFourteenDays: 4,
     });
     assert.deepEqual(concernsFor(sarah).sort(), ['missed', 'waiting']);
+  });
+});
+
+describe('one concern, said once', () => {
+  const NOW = `${TODAY}T12:00:00.000Z`;
+  const adherence = (over: Partial<RosterFacts>) =>
+    classify(facts(over), TODAY, NOW).find((s) => s.kind === 'training_adherence');
+
+  it('states the situation once however many ways it is true', () => {
+    // the measured case: 17 of 17 athletes fired all three of the signals
+    // this replaced, and a coach read three sentences to learn one thing
+    const signals = classify(facts({
+      lastCompletedDate: null,
+      missedFourteenDays: 13,
+      missedKeySession: { name: 'Threshold — 6 x 5 min', date: '2026-09-10' },
+    }), TODAY, NOW);
+    assert.equal(signals.filter((s) => s.kind === 'training_adherence').length, 1);
+  });
+
+  it('leads with the strongest true statement of the same fact', () => {
+    assert.equal(
+      adherence({ lastCompletedDate: null, missedFourteenDays: 13 })!.detail,
+      'Nothing logged yet, with sessions prescribed.',
+      'having logged nothing at all outranks a count of misses');
+    assert.equal(
+      adherence({ missedFourteenDays: 4, missedKeySession: { name: 'Long Run', date: '2026-09-13' } })!.detail,
+      '4 sessions missed in the last two weeks.',
+      'and a count outranks the identity of one of them');
+  });
+
+  it('keeps every sentence it replaced, exactly', () => {
+    const s = adherence({
+      lastCompletedDate: null,
+      missedFourteenDays: 13,
+      missedKeySession: { name: 'Threshold — 6 x 5 min', date: '2026-09-10' },
+    })!;
+    assert.deepEqual(s.supporting, [
+      '13 sessions missed in the last two weeks.',
+      'Missed Threshold — 6 x 5 min.',
+    ], 'consolidation is canonical representation, not deletion');
+  });
+
+  it('never supports the headline with something untrue', () => {
+    // an athlete who trained on Tuesday must not be told they have logged
+    // nothing, however many sessions they skipped
+    const s = adherence({ lastCompletedDate: '2026-09-15', missedFourteenDays: 5 })!;
+    assert.ok(!s.supporting!.some((line) => /Nothing logged/.test(line)),
+      `supporting said: ${JSON.stringify(s.supporting)}`);
+  });
+
+  it('still fires for each of the three situations on its own', () => {
+    assert.ok(adherence({ missedFourteenDays: 3 }), 'misses alone');
+    assert.ok(adherence({ missedKeySession: { name: 'Long Run', date: '2026-09-13' } }), 'a key session alone');
+    assert.ok(adherence({ lastCompletedDate: '2026-09-04' }), 'having stopped alone');
+    assert.equal(adherence({ lastCompletedDate: '2026-09-15' }), undefined, 'and not for an athlete who is fine');
+  });
+
+  it('does not change what the missing-training filter finds', () => {
+    const roster = [
+      buildEntry(facts({ athleteId: '1', missedFourteenDays: 4 }), TODAY, NOW),
+      buildEntry(facts({ athleteId: '2', lastCompletedDate: null }), TODAY, NOW),
+      buildEntry(facts({ athleteId: '3', missedKeySession: { name: 'Long Run', date: '2026-09-13' } }), TODAY, NOW),
+      buildEntry(facts({ athleteId: '4' }), TODAY, NOW),
+    ];
+    assert.deepEqual(applyFilter(roster, 'missed').map((e) => e.athleteId), ['1', '2', '3']);
+  });
+
+  it('leaves the signals it was tested against and rejected alone', () => {
+    // flagged fires for reasons that have nothing to do with pain, so the two
+    // are not the same fact and were deliberately not merged
+    const e = buildEntry(facts({
+      checkIn: {
+        id: 'c1', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'attention', reasons: ['Sleep reported at 3 or below', 'Motivation reported at 3 or below'],
+        acknowledgedAt: null, respondedAt: null,
+        fatigue: 5, soreness: 4, painOrNiggles: null,
+      },
+    }), TODAY, NOW);
+    const kindsHere = e.signals.map((s) => s.kind);
+    assert.ok(kindsHere.includes('checkin_flagged'));
+    assert.ok(!kindsHere.includes('soreness_reported'), 'flagged without pain is a real state');
+  });
+
+  it('keeps pain above training, and training above paperwork', () => {
+    const e = buildEntry(facts({
+      lastCompletedDate: null,
+      missedFourteenDays: 13,
+      programmeEndDate: '2026-09-24',
+      conversation: { waitingSince: `${TODAY}T04:00:00.000Z`, unanswered: 1, latest: 'Hi' },
+      checkIn: {
+        id: 'c1', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'attention', reasons: ['Soreness reported at 8 or above'],
+        acknowledgedAt: null, respondedAt: null,
+        fatigue: 8, soreness: 9, painOrNiggles: 'Left Achilles sore on hills.',
+      },
+    }), TODAY, NOW);
+    assert.deepEqual(e.signals.map((s) => s.kind), [
+      'soreness_reported',
+      'checkin_flagged',
+      'awaiting_reply',
+      'training_adherence',
+      'programme_ending',
+    ]);
+  });
+});
+
+describe('the roster and the digest describe the same morning', () => {
+  const NOW = `${TODAY}T12:00:00.000Z`;
+
+  it('counts missing training the same way in both', async () => {
+    const { composeDigest } = await import('./notifications.ts');
+    const roster = [
+      ...['1', '2', '3'].map((id) => buildEntry(facts({
+        athleteId: id, fullName: `A${id}`, missedFourteenDays: 4,
+      }), TODAY, NOW)),
+      buildEntry(facts({ athleteId: '4', fullName: 'Stopped', lastCompletedDate: null }), TODAY, NOW),
+      buildEntry(facts({ athleteId: '5', fullName: 'Fine' }), TODAY, NOW),
+    ];
+
+    const rosterCount = applyFilter(roster, 'missed').length;
+    const band = rosterWorkload(roster, { threshold: 1 }).find((r) => r.kind === 'missed')!;
+    const digest = composeDigest(roster, TODAY);
+
+    assert.equal(rosterCount, 4, 'four athletes are missing training');
+    assert.equal(band.count, rosterCount, 'the band agrees with the filter');
+    // the digest reports sessions, not athletes — but from the same signal
+    assert.equal(digest.missedSessions, 12, '3 athletes x 4 sessions; the stopped one has none recorded');
+    assert.ok(digest.groups.some((g) => g.kind === 'missed' && g.count === rosterCount),
+      'and its group count is the roster count');
   });
 });

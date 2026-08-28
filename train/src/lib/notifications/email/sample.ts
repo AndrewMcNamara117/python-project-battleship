@@ -57,7 +57,7 @@ export function sampleDigest(): Renderable {
           },
           {
             athleteId: 'sample-2', athleteName: 'Second Sample', priority: 'attention',
-            reasons: [], kinds: ['missed_repeated'],
+            reasons: [], kinds: ['training_adherence'],
             href: '/coach',
           },
           {
