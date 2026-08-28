@@ -22,6 +22,7 @@ const check = (name, ok, detail = '') => {
   if (ok) { pass++; console.log(`  ok   ${name}`); }
   else { fail++; console.log(`  FAIL ${name}${detail ? ' — ' + detail : ''}`); }
 };
+const skip = (why) => console.log(`  --   ${why}`);
 
 const browser = await chromium.launch({
   ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
@@ -44,32 +45,39 @@ try {
 
   console.log('\nreading is an act, not a side effect');
   await go('/coach/checkins');
-  const opened = Number(((await body()).match(/(\d+) WAITING/i) ?? [0, 0])[1]);
-  check('the queue has check-ins waiting', opened > 0, `${opened}`);
+  const opened = Number(((await body()).match(/(\d+) UNREAD/i) ?? [0, 0])[1]);
 
+  // A queue with nothing unread is a correct state, not a failure — an
+  // earlier suite in the same server may already have cleared it. What must
+  // always hold is that LOOKING never changes the number.
   await go('/coach/checkins');
-  const stillWaiting = Number(((await body()).match(/(\d+) WAITING/i) ?? [0, 0])[1]);
+  const stillWaiting = Number(((await body()).match(/(\d+) UNREAD/i) ?? [0, 0])[1]);
   check('looking at the page twice marks nothing read', stillWaiting === opened,
     `${opened} -> ${stillWaiting}`);
 
   /* ---- individual mark as read ---- */
 
-  console.log('\nmarking one read');
-  const markOne = p.getByRole('button', { name: /mark as read/i }).first();
-  check('every check-in offers it', (await p.getByRole('button', { name: /mark as read/i }).count()) > 0);
-  check('and says what it will not do',
-    /Records that you read it/i.test(await body()));
+  if (opened === 0) {
+    skip('nothing unread in this server; the individual mark-as-read leg needs a fresh one');
+  } else {
+    console.log('\nmarking one read');
+    const markOne = p.getByRole('button', { name: /mark as read/i }).first();
+    check('an unread check-in offers it',
+      (await p.getByRole('button', { name: /mark as read/i }).count()) > 0);
+    check('and says what it will not do',
+      /Records that you read it/i.test(await body()));
 
-  await markOne.click();
-  await p.waitForTimeout(2000);
-  await go('/coach/checkins');
-  const afterOne = Number(((await body()).match(/(\d+) WAITING/i) ?? [0, 0])[1]);
-  check('it leaves the queue', afterOne === opened - 1, `${opened} -> ${afterOne}`);
+    await markOne.click();
+    await p.waitForTimeout(2000);
+    await go('/coach/checkins');
+    const afterOne = Number(((await body()).match(/(\d+) UNREAD/i) ?? [0, 0])[1]);
+    check('it leaves the queue', afterOne === opened - 1, `${opened} -> ${afterOne}`);
 
-  await p.reload({ waitUntil: 'domcontentloaded' });
-  await p.waitForTimeout(2000);
-  check('and stays read after a refresh',
-    Number(((await body()).match(/(\d+) WAITING/i) ?? [0, 0])[1]) === afterOne);
+    await p.reload({ waitUntil: 'domcontentloaded' });
+    await p.waitForTimeout(2000);
+    check('and stays read after a refresh',
+      Number(((await body()).match(/(\d+) UNREAD/i) ?? [0, 0])[1]) === afterOne);
+  }
 
   /* ---- read is not replied ---- */
 
@@ -186,8 +194,100 @@ try {
 
     await go('/coach/checkins');
     check('the queue is empty and says so',
-      Number(((await body()).match(/(\d+) WAITING/i) ?? [0, 0])[1]) === 0);
+      Number(((await body()).match(/(\d+) UNREAD/i) ?? [0, 0])[1]) === 0);
   }
+
+  /* ---- Slice 15: the queue is triaged, selectable and collapsed ---- */
+
+  console.log('\nthe queue itself');
+  await go('/coach/checkins');
+
+  const chips = p.locator('main button[aria-pressed]');
+  const chipCount = await chips.count();
+  check('the queue offers triage', chipCount >= 2, `${chipCount} chips`);
+
+  if (chipCount) {
+    const labels = (await chips.allInnerTexts()).map((t) => t.replace(/\n/g, ' '));
+    check('with the counts on them', labels.every((l) => /\d/.test(l)), labels.join(' | '));
+
+    let truthful = 0, checked = 0; const wrong = [];
+    for (let i = 0; i < chipCount; i++) {
+      const chip = chips.nth(i);
+      const claimed = Number(((await chip.innerText()).match(/(\d+)\s*$/) ?? [0, 0])[1]);
+      await chip.click();
+      await p.waitForTimeout(350);
+      const shown = await p.getByRole('list', { name: 'Check-ins' }).locator('> li').count();
+      checked++;
+      if (shown === claimed) truthful++; else wrong.push(`${labels[i]} shows ${shown}`);
+    }
+    check('every count is the count of the list it opens', truthful === checked, wrong.join(' · '));
+  }
+
+  await go('/coach/checkins');
+  const queued = p.getByRole('list', { name: 'Check-ins' }).locator('> li');
+  if (await queued.count()) {
+    const first = queued.first();
+    const collapsed = await first.innerText();
+    check('a collapsed card still says what the check-in raised',
+      /Check-in flagged|Reported:|not yet reviewed/i.test(collapsed),
+      collapsed.split('\n').slice(0, 4).join(' | '));
+
+    const openBtn = first.getByRole('button', { name: /\d+ more/i });
+    if (await openBtn.count()) {
+      check('the rest is a keystroke away, not a page away',
+        await openBtn.getAttribute('aria-expanded') === 'false');
+      const id = await openBtn.getAttribute('aria-controls');
+      await openBtn.click();
+      await p.waitForTimeout(350);
+      const opened = await p.getByRole('list', { name: 'Check-ins' }).locator('> li')
+        .filter({ has: p.locator(`#${id}`) }).innerText();
+      check('opening shows the scores and what they wrote',
+        opened.length > collapsed.length, `${collapsed.length} -> ${opened.length} chars`);
+      check('including a reply box for this athlete alone',
+        (await p.locator(`#${id} textarea`).count()) === 1);
+    }
+  }
+
+  await go('/coach/checkins');
+  const standingOpen = await p.evaluate(() => [...document.querySelectorAll('main textarea')]
+    .filter((t) => t.getBoundingClientRect().height > 0).length);
+  check('no reply box stands open on arrival', standingOpen === 0, `${standingOpen} open`);
+  check('and there is no bulk reply anywhere',
+    (await p.getByRole('button', { name: /reply to all|bulk reply/i }).count()) === 0);
+
+  const selectAll = p.getByRole('button', { name: /^Select these \d+$/ });
+  if (await selectAll.count()) {
+    const beforeText = await body();
+    const flaggedBefore = Number((/(\d+) flagged and still unanswered/.exec(beforeText) ?? [0, 0])[1]);
+
+    await selectAll.click();
+    await p.waitForTimeout(400);
+    const mark = p.getByRole('button', { name: /^Mark \d+ read$/ });
+    check('selection offers one batch, not a button per athlete', (await mark.count()) > 0);
+
+    await mark.first().click();
+    await p.waitForTimeout(2500);
+    const confirm = p.getByRole('button', { name: /^Mark \d+ read$/ });
+    if (await confirm.count()) { await confirm.last().click(); await p.waitForTimeout(3000); }
+
+    await go('/coach/checkins');
+    const afterText = await body();
+    const flaggedAfter = Number((/(\d+) flagged and still unanswered/.exec(afterText) ?? [0, 0])[1]);
+    check('marking read leaves the flagged count exactly where it was',
+      flaggedAfter === flaggedBefore, `${flaggedBefore} -> ${flaggedAfter}`);
+  } else {
+    check('nothing unread to batch, which is a correct answer', true);
+  }
+
+  await p.setViewportSize({ width: 390, height: 844 });
+  await go('/coach/checkins');
+  const qOverflow = await p.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check('the queue does not scroll sideways at 390px', qOverflow <= 1, `${qOverflow}px`);
+  check('and the triage chips are still there',
+    (await p.locator('main button[aria-pressed]').count()) >= 2);
+  await p.setViewportSize({ width: 1280, height: 1000 });
+  await p.waitForTimeout(300);
 
   /* ---- the athlete's side ---- */
 

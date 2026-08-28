@@ -273,45 +273,7 @@ export function classify(
   /* ---- what the athlete told them ---- */
 
   if (facts.checkIn) {
-    const c = facts.checkIn;
-    // A flagged check-in is settled by answering it, not by reading it.
-    // Reading "my Achilles is sore" has not made the Achilles better, and a
-    // product that clears the signal on a click is one that loses injuries.
-    if (c.attention === 'attention' && !c.respondedAt) {
-      signals.push({
-        kind: 'checkin_flagged',
-        severity: 'attention',
-        detail: c.reasons.length
-          ? `Check-in flagged: ${c.reasons.join(', ')}.`
-          : 'Check-in flagged for review.',
-        href: `${athlete}#checkins`,
-      });
-    } else if (!c.acknowledgedAt) {
-      // purely a communication state: has anyone looked at this yet
-      signals.push({
-        kind: 'checkin_unreviewed',
-        severity: 'information',
-        detail: 'Check-in submitted, not yet reviewed.',
-        href: `${athlete}#checkins`,
-      });
-    }
-
-    if (c.painOrNiggles) {
-      // Severity comes from the athlete's own soreness score, not from
-      // whether they typed anything. An athlete who writes "nothing to
-      // report" in the niggles box was raising a signal that read
-      // "Reported: Nothing to report." — and once this fed notifications it
-      // would have woken a coach at midnight to tell them nobody was hurt.
-      //
-      // Their words are still carried through exactly as written. Nothing
-      // here reads them, and nothing here decides what they mean.
-      signals.push({
-        kind: 'soreness_reported',
-        severity: (c.soreness ?? 0) >= SORENESS_RAISES ? 'attention' : 'information',
-        detail: `Reported: ${c.painOrNiggles}`,
-        href: `${athlete}#checkins`,
-      });
-    }
+    signals.push(...checkInSignals(facts.checkIn, athlete));
   }
 
   /* ---- what they actually did ---- */
@@ -477,6 +439,166 @@ const FILTER_KINDS: Partial<Record<RosterFilter, SignalKind[]>> = {
   pain: ['soreness_reported'],
   waiting: ['awaiting_reply'],
 };
+
+/**
+ * WHAT A CHECK-IN RAISES.
+ *
+ * Extracted so the roster and the check-in queue cannot drift. Slice 15 gave
+ * the queue its own triage, and the only safe way to do that was to have both
+ * screens ask this one function rather than each deciding for itself what
+ * "flagged" or "pain reported" means.
+ *
+ * `athleteHref` is where the signal should lead. The roster sends the coach to
+ * the athlete; the queue already has the check-in in front of them.
+ */
+export function checkInSignals(
+  c: NonNullable<RosterFacts['checkIn']>,
+  athleteHref: string,
+): Signal[] {
+  const out: Signal[] = [];
+
+  // A flagged check-in is settled by answering it, not by reading it.
+  // Reading "my Achilles is sore" has not made the Achilles better, and a
+  // product that clears the signal on a click is one that loses injuries.
+  if (c.attention === 'attention' && !c.respondedAt) {
+    out.push({
+      kind: 'checkin_flagged',
+      severity: 'attention',
+      detail: c.reasons.length
+        ? `Check-in flagged: ${c.reasons.join(', ')}.`
+        : 'Check-in flagged for review.',
+      href: `${athleteHref}#checkins`,
+    });
+  } else if (!c.acknowledgedAt) {
+    // purely a communication state: has anyone looked at this yet
+    out.push({
+      kind: 'checkin_unreviewed',
+      severity: 'information',
+      detail: 'Check-in submitted, not yet reviewed.',
+      href: `${athleteHref}#checkins`,
+    });
+  }
+
+  if (c.painOrNiggles) {
+    // Severity comes from the athlete's own soreness score, not from whether
+    // they typed anything. An athlete who writes "nothing to report" in the
+    // niggles box was raising a signal that read "Reported: Nothing to
+    // report." — and once this fed notifications it would have woken a coach
+    // at midnight to tell them nobody was hurt.
+    //
+    // Their words are carried through exactly as written. Nothing here reads
+    // them, and nothing here decides what they mean.
+    out.push({
+      kind: 'soreness_reported',
+      severity: (c.soreness ?? 0) >= SORENESS_RAISES ? 'attention' : 'information',
+      detail: `Reported: ${c.painOrNiggles}`,
+      href: `${athleteHref}#checkins`,
+    });
+  }
+
+  return out.sort(compareSignals);
+}
+
+/* ============================================================
+ * THE CHECK-IN QUEUE
+ * ========================================================== */
+
+/**
+ * A check-in as the queue holds it, reduced to what the classifier needs.
+ *
+ * The queue works on whole `CheckIn` rows; the roster works on the summary
+ * the roster query returns. This is the seam between them, so both reach
+ * `checkInSignals` with the same shape and get the same answer.
+ */
+export interface QueueCheckIn {
+  id: UUID;
+  athleteId: UUID;
+  athleteName: string;
+  weekStart: ISODate;
+  submittedAt: ISOTimestamp;
+  attentionLevel: 'none' | 'watch' | 'attention';
+  attentionReasons: string[];
+  acknowledgedAt: ISOTimestamp | null;
+  respondedAt: ISOTimestamp | null;
+  soreness: number | null;
+  painOrNiggles: string | null;
+}
+
+/** What this check-in raises, by the definition the roster uses. */
+export function queueSignals(c: QueueCheckIn): Signal[] {
+  return checkInSignals({
+    id: c.id,
+    weekStart: c.weekStart,
+    submittedAt: c.submittedAt,
+    attention: c.attentionLevel,
+    reasons: c.attentionReasons,
+    acknowledgedAt: c.acknowledgedAt,
+    respondedAt: c.respondedAt,
+    fatigue: null,
+    soreness: c.soreness,
+    painOrNiggles: c.painOrNiggles,
+  }, `/coach/athletes/${c.athleteId}`);
+}
+
+/**
+ * The filters the check-in queue offers.
+ *
+ * Deliberately a subset of `RosterFilter`, using the same names and the same
+ * `FILTER_KINDS` mapping, so "flagged" cannot mean one thing on the roster and
+ * another here. `answered` is the queue's own — the roster never lists a
+ * settled check-in, but a coach reviewing their week wants to see what they
+ * already did.
+ */
+export const QUEUE_FILTERS = ['waiting', 'checkins', 'pain', 'answered', 'all'] as const;
+export type QueueFilter = (typeof QUEUE_FILTERS)[number];
+
+export const QUEUE_FILTER_LABELS: Record<QueueFilter, string> = {
+  waiting: 'Needs a reply',
+  checkins: 'Unread',
+  pain: 'Pain or soreness',
+  answered: 'Answered',
+  all: 'Everything',
+};
+
+export function applyQueueFilter(rows: QueueCheckIn[], filter: QueueFilter): QueueCheckIn[] {
+  if (filter === 'all') return rows;
+  if (filter === 'answered') return rows.filter((c) => c.respondedAt !== null);
+  // 'waiting' here means the flagged check-in a coach still owes an answer —
+  // the roster's `checkin_flagged`, not the message channel's waiting reply.
+  const kinds = filter === 'waiting'
+    ? ['checkin_flagged']
+    : kindsForFilter(filter as RosterFilter);
+  return rows.filter((c) => queueSignals(c).some((s) => kinds.includes(s.kind)));
+}
+
+export function queueCounts(rows: QueueCheckIn[]): Record<QueueFilter, number> {
+  const counts = {} as Record<QueueFilter, number>;
+  for (const f of QUEUE_FILTERS) counts[f] = applyQueueFilter(rows, f).length;
+  return counts;
+}
+
+/**
+ * The order a coach wants to work in.
+ *
+ * The same rule the roster ranks by — severity, then the concern order — with
+ * the oldest first inside a tie, because a check-in that has waited four days
+ * is the one most likely to have been forgotten. Age breaks ties; it never
+ * promotes an athlete past a more serious one.
+ */
+export function rankQueue(rows: QueueCheckIn[]): QueueCheckIn[] {
+  const lead = (c: QueueCheckIn) => queueSignals(c)[0] ?? null;
+  return [...rows].sort((a, b) => {
+    const sa = lead(a); const sb = lead(b);
+    if (sa && sb) {
+      const bySignal = compareSignals(sa, sb);
+      if (bySignal !== 0) return bySignal;
+    } else if (sa !== sb) {
+      return sa ? -1 : 1;
+    }
+    return a.submittedAt.localeCompare(b.submittedAt)
+      || a.athleteName.localeCompare(b.athleteName);
+  });
+}
 
 /**
  * How long someone has been waiting, in the words a coach would use.

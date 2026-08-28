@@ -105,7 +105,13 @@ export function allSelected(selection: Selection, athleteIds: UUID[]): boolean {
  * expects their four to still be chosen. An athlete who has left the roster
  * entirely is dropped rather than silently carried into a batch.
  */
-export function reconcile(selection: Selection, roster: RosterEntry[]): Selection {
+export function reconcile(
+  selection: Selection,
+  // Only the ids are used. Widened so the check-in queue, which holds
+  // check-ins rather than roster entries, can reconcile against its own list
+  // instead of growing a second selection model.
+  roster: readonly { athleteId: UUID }[],
+): Selection {
   const live = new Set(roster.map((e) => e.athleteId));
   return { ids: selection.ids.filter((id) => live.has(id)) };
 }

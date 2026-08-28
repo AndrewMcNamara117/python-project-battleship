@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  applyFilter, attentionRoster, buildEntry, classify, concernsFor, filterCounts,
-  rankEntries, rosterWorkload, summariseToday,
+  applyFilter, applyQueueFilter, attentionRoster, buildEntry, classify, concernsFor,
+  filterCounts, queueCounts, queueSignals, rankEntries, rankQueue, rosterWorkload,
+  summariseToday,
 } from './roster.ts';
+import type { QueueCheckIn } from './roster.ts';
 import type { RosterFacts } from './roster.ts';
 
 /**
@@ -761,5 +763,119 @@ describe('the roster and the digest describe the same morning', () => {
     assert.equal(digest.missedSessions, 12, '3 athletes x 4 sessions; the stopped one has none recorded');
     assert.ok(digest.groups.some((g) => g.kind === 'missed' && g.count === rosterCount),
       'and its group count is the roster count');
+  });
+});
+
+
+describe('the check-in queue triages by the roster\'s own definitions', () => {
+  const at = (h: number) => new Date(Date.parse(`${TODAY}T12:00:00Z`) - h * 3_600_000).toISOString();
+
+  const ci = (over: Partial<QueueCheckIn> = {}): QueueCheckIn => ({
+    id: 'c1', athleteId: 'a1', athleteName: 'Athlete', weekStart: '2026-09-14',
+    submittedAt: at(4), attentionLevel: 'none', attentionReasons: [],
+    acknowledgedAt: null, respondedAt: null, soreness: 4, painOrNiggles: null,
+    ...over,
+  });
+
+  const kinds = (c: QueueCheckIn) => queueSignals(c).map((s) => s.kind);
+
+  /* ---- the states a real Monday contains ---- */
+
+  const unreadFine = ci({ id: 'fine', athleteName: 'Fine' });
+  const flagged = ci({
+    id: 'flag', athleteName: 'Flagged', attentionLevel: 'attention',
+    attentionReasons: ['Soreness reported at 8 or above'], soreness: 9,
+    painOrNiggles: 'Left Achilles sore on hills.',
+  });
+  const painOnly = ci({
+    id: 'pain', athleteName: 'Sore', soreness: 9, painOrNiggles: 'Calf tight.',
+  });
+  const painMild = ci({
+    id: 'mild', athleteName: 'Niggle', soreness: 4, painOrNiggles: 'Slight twinge.',
+  });
+  const oldUnanswered = ci({
+    id: 'old', athleteName: 'Waiting', submittedAt: at(96),
+    attentionLevel: 'attention', attentionReasons: ['Sleep reported at 3 or below'],
+  });
+  const answered = ci({
+    id: 'done', athleteName: 'Answered', attentionLevel: 'attention',
+    attentionReasons: ['Sleep reported at 3 or below'],
+    acknowledgedAt: at(2), respondedAt: at(2),
+  });
+  const readNotAnswered = ci({
+    id: 'read', athleteName: 'Read', attentionLevel: 'attention',
+    attentionReasons: ['Fatigue reported at 8 or above'], acknowledgedAt: at(1),
+  });
+  const all = [unreadFine, flagged, painOnly, painMild, oldUnanswered, answered, readNotAnswered];
+
+  it('raises exactly what the roster would raise', () => {
+    assert.deepEqual(kinds(unreadFine), ['checkin_unreviewed']);
+    assert.deepEqual(kinds(flagged), ['soreness_reported', 'checkin_flagged']);
+    assert.deepEqual(kinds(painOnly), ['soreness_reported', 'checkin_unreviewed']);
+    assert.deepEqual(kinds(answered), [], 'a settled check-in raises nothing');
+  });
+
+  it('keeps a flagged check-in flagged after it has been read', () => {
+    assert.ok(kinds(readNotAnswered).includes('checkin_flagged'),
+      'reading is not answering — Slice 10, still true here');
+  });
+
+  it('grades pain by the athlete\'s own score, not by whether they typed', () => {
+    const loud = queueSignals(painOnly).find((s) => s.kind === 'soreness_reported')!;
+    const quiet = queueSignals(painMild).find((s) => s.kind === 'soreness_reported')!;
+    assert.equal(loud.severity, 'attention');
+    assert.equal(quiet.severity, 'information');
+  });
+
+  it('filters find the right check-ins and only those', () => {
+    assert.deepEqual(applyQueueFilter(all, 'waiting').map((c) => c.id),
+      ['flag', 'old', 'read'], 'flagged and unanswered, however long ago');
+    assert.deepEqual(applyQueueFilter(all, 'pain').map((c) => c.id), ['flag', 'pain', 'mild']);
+    assert.deepEqual(applyQueueFilter(all, 'answered').map((c) => c.id), ['done']);
+    assert.equal(applyQueueFilter(all, 'all').length, all.length);
+  });
+
+  it('counts what the chips will say', () => {
+    const counts = queueCounts(all);
+    assert.equal(counts.waiting, 3);
+    assert.equal(counts.pain, 3);
+    assert.equal(counts.answered, 1);
+    assert.equal(counts.all, 7);
+    for (const f of ['waiting', 'checkins', 'pain', 'answered'] as const) {
+      assert.equal(counts[f], applyQueueFilter(all, f).length, `${f} count matches its filter`);
+    }
+  });
+
+  it('returns nothing, truthfully, when nothing matches', () => {
+    assert.deepEqual(applyQueueFilter([unreadFine], 'pain'), []);
+    assert.deepEqual(queueCounts([]).all, 0);
+  });
+
+  it('orders by concern first and age only within a tie', () => {
+    const order = rankQueue(all).map((c) => c.id);
+    assert.ok(order.indexOf('flag') < order.indexOf('fine'),
+      'a flagged check-in outranks an ordinary unread one');
+    assert.ok(order.indexOf('pain') < order.indexOf('fine'),
+      'and so does reported pain');
+    assert.equal(order.at(-1), 'done', 'a settled check-in sinks to the bottom');
+  });
+
+  it('does not let age outrank a concern', () => {
+    // four days old and merely unread, against fresh reported pain
+    const stale = ci({ id: 'stale', athleteName: 'Stale', submittedAt: at(96) });
+    const fresh = ci({ id: 'fresh', athleteName: 'Fresh', submittedAt: at(1), soreness: 9, painOrNiggles: 'Sore.' });
+    assert.deepEqual(rankQueue([stale, fresh]).map((c) => c.id), ['fresh', 'stale']);
+  });
+
+  it('puts the oldest first when the concern is the same', () => {
+    const older = ci({ id: 'older', athleteName: 'B', submittedAt: at(72) });
+    const newer = ci({ id: 'newer', athleteName: 'A', submittedAt: at(2) });
+    assert.deepEqual(rankQueue([newer, older]).map((c) => c.id), ['older', 'newer']);
+  });
+
+  it('carries an athlete with several signals once, with all of them', () => {
+    assert.equal(applyQueueFilter([flagged], 'pain').length, 1);
+    assert.equal(applyQueueFilter([flagged], 'waiting').length, 1);
+    assert.equal(kinds(flagged).length, 2, 'and the row states both');
   });
 });
