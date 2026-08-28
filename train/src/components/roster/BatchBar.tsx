@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Select } from '@/components/ui/Field';
 import {
   applicableIds, availableActions, BATCH_ACTION_LABEL, confirmLabel,
-  resultSentence, selectionLabel, tally, tallySentence, unavailableReason,
+  resultSentence, reviewWarnings, selectionLabel, tally, tallySentence, unavailableReason,
 } from '@/lib/domain/batch';
 import { addDays, startOfWeek, toISODate } from '@/lib/domain/dates';
 import type {
@@ -284,7 +284,7 @@ export function BatchBar({
             <Button onClick={apply} disabled={pending || t.willChange === 0}>
               {pending ? 'Applying…' : confirmLabel(preview.action, t)}
             </Button>
-            <p className="text-[12.5px] text-ink-secondary">{tallySentence(t)}</p>
+            <p className="text-[12.5px] text-ink-secondary">{tallySentence(t, reviewWarnings(preview))}</p>
           </div>
         </div>
       )}

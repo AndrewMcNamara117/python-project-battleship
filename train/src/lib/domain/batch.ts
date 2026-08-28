@@ -214,6 +214,159 @@ export function tally(preview: BatchPreview): BatchTally {
   };
 }
 
+/* ============================================================
+ * WHAT IS SHARED, AND WHO IS DIFFERENT
+ * ========================================================== */
+
+/**
+ * One warning, and exactly who carries it.
+ *
+ * The sentence is never rewritten. It is the string the preview produced,
+ * carried through unchanged — grouping decides where it is shown, not what
+ * it says.
+ */
+export interface WarningGroup {
+  detail: string;
+  athleteIds: UUID[];
+  athleteNames: string[];
+}
+
+/** An athlete carrying something the rest of the batch does not. */
+export interface ReviewException {
+  athleteId: UUID;
+  athleteName: string;
+  /** Only what is NOT shared. What they have in common is stated above. */
+  only: string[];
+}
+
+export interface ReviewWarnings {
+  /** How many athletes the batch will actually change. */
+  cohort: number;
+  /** Carried by every athlete being changed. Said once. */
+  shared: WarningGroup[];
+  /** Carried by some. Said once, with exactly who — rarest first. */
+  differences: WarningGroup[];
+  /** Who does not match the group, and what only they have. */
+  exceptions: ReviewException[];
+}
+
+/**
+ * THE REVIEW, SAID ONCE.
+ *
+ * Confirming a fourteen-athlete assignment used to mean reading four
+ * warnings fourteen times — 56 lines for 4 facts across 3.9 screens — under a
+ * summary that said only "14 with warnings". That is not merely long. The
+ * review exists so a coach can spot the athlete for whom this is wrong before
+ * it happens, and fourteenfold repetition is exactly the condition in which
+ * an exception goes unread.
+ *
+ * Two rules keep this honest:
+ *
+ *   Identity is the EXACT sentence. Warnings carry a `kind` upstream, and
+ *   grouping by it would have merged "the programme trains on Monday, which
+ *   they are not available for" with "they are available all week; the
+ *   programme only uses six days" — both `availability`, different facts.
+ *   Two athletes whose warning differs by a single number keep two lines,
+ *   because they are two different facts about two different people.
+ *
+ *   "Shared" means ALL of them. A warning on thirteen of fourteen is not
+ *   shared, it is a difference with thirteen names on it. Nothing here may
+ *   ever imply that every athlete carries something when one of them does
+ *   not — that would turn a safety screen into a rubber stamp.
+ */
+export function reviewWarnings(preview: BatchPreview): ReviewWarnings {
+  // The cohort is the athletes this will actually change. A blocked or
+  // unauthorised athlete is not about to be altered, so "shared by everyone"
+  // is a statement about the ones being altered.
+  const cohort = preview.rows.filter((r) => r.outcome === 'applied');
+
+  // Every row is scanned, not just the cohort: a warning on a row outside it
+  // still belongs to somebody and must not vanish.
+  const carriers = new Map<string, BatchPreviewRow[]>();
+  for (const row of preview.rows) {
+    for (const detail of new Set(row.warnings)) {
+      carriers.set(detail, [...(carriers.get(detail) ?? []), row]);
+    }
+  }
+
+  const shared: WarningGroup[] = [];
+  const differences: WarningGroup[] = [];
+
+  for (const [detail, rows] of carriers) {
+    const group: WarningGroup = {
+      detail,
+      athleteIds: rows.map((r) => r.athleteId),
+      athleteNames: rows.map((r) => r.athleteName),
+    };
+    const everyoneChanging = cohort.length > 0
+      && rows.length >= cohort.length
+      && cohort.every((c) => group.athleteIds.includes(c.athleteId));
+    if (everyoneChanging) shared.push(group);
+    else differences.push(group);
+  }
+
+  // Rarest first: the warning one athlete has is the one the coach is here
+  // to find, and it should not be below the one thirteen of them share.
+  differences.sort((a, b) =>
+    a.athleteIds.length - b.athleteIds.length || a.detail.localeCompare(b.detail));
+
+  // WHO DOES NOT MATCH THE GROUP.
+  //
+  // Not "carries something outside the shared set" — when one athlete of
+  // fourteen lacks a warning, the other thirteen all fail that test and the
+  // screen announces that fourteen athletes are unusual, which is the same
+  // useless noise in a new shape.
+  //
+  // The group is the warning set most of them actually have. An exception is
+  // an athlete whose set differs from it, and what is shown is only the part
+  // that differs.
+  const signature = (row: BatchPreviewRow) =>
+    [...new Set(row.warnings)].sort().join('\u241f');
+
+  const bySignature = new Map<string, BatchPreviewRow[]>();
+  for (const row of cohort) {
+    const sig = signature(row);
+    bySignature.set(sig, [...(bySignature.get(sig) ?? []), row]);
+  }
+  const modal = [...bySignature.entries()]
+    .sort((a, b) => b[1].length - a[1].length)[0];
+  const usual = new Set(modal ? [...new Set(modal[1][0].warnings)] : []);
+
+  const exceptions: ReviewException[] = preview.rows
+    .filter((row) => signature(row) !== (modal?.[0] ?? ''))
+    .map((row) => ({
+      athleteId: row.athleteId,
+      athleteName: row.athleteName,
+      only: [...new Set(row.warnings)].filter((d) => !usual.has(d)),
+    }))
+    .filter((e) => e.only.length > 0)
+    .sort((a, b) => a.athleteName.localeCompare(b.athleteName));
+
+  return { cohort: cohort.length, shared, differences, exceptions };
+}
+
+/**
+ * The warnings line under the button.
+ *
+ * "14 with warnings" told a coach nothing about whether all fourteen shared
+ * one harmless caveat or one of them had a problem the others did not.
+ */
+export function warningSentence(w: ReviewWarnings): string | null {
+  if (!w.shared.length && !w.differences.length) return null;
+
+  const parts: string[] = [];
+  if (w.shared.length) {
+    parts.push(`${w.shared.length} ${w.shared.length === 1 ? 'warning' : 'warnings'} on all ${w.cohort}`);
+  }
+  if (w.exceptions.length === 1) {
+    const e = w.exceptions[0];
+    parts.push(`${e.athleteName} has ${e.only.length} the others do not`);
+  } else if (w.exceptions.length > 1) {
+    parts.push(`${w.exceptions.length} athletes differ`);
+  }
+  return parts.join(' · ');
+}
+
 /** The athletes the apply will actually be asked to change. */
 export function applicableIds(preview: BatchPreview): UUID[] {
   return preview.rows.filter((r) => r.outcome === 'applied').map((r) => r.athleteId);
@@ -233,14 +386,22 @@ export function confirmLabel(action: BatchAction, t: BatchTally): string {
   return `${verb} ${t.willChange} ${t.willChange === 1 ? 'athlete' : 'athletes'}`;
 }
 
-/** The sentence beside the button, so a coach never has to count the rows. */
-export function tallySentence(t: BatchTally): string {
+/**
+ * The sentence beside the button, so a coach never has to count the rows.
+ *
+ * Given the warnings it says what they are shaped like rather than how many
+ * rows have one: "14 with warnings" was true and told a coach nothing about
+ * whether all fourteen shared one caveat or one of them had a problem.
+ */
+export function tallySentence(t: BatchTally, warnings?: ReviewWarnings): string {
   const parts = [
     `${t.willChange} will change`,
     t.nothingToDo ? `${t.nothingToDo} already as prescribed` : null,
     t.blocked ? `${t.blocked} blocked` : null,
     t.unauthorised ? `${t.unauthorised} not on your roster` : null,
-    t.warnings ? `${t.warnings} with warnings` : null,
+    warnings
+      ? warningSentence(warnings)
+      : (t.warnings ? `${t.warnings} with warnings` : null),
   ].filter(Boolean);
   return parts.join(' · ');
 }

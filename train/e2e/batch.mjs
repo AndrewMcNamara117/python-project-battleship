@@ -110,10 +110,70 @@ try {
     promised <= count, `promises ${promised} of ${count}`);
   check('a tally spells out the exceptions',
     /will change/i.test(reviewed));
-  check('every selected athlete has a row',
-    (await p.locator('text=/will change|nothing to do|blocked|not yours/i').count()) >= promised);
   check('warnings are shown rather than resolved away',
     !/resolved|adjusted to fit|moved to fit/i.test(reviewed));
+
+  /* ---- Slice 14: said once, and the odd one out is not buried ---- */
+
+  const WARN = /^(The athlete is available|The programme trains on|The programme's|The heaviest week|Assigning this will|\d+ session\(s\))/;
+  const reviewLines = reviewed.split('\n').map((l) => l.trim()).filter(Boolean);
+  const warnLines = reviewLines.filter((l) => WARN.test(l));
+  const distinct = new Set(warnLines);
+
+  if (warnLines.length === 0) {
+    check('a review with nothing to warn about says nothing', true,
+      'this cohort produced no warnings, which is a correct answer');
+  } else {
+    check('every warning is stated exactly once',
+      warnLines.length === distinct.size,
+      `${warnLines.length} lines for ${distinct.size} distinct warnings`);
+  }
+
+  // the summary must say what the warnings are shaped like, not just a count
+  const tallyLine = reviewLines.find((l) => /will change/.test(l)) ?? '';
+  check('the summary is not a bare count of rows with warnings',
+    !/\d+ with warnings$/.test(tallyLine), tallyLine);
+  if (distinct.size) {
+    check('and says what is true of everyone, or who differs',
+      /on all \d+|the others do not|athletes differ/.test(tallyLine), tallyLine);
+  }
+
+  // the per-athlete rows are one keystroke away, and Remove survives
+  const rowsToggle = p.getByRole('button', { name: /athlete by athlete/i });
+  check('the athlete-by-athlete rows are one click away', (await rowsToggle.count()) > 0);
+  if (await rowsToggle.count()) {
+    check('and the review says how many there are',
+      /\d+ rows?/i.test(await rowsToggle.innerText()), await rowsToggle.innerText());
+    check('collapsed by default', await rowsToggle.getAttribute('aria-expanded') === 'false');
+    await rowsToggle.click();
+    await p.waitForTimeout(400);
+    check('opening them shows every selected athlete',
+      (await p.locator('text=/will change|nothing to do|blocked|not yours/i').count()) >= promised);
+    check('Remove is still there, per athlete',
+      (await p.getByRole('button', { name: /^Remove$/ }).count()) >= promised,
+      `${await p.getByRole('button', { name: /^Remove$/ }).count()} of ${promised}`);
+
+    // a warning shared by everyone is stated above, not repeated on each row
+    const opened = (await p.locator('body').innerText()).split('\n').map((l) => l.trim());
+    for (const w of distinct) {
+      const times = opened.filter((l) => l === w).length;
+      check(`"${w.slice(0, 42)}…" is said once`, times === 1, `said ${times} times`);
+    }
+    await rowsToggle.click();
+    await p.waitForTimeout(300);
+  }
+
+  /* ---- on a phone ---- */
+
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(400);
+  const overflow = await p.evaluate(() =>
+    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check('the review does not scroll sideways at 390px', overflow <= 1, `${overflow}px`);
+  check('and the confirm button is still reachable',
+    (await p.getByRole('button', { name: /assign to \d+ athlete/i }).count()) > 0);
+  await p.setViewportSize({ width: 1440, height: 1200 });
+  await p.waitForTimeout(300);
 
   /* ---- applying ---- */
 

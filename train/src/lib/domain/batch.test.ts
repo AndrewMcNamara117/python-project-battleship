@@ -7,6 +7,7 @@ import {
   succeeded, tally, tallySentence, toggle, unavailableReason,
 } from './batch.ts';
 import { buildEntry } from './roster.ts';
+import { reviewWarnings, warningSentence } from './batch.ts';
 import type { BatchPreview, BatchPreviewRow, BatchResult } from './batch.ts';
 import type { RosterFacts } from './roster.ts';
 
@@ -326,5 +327,208 @@ describe('marking check-ins read', () => {
 
   it('takes no parameters, so there is nothing to configure wrongly', () => {
     assert.equal(describeParams({ action: 'acknowledge_checkin' }), 'read, not answered');
+  });
+});
+
+
+describe('the review says each warning once', () => {
+  const AVAIL = 'The athlete is available on Monday, Tuesday; the programme only uses Tuesday.';
+  const KIT = "The programme's strength work uses Trap bar, which is not on the athlete's equipment list.";
+  const ARCHIVE = 'Assigning this will archive the athlete\'s current programme, "Connemara Ultra".';
+
+  const row = (
+    name: string,
+    warnings: string[],
+    outcome: BatchPreviewRow['outcome'] = 'applied',
+    blockers: string[] = [],
+  ): BatchPreviewRow => ({
+    athleteId: name.toLowerCase().replace(/\s+/g, '-'),
+    athleteName: name,
+    outcome,
+    summary: outcome === 'applied' ? '10 weeks' : 'nothing',
+    warnings,
+    blockers,
+  });
+
+  const preview = (rows: BatchPreviewRow[]): BatchPreview => ({ action: 'assign_template', rows });
+
+  it('collapses a warning every athlete carries into one line', () => {
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL, KIT]),
+      row('Squad 02', [AVAIL, KIT]),
+      row('Squad 03', [AVAIL, KIT]),
+    ]));
+    assert.equal(w.cohort, 3);
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL, KIT]);
+    assert.deepEqual(w.differences, []);
+    assert.deepEqual(w.exceptions, [], 'nobody differs');
+    assert.equal(w.shared[0].athleteIds.length, 3, 'and it truthfully names all three');
+  });
+
+  it('never calls a warning shared when one athlete lacks it', () => {
+    // the failure that would turn a safety screen into a rubber stamp
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL]),
+      row('Squad 02', [AVAIL]),
+      row('Squad 03', []),
+    ]));
+    assert.deepEqual(w.shared, [], 'two of three is not shared');
+    assert.equal(w.differences.length, 1);
+    assert.deepEqual(w.differences[0].athleteNames, ['Squad 01', 'Squad 02']);
+  });
+
+  it('makes the single exceptional athlete impossible to miss', () => {
+    const w = reviewWarnings(preview([
+      ...['Squad 01', 'Squad 02', 'Squad 03', 'Squad 04'].map((n) => row(n, [AVAIL, KIT])),
+      row('Squad 05', [AVAIL, KIT, ARCHIVE]),
+    ]));
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL, KIT]);
+    assert.equal(w.differences.length, 1);
+    assert.deepEqual(w.differences[0].athleteNames, ['Squad 05']);
+    assert.deepEqual(w.exceptions, [{
+      athleteId: 'squad-05', athleteName: 'Squad 05', only: [ARCHIVE],
+    }], 'and only what makes them different');
+    assert.match(warningSentence(w)!, /Squad 05 has 1 the others do not/);
+  });
+
+  it('puts the rarest difference first, not the most common', () => {
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL, KIT]),
+      row('Squad 02', [AVAIL, KIT]),
+      row('Squad 03', [AVAIL, ARCHIVE]),
+      row('Squad 04', [AVAIL]),
+    ]));
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL]);
+    assert.deepEqual(
+      w.differences.map((g) => [g.detail, g.athleteIds.length]),
+      [[ARCHIVE, 1], [KIT, 2]],
+      'the one only Squad 03 has leads');
+  });
+
+  it('handles several kinds of exception at once', () => {
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL]),
+      row('Squad 02', [AVAIL, KIT]),
+      row('Squad 03', [AVAIL, ARCHIVE]),
+    ]));
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL]);
+    assert.equal(w.differences.length, 2);
+    assert.deepEqual(w.exceptions.map((e) => [e.athleteName, e.only]), [
+      ['Squad 02', [KIT]],
+      ['Squad 03', [ARCHIVE]],
+    ]);
+    assert.match(warningSentence(w)!, /2 athletes differ/);
+  });
+
+  it('says nothing when there is nothing to warn about', () => {
+    const w = reviewWarnings(preview([row('Squad 01', []), row('Squad 02', [])]));
+    assert.deepEqual(w.shared, []);
+    assert.deepEqual(w.differences, []);
+    assert.deepEqual(w.exceptions, []);
+    assert.equal(warningSentence(w), null, 'a clean review says so by staying quiet');
+  });
+
+  it('works for a batch of one', () => {
+    const w = reviewWarnings(preview([row('Squad 01', [AVAIL, KIT])]));
+    assert.equal(w.cohort, 1);
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL, KIT],
+      'one athlete carrying both means both are shared by everyone being changed');
+    assert.deepEqual(w.exceptions, []);
+  });
+
+  it('keeps a warning belonging to an athlete who will not change', () => {
+    // a blocked athlete is not in the cohort, but their warning is still theirs
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL]),
+      row('Squad 02', [AVAIL]),
+      row('Blocked One', [KIT], 'blocked', ['Their week is already complete.']),
+    ]));
+    assert.equal(w.cohort, 2, 'two will change');
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL]);
+    assert.deepEqual(w.differences.map((g) => g.athleteNames), [['Blocked One']],
+      'the blocked athlete\'s warning is not swallowed');
+  });
+
+  it('does not let an unauthorised athlete make a warning look shared', () => {
+    const w = reviewWarnings(preview([
+      row('Squad 01', [AVAIL]),
+      row('Not Yours', [], 'unauthorised', ['This athlete is not on your roster.']),
+    ]));
+    assert.equal(w.cohort, 1);
+    assert.deepEqual(w.shared.map((g) => g.detail), [AVAIL]);
+    assert.equal(w.exceptions.length, 0);
+  });
+
+  it('counts an athlete who repeats themselves once', () => {
+    const w = reviewWarnings(preview([row('Squad 01', [AVAIL, AVAIL])]));
+    assert.equal(w.shared.length, 1);
+    assert.equal(w.shared[0].athleteIds.length, 1);
+  });
+
+  it('says nothing rather than something wrong when nobody will change', () => {
+    const w = reviewWarnings(preview([
+      row('Blocked One', [AVAIL], 'blocked', ['Their week is already complete.']),
+    ]));
+    assert.equal(w.cohort, 0);
+    assert.deepEqual(w.shared, [], 'shared-by-all is meaningless when nobody is changing');
+    assert.deepEqual(w.differences.map((g) => g.athleteNames), [['Blocked One']]);
+  });
+
+  it('never loses a warning, wherever it is put', () => {
+    const rows = [
+      row('Squad 01', [AVAIL, KIT]),
+      row('Squad 02', [AVAIL]),
+      row('Squad 03', [AVAIL, ARCHIVE]),
+    ];
+    const w = reviewWarnings(preview(rows));
+    const said = new Set([...w.shared, ...w.differences].map((g) => g.detail));
+    const all = new Set(rows.flatMap((r) => r.warnings));
+    assert.deepEqual([...said].sort(), [...all].sort(),
+      'every sentence the preview produced is stated exactly once');
+  });
+});
+
+describe('who does not match the group', () => {
+  const A = 'Available Monday to Sunday; the programme only uses six days.';
+  const B = "Strength work uses a trap bar, which is not on the athlete's list.";
+  const ODD = 'The heaviest week trains 6 days; the athlete is available 3.';
+
+  const row = (name: string, warnings: string[]): BatchPreviewRow => ({
+    athleteId: name.toLowerCase().replace(/\s+/g, '-'),
+    athleteName: name, outcome: 'applied', summary: '10 weeks', warnings, blockers: [],
+  });
+
+  it('names the one athlete, not the thirteen who are normal', () => {
+    // The failure this replaced: with one athlete missing the common pair,
+    // "carries something not shared by all" was true of all fourteen, and the
+    // screen announced that fourteen athletes were unusual.
+    const rows = [
+      ...Array.from({ length: 13 }, (_, i) => row(`Squad ${String(i + 1).padStart(2, '0')}`, [A, B])),
+      row('Squad 14', [ODD]),
+    ];
+    const w = reviewWarnings({ action: 'assign_template', rows });
+
+    assert.deepEqual(w.shared, [], 'nothing is true of all fourteen');
+    assert.deepEqual(w.exceptions.map((e) => e.athleteName), ['Squad 14']);
+    assert.deepEqual(w.exceptions[0].only, [ODD]);
+    assert.match(warningSentence(w)!, /Squad 14 has 1 the others do not/);
+  });
+
+  it('leads with the rarest, so the odd one is read first', () => {
+    const rows = [
+      ...Array.from({ length: 13 }, (_, i) => row(`Squad ${String(i + 1).padStart(2, '0')}`, [A, B])),
+      row('Squad 14', [ODD]),
+    ];
+    const w = reviewWarnings({ action: 'assign_template', rows });
+    assert.equal(w.differences[0].detail, ODD, 'the one-athlete warning is first');
+    assert.equal(w.differences[0].athleteIds.length, 1);
+    assert.equal(w.differences.at(-1)!.athleteIds.length, 13);
+  });
+
+  it('treats an athlete with FEWER warnings as unremarkable, not as an exception', () => {
+    const rows = [row('Squad 01', [A]), row('Squad 02', [A]), row('Squad 03', [])];
+    const w = reviewWarnings({ action: 'assign_template', rows });
+    assert.deepEqual(w.exceptions, [],
+      'there is nothing to warn a coach about on an athlete with no warnings');
   });
 });

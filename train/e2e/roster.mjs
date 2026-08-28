@@ -233,8 +233,6 @@ try {
       (await p.locator(`#${firstPanel}`).getAttribute('hidden')) === null);
 
     // Nothing is lost by opening: every line that was there is still there.
-    const opened = await row.innerText();
-    const beforeLines = (await row.innerText()).split('\n');
     check('opening never removes a line that was already showing',
       after >= before, `${before} -> ${after}`);
 
