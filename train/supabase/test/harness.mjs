@@ -27,16 +27,27 @@ const AUTH_SHIM = `
     created_at          timestamptz not null default now()
   );
 
-  -- Supabase reads the subject claim from the request JWT. Locally we set the
-  -- same GUC directly, which is how the policies see "who is asking".
+  -- These are Supabase's own definitions, character for character, not a
+  -- simplification of them. PostgREST verifies the JWT and then publishes its
+  -- claims as GUCs; current PostgREST sets the whole claim set as JSON in
+  -- request.jwt.claims, while older versions set one GUC per claim. Supabase
+  -- reads both, so the shim must read both — otherwise the suite would pass
+  -- against a claim shape production does not actually use.
   create or replace function auth.uid() returns uuid
   language sql stable as $$
-    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+    select coalesce(
+      nullif(current_setting('request.jwt.claim.sub', true), ''),
+      (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')
+    )::uuid;
   $$;
 
   create or replace function auth.role() returns text
   language sql stable as $$
-    select coalesce(nullif(current_setting('request.jwt.claim.role', true), ''), 'authenticated');
+    select coalesce(
+      nullif(current_setting('request.jwt.claim.role', true), ''),
+      (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role'),
+      'authenticated'
+    );
   $$;
 `;
 
@@ -85,8 +96,14 @@ export async function createTestDatabase({ verbose = false } = {}) {
   /** Run a query as a specific signed-in user, under RLS. */
   const asUser = async (userId, sql, params = []) => {
     await db.exec(`set role authenticated;`);
-    await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [userId ?? '']);
-    await db.query(`select set_config('request.jwt.claim.role', 'authenticated', false)`);
+    // the claim set PostgREST publishes for a GoTrue-issued access token
+    await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
+    await db.query(`select set_config('request.jwt.claim.role', '', false)`);
+    await db.query(
+      `select set_config('request.jwt.claims', jsonb_build_object(
+         'sub', $1::text, 'role', 'authenticated', 'aud', 'authenticated')::text, false)`,
+      [userId ?? ''],
+    );
     try {
       return await db.query(sql, params);
     } finally {
@@ -109,7 +126,11 @@ export async function createTestDatabase({ verbose = false } = {}) {
   const asService = async (sql, params = []) => {
     await db.exec('reset role;');
     await db.query(`select set_config('request.jwt.claim.sub', '', false)`);
-    await db.query(`select set_config('request.jwt.claim.role', 'service_role', false)`);
+    await db.query(`select set_config('request.jwt.claim.role', '', false)`);
+    await db.query(
+      `select set_config('request.jwt.claims', jsonb_build_object(
+         'role', 'service_role', 'aud', 'authenticated')::text, false)`,
+    );
     return await db.query(sql, params);
   };
 

@@ -197,7 +197,14 @@ try {
     await p.goto(`${BASE}/coach/checkins`, { waitUntil: 'networkidle' });
     const body = await p.locator('body').innerText();
     step(13, 'check-in reaches the coach queue', /Andrew/i.test(body));
-    step(14, 'it is flagged for attention', /attention/i.test(body));
+    // Slice 15 replaced the generic word "attention" on this screen with the
+    // reasons themselves. Assert the behaviour, and assert it harder than the
+    // old wording did: the queue must say the check-in is flagged AND name why.
+    step(14, 'it is flagged, and the queue names why',
+      /flagged/i.test(body)
+        && /worsening|swelling/i.test(body)
+        && /soreness reported at 8 or above/i.test(body),
+      'expected the flag and its stated reasons');
 
     await p.goto(`${BASE}/coach`, { waitUntil: 'networkidle' });
     const overview = await p.locator('body').innerText();
