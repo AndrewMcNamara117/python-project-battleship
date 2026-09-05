@@ -1,7 +1,66 @@
+# ---------------------------------------------------------------
+# Iron Miles / repo-wide ignores
+#
+# NOTE: the Iron Miles website itself is plain static HTML/CSS/JS with
+# no build step, so its source is committed in full and nothing about
+# the live site is ignored here.
+# ---------------------------------------------------------------
+
+# --- secrets: never commit any of these ---
+.env
+.env.*
+!.env.example
+env.py
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+secrets.json
+credentials.json
+.netrc
+
+# --- OS / editor noise ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+*.sublime-workspace
+
+# --- Node (thomondworks/ Next.js app, and the legacy mock terminal) ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.vercel/
+
+# --- Python (legacy battleship game) ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Code Institute / Gitpod template leftovers ---
 core.Microsoft*
 core.mongo*
 core.python*
-env.py
-__pycache__/
-*.py[cod]
-node_modules/
+
+# --- misc ---
+*.log
+.cache/
+coverage/
