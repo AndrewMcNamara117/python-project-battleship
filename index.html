@@ -248,7 +248,10 @@ html:not(.js-motion) #manifesto .pin{position:relative;padding:110px 0}
 html:not(.js-motion) #manifesto cite{opacity:1}
 
 /* ---- facts ---- */
-.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+/* auto-fit, not a fixed count: with five stats a repeat(4,1fr) grid left a
+   dead rectangle on the second row. auto-fit collapses the empty tracks so
+   whatever number of stats there are, every row fills. */
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .facts .cell{background:var(--iron-2);padding:clamp(26px,3vw,40px) 24px;position:relative;overflow:hidden}
 .facts .cell::after{content:"";position:absolute;left:0;top:0;width:3px;height:0;background:var(--green);transition:height .8s var(--ease)}
 .facts .cell.in::after{height:100%}
@@ -374,6 +377,26 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
 }
+
+/* ---- next session band ----
+   A live clock under the hero. Everywhere else this page says what Iron Miles
+   is; this strip says it is happening on Saturday. Tabular numerals so the
+   seconds do not shuffle the layout on every tick. */
+/* section{} gives every section 64-130px of vertical padding. This is a
+   band, not a section — it should feel like a strip bolted under the hero. */
+.nextup{border-block:1px solid var(--line);background:var(--iron-2);padding:0}
+.nextup-in{display:flex;flex-wrap:wrap;align-items:center;gap:18px 34px;padding:22px}
+.nextup-l{min-width:0;flex:1 1 15rem}
+.nextup-name{font-weight:800;font-size:clamp(1.15rem,2.4vw,1.5rem);color:var(--white);margin:6px 0 0;letter-spacing:.01em}
+.nextup-where{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:7px 0 0;font-weight:600}
+.nextup-r{min-width:0;flex:0 1 auto}
+.nextup-clock{font-weight:800;font-size:clamp(1.25rem,3.1vw,2rem);color:var(--green);margin:0;font-variant-numeric:tabular-nums;letter-spacing:.02em;line-height:1.1}
+.nextup-clock small{font-size:.5em;font-weight:700;letter-spacing:.16em;color:var(--muted);margin-left:.5em}
+.nextup-note{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin:8px 0 0;font-weight:600}
+.nextup.is-live .nextup-clock{color:var(--white)}
+.nextup.is-live .nextup-note{color:var(--green)}
+.nextup-cta{flex:0 0 auto}
+@media(max-width:620px){.nextup-in{gap:14px;padding:20px 22px}.nextup-cta{width:100%;text-align:center}}
 </style>
 </head>
 <body class="locked">
@@ -438,6 +461,25 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
     <div class="scrollcue"><span>Scroll to forge</span><span class="ln"></span></div>
   </section>
 
+  <!-- ============ NEXT SESSION ============ -->
+  <!-- The one part of this page that is not a brochure. Server-rendered text
+       below is the honest fallback: without JS, or before the clock starts,
+       it still reads as a complete sentence. The script only sharpens it. -->
+  <section class="nextup" aria-labelledby="nextup-h">
+    <div class="wrap nextup-in">
+      <div class="nextup-l">
+        <p class="eyebrow green" id="nextup-h">Next session</p>
+        <p class="nextup-name">The Forge Five</p>
+        <p class="nextup-where">Saturdays · 10:00 · Maguire’s Pitches · free</p>
+      </div>
+      <div class="nextup-r">
+        <p class="nextup-clock" data-nextup role="timer" aria-live="off">This Saturday, 10:00</p>
+        <p class="nextup-note" data-nextup-note>Everyone welcome. All paces.</p>
+      </div>
+      <a class="btn btn-green nextup-cta" href="club.html" data-magnet><span class="lab">Come along</span></a>
+    </div>
+  </section>
+
   <!-- ============ MARQUEE ============ -->
   <div class="marquee" aria-hidden="true">
     <div class="mq-track" data-mq data-mq-speed="1">
@@ -477,7 +519,7 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
         <a class="door wide reveal" href="club.html#run" data-tilt style="transition-delay:.18s">
           <span class="glow"></span>
           <span class="top"><span class="no">04</span><span class="arrow">→</span></span>
-          <span><span class="lbl">Saturday Run Club</span><span class="sub">Living Bridge, UL · 10:00 · free</span></span>
+          <span><span class="lbl">The Forge Five</span><span class="sub">Maguire’s Pitches · Saturdays 10:00 · free</span></span>
         </a>
         <a class="door wide reveal" href="club.html#forge" data-tilt style="transition-delay:.24s">
           <span class="glow"></span>
@@ -517,7 +559,7 @@ footer{border-top:1px solid var(--line);padding:64px 0 40px;background:var(--iro
       <div class="facts">
         <div class="cell reveal"><div class="num" data-count="0" data-prefix="€">€0</div><div class="cap">To join, ever</div></div>
         <div class="cell reveal" style="transition-delay:.08s"><div class="num" data-count="63" data-suffix="km">63km</div><div class="cap">From first run to ultra in one year</div></div>
-        <div class="cell reveal" style="transition-delay:.16s"><div class="num">10:00<small> SAT</small></div><div class="cap">Living Bridge, UL · every week</div></div>
+        <div class="cell reveal" style="transition-delay:.16s"><div class="num" data-count="50" data-suffix="+">50+</div><div class="cap">In the club, and counting</div></div>
         <div class="cell reveal" style="transition-delay:.24s"><div class="num" data-count="1" data-prefix="+">+1</div><div class="cap">The only number that matters</div></div>
       </div>
     </div>
@@ -1336,5 +1378,6 @@ else{
 }
 })();
 </script>
+<script src="assets/js/nextup.js" defer></script>
 </body>
 </html>
