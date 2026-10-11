@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "db:install": "node scripts/build-install.mjs",
     "test": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test \"src/**/*.test.ts\" \"supabase/test/*.test.mjs\"",
     "test:libraries": "node --test supabase/test/libraries.test.mjs",
     "test:rls": "node --test supabase/test/rls.test.mjs",
