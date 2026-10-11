@@ -59,6 +59,24 @@ const SIGNAL_CONCERN: Record<SignalKind, number> = {
   checkin_unreviewed: 10,
 };
 
+/**
+ * Whether this signal is the athlete's body talking, rather than their diary.
+ *
+ * It is the top band of SIGNAL_CONCERN above — the same ordering the roster
+ * already sorts by — given a name so the interface can mark these rows without
+ * forming a second opinion about what matters. Change the order above and this
+ * follows, which is the point.
+ *
+ * Deliberately not keyed on `severity`: severity rates exactly one signal
+ * 'urgent' (an empty calendar) and everything clinical merely 'attention', so
+ * a mark driven by severity paints almost every row the same colour and tells
+ * a coach nothing. See the Gate notes — that mismatch is worth fixing, but it
+ * is a change to what the product believes, not to how a row is drawn.
+ */
+export function isClinical(kind: SignalKind): boolean {
+  return SIGNAL_CONCERN[kind] <= 1;
+}
+
 /** Severity first, then the concern order. Nothing else. */
 export function compareSignals(a: Signal, b: Signal): number {
   return SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]

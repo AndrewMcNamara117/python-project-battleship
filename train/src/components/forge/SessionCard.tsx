@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Panel } from '@/components/ui/Panel';
 import { StatusTag, sessionLabel, sessionTone } from '@/components/ui/StatusTag';
 import { IntensityScale } from './IntensityScale';
+import { SessionGlyph } from './SessionGlyph';
 import { formatDistance, formatMinutes, formatPaceRange } from '@/lib/domain/dates';
 import { explainSession } from '@/lib/forge/assistant';
 import { WORKOUT_TYPE_LABELS, type ScheduledWorkout, type Units } from '@/lib/domain/types';
@@ -44,7 +45,16 @@ export function SessionCard({
       {/* what it is */}
       <div className="flex flex-wrap items-start justify-between gap-x-5 gap-y-3">
         <div className="min-w-0">
-          <p className="im-micro">{WORKOUT_TYPE_LABELS[workout.type]}</p>
+          {/* The glyph says what KIND of work this is before a word is read.
+              Today was the one screen the design system never reached: a 22K
+              long run and a set of 400s arrived as identical rows of text.
+              Type and status are both real fields, so the mark is truthful —
+              it is the same component the calendar and the week list use, not
+              a second visual language invented for this card. */}
+          <p className="im-micro flex items-center gap-2">
+            <SessionGlyph type={workout.type} status={workout.status} />
+            {WORKOUT_TYPE_LABELS[workout.type]}
+          </p>
           <h2
             className={`im-display im-display-tight mt-3 text-ink ${
               size === 'lead' ? 'text-[clamp(1.5rem,3.4vw,2.15rem)]' : 'text-[1.25rem]'

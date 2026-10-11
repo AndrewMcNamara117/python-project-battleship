@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Field';
 import { Panel } from '@/components/ui/Panel';
 import {
-  applyFilter, concernsFor, FILTER_LABELS, filterCounts, kindsForFilter,
+  applyFilter, concernsFor, FILTER_LABELS, filterCounts, isClinical, kindsForFilter,
   rankEntries, rosterWorkload, summariseToday, waitedFor,
 } from '@/lib/domain/roster';
 import type {
@@ -43,6 +43,23 @@ const SEVERITY_DOT: Record<Severity, string> = {
   attention: 'bg-amber',
   information: 'bg-hairline-strong',
 };
+
+/**
+ * THE ONE MARK ON THE ROW.
+ *
+ * An 8px dot works in the band, where five rows sit together and the eye has
+ * already stopped. It does not survive a list of forty: at `information` the
+ * dot is hairline grey on charcoal and effectively absent, so a coach
+ * scrolling past saw no difference between somebody reporting pain and
+ * somebody who simply has nothing scheduled.
+ *
+ * The edge marks only what the athlete's body is saying — `isClinical`, which
+ * is the top band of the roster's own concern order. Not severity: severity
+ * rates one signal 'urgent' and everything clinical 'attention', which would
+ * paint thirty-eight rows in forty the same colour. A mark on almost every
+ * row is wallpaper, and this product's whole argument is attention over
+ * information.
+ */
 
 /** The two ways to look at the whole squad. Concerns are chosen in the band. */
 const SCOPES: RosterFilter[] = ['attention', 'all'];
@@ -384,7 +401,11 @@ function AthleteRow({ entry, today, now, active, selected, onToggle, open, onOpe
         : `${entry.programmeName} — not started yet`;
 
   return (
-    <Panel className={`min-w-0 p-5 transition-colors ${selected ? 'border-mint/40' : ''}`}>
+    <Panel
+      className={`min-w-0 p-5 transition-colors ${
+        entry.signals.some((s) => isClinical(s.kind)) ? 'im-panel-clinical' : ''
+      } ${selected ? 'border-mint/40' : ''}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         {/* basis-64 so the actions wrap BELOW on a phone rather than squeezing
             this column to nothing: with min-w-0 and no basis, a long sentence

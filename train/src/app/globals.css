@@ -243,6 +243,15 @@ body {
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-md);
 }
+/* A panel about somebody's body, not their diary.
+   Lives here rather than as a utility class because .im-panel sets its own
+   border unlayered, which beats Tailwind's layered utilities — a border-l-2
+   on the element simply did not render. Three rows in forty carry this; if it
+   ever marks most of the list it has stopped meaning anything. */
+.im-panel-clinical {
+  border-left-width: 2px;
+  border-left-color: var(--color-status-missed);
+}
 .im-panel-raised {
   box-shadow:
     0 1px 0 0 rgba(230, 230, 230, 0.05) inset,
