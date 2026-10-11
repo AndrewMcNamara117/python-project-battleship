@@ -1,0 +1,21 @@
+-- =============================================================================
+-- 0019 — the batch action Slice 10 shipped but never told Postgres about
+-- =============================================================================
+--
+-- Slice 10 added 'acknowledge_checkin' to the BatchAction union in TypeScript
+-- and wired "mark these read" into the roster's batch bar. It did not add the
+-- value to `im_batch_action`, so every one of those batches would have failed
+-- against a real database with
+--
+--   invalid input value for enum im_batch_action: "acknowledge_checkin"
+--
+-- while passing against the demo adapter, whose actions are plain strings.
+-- The Slice 10 Postgres tests exercised im_acknowledge_checkin directly and
+-- never through im_open_batch, which is how a whole feature came to be green
+-- in tests and broken in production.
+--
+-- supabase/test/roster-workload.test.mjs now checks the enum against the
+-- TypeScript union itself, so a fourth action cannot be added to one and
+-- forgotten in the other.
+
+alter type im_batch_action add value if not exists 'acknowledge_checkin';
