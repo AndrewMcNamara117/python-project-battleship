@@ -668,6 +668,24 @@ export class DemoRepo implements IronMilesRepo {
     );
   }
 
+  async listMessagesFor(athleteIds: readonly UUID[]): Promise<Map<UUID, Message[]>> {
+    const out = new Map<UUID, Message[]>();
+    const wanted = new Set(athleteIds);
+    const sorted = dataset().messages
+      .filter((m) => wanted.has(m.senderId) || wanted.has(m.recipientId))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+    for (const m of sorted) {
+      // The athlete is whichever end of this message is on the roster. Same
+      // rule listMessages applies one at a time, so the two cannot disagree.
+      const athlete = wanted.has(m.senderId) ? m.senderId : m.recipientId;
+      const list = out.get(athlete);
+      if (list) list.push(clone(m));
+      else out.set(athlete, [clone(m)]);
+    }
+    return out;
+  }
+
   async sendMessage(msg: Omit<Message, 'id' | 'createdAt' | 'readAt'>): Promise<Message> {
     const all = dataset().messages;
     // Who is waiting is decided by who spoke last, so two messages must never

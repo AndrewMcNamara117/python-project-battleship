@@ -215,6 +215,19 @@ export interface IronMilesRepo {
 
   /* coaching comms */
   listMessages(athleteId: UUID): Promise<Message[]>;
+  /**
+   * The same threads, for a whole roster, without one round trip per athlete.
+   *
+   * `listMessages` costs two queries each under Postgres — find the thread,
+   * then read it — so the coach's messages screen was paying eighty-one
+   * queries to show forty conversations. This answers the same question in
+   * two, whatever the squad size.
+   *
+   * Athletes with no thread are simply absent from the map; callers default
+   * to an empty list. Row-level security still decides what is visible — this
+   * is the same tables, asked once.
+   */
+  listMessagesFor(athleteIds: readonly UUID[]): Promise<Map<UUID, Message[]>>;
   sendMessage(msg: Omit<Message, 'id' | 'createdAt' | 'readAt'>): Promise<Message>;
   markMessagesRead(athleteId: UUID, readerId: UUID): Promise<void>;
   listCoachNotes(athleteId: UUID, viewerRole: 'athlete' | 'coach'): Promise<CoachNote[]>;

@@ -860,6 +860,37 @@ export class SupabaseRepo implements IronMilesRepo {
     );
   }
 
+  async listMessagesFor(athleteIds: readonly UUID[]): Promise<Map<UUID, Message[]>> {
+    const out = new Map<UUID, Message[]>();
+    if (!athleteIds.length) return out;
+
+    // One query for the threads, one for every message in them. The previous
+    // shape of this screen called listMessages per athlete, which is two
+    // round trips each — eighty-one queries to render forty conversations.
+    const threads = await this.rows(
+      this.db.from('message_threads').select('id, athlete_id').in('athlete_id', [...athleteIds]),
+      (r: { id: string; athlete_id: string }) => r,
+    );
+    if (!threads.length) return out;
+
+    const athleteOf = new Map(threads.map((t) => [t.id, t.athlete_id as UUID]));
+    const messages = await this.rows(
+      this.db.from('messages').select('*').in('thread_id', threads.map((t) => t.id)).order('created_at'),
+      this.toMessage,
+    );
+
+    // `order('created_at')` sorts the whole result, so each athlete's slice
+    // comes out in order already; grouping preserves it.
+    for (const m of messages) {
+      const athlete = athleteOf.get(m.threadId);
+      if (!athlete) continue;
+      const list = out.get(athlete);
+      if (list) list.push(m);
+      else out.set(athlete, [m]);
+    }
+    return out;
+  }
+
   async sendMessage(msg: Omit<Message, 'id' | 'createdAt' | 'readAt'>): Promise<Message> {
     const { data, error } = await this.db
       .from('messages')

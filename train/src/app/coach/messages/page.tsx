@@ -22,13 +22,14 @@ export default async function CoachMessagesPage() {
   // unread" for ever, and no control on this screen could clear it. Slice 12
   // settled what waiting means; this asks that, rather than holding a second
   // opinion nobody maintains.
-  const threads = await Promise.all(
-    ctx.roster.map(async (entry) => ({
-      entry,
-      athlete: { id: entry.athleteId, fullName: entry.fullName },
-      messages: await repo.listMessages(entry.athleteId),
-    })),
-  );
+  // Two queries for the whole roster, not two per athlete. At forty athletes
+  // the per-athlete version cost eighty-one round trips to draw one screen.
+  const byAthlete = await repo.listMessagesFor(ctx.roster.map((e) => e.athleteId));
+  const threads = ctx.roster.map((entry) => ({
+    entry,
+    athlete: { id: entry.athleteId, fullName: entry.fullName },
+    messages: byAthlete.get(entry.athleteId) ?? [],
+  }));
 
   const withMessages = threads.filter((t) => t.messages.length);
 
