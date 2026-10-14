@@ -103,6 +103,8 @@ import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
  * what actually enforces who can read and write what. The mappers below only
  * translate snake_case rows into the domain shapes.
  */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class SupabaseRepo implements IronMilesRepo {
   readonly mode = 'supabase' as const;
 
@@ -892,10 +894,25 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   async saveStrengthSession(session: StrengthSession): Promise<StrengthSession> {
+    // The session player names a session `ss-<athlete>-<date>` until it has
+    // been saved once. That is not a uuid, so it cannot be written as one:
+    // resolve it to the row already saved for that day, or let Postgres mint one.
+    let id: string | undefined = session.id;
+    if (!UUID_RE.test(id)) {
+      const { data: existing, error: lookupError } = await this.db
+        .from('strength_sessions')
+        .select('id')
+        .eq('athlete_id', session.athleteId)
+        .eq('date', session.date)
+        .eq('template_id', session.templateId)
+        .maybeSingle();
+      if (lookupError && lookupError.code !== 'PGRST116') throw new Error(lookupError.message);
+      id = existing?.id ?? undefined;
+    }
     const { data, error } = await this.db
       .from('strength_sessions')
       .upsert({
-        id: session.id,
+        ...(id ? { id } : {}),
         athlete_id: session.athleteId,
         scheduled_workout_id: session.scheduledWorkoutId,
         template_id: session.templateId,

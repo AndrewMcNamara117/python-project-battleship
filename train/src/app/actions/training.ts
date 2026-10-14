@@ -80,8 +80,6 @@ export async function logWorkout(formData: FormData): Promise<Result> {
     source: existing?.source ?? 'manual',
   });
 
-  await awardWeeklyBonuses(session.userId, scheduled.date);
-
   revalidatePath('/app');
   revalidatePath('/app/today');
   revalidatePath('/app/calendar');
@@ -176,8 +174,6 @@ export async function saveStrengthProgress(
     notes,
     completedAt: complete ? new Date().toISOString() : null,
   });
-
-  if (complete) await awardWeeklyBonuses(session.userId, date);
 
   revalidatePath('/app');
   revalidatePath('/app/strength');
@@ -281,33 +277,4 @@ export async function toggleEventAttendance(eventId: string, going: boolean): Pr
   await repo.setEventAttendance(eventId, session.userId, going);
   revalidatePath('/app/community');
   return { ok: true, message: going ? 'You are in.' : 'Removed.' };
-}
-
-/**
- * Week-level Forge awards. Kept server-side and idempotent — the ledger's
- * unique index on (athlete, kind, source) means re-running this is harmless.
- */
-async function awardWeeklyBonuses(athleteId: string, date: string) {
-  const repo = await getRepo();
-  const weekStart = startOfWeek(date);
-  const weekEnd = addDays(weekStart, 6);
-  const today = toISODate(new Date());
-
-  const week = await repo.listScheduled(athleteId, weekStart, weekEnd);
-  const prescribed = week.filter(countsForAdherence);
-  if (!prescribed.length) return;
-
-  const allDone = prescribed.every((w) => w.status === 'completed');
-  const weekIsOver = weekEnd < today;
-
-  if (allDone && weekIsOver) {
-    await repo.awardForgePoints({
-      athleteId,
-      kind: 'full_week_adherence',
-      points: 20,
-      date: weekEnd,
-      label: '100% weekly adherence',
-      sourceId: `week-${weekStart}`,
-    });
-  }
 }

@@ -375,8 +375,10 @@ export class DemoRepo implements IronMilesRepo {
   async saveScheduled(workout: ScheduledWorkout): Promise<ScheduledWorkout> {
     const d = dataset();
     const i = d.scheduled.findIndex((w) => w.id === workout.id);
+    const wasCompleted = i >= 0 && d.scheduled[i].status === 'completed';
     if (i >= 0) d.scheduled[i] = clone(workout);
     else d.scheduled.push(clone(workout));
+    if (workout.status === 'completed' && !wasCompleted) await this.awardWeekIfComplete(workout.athleteId, workout.date);
 
     // Postgres records this from a trigger on every insert and update; the two
     // adapters have to agree on what revision 1 is
@@ -432,6 +434,7 @@ export class DemoRepo implements IronMilesRepo {
         label: sched?.name ?? 'Session completed',
         sourceId: entry.scheduledWorkoutId,
       });
+      if (sched) await this.awardWeekIfComplete(entry.athleteId, sched.date);
     }
     return clone(row);
   }
@@ -709,6 +712,7 @@ export class DemoRepo implements IronMilesRepo {
         label: 'Strength session',
         sourceId: session.id,
       });
+      await this.awardWeekIfComplete(session.athleteId, session.date);
     }
     return clone(session);
   }
@@ -810,6 +814,27 @@ export class DemoRepo implements IronMilesRepo {
         .forgeEvents.filter((e) => e.athleteId === athleteId)
         .sort((a, b) => b.date.localeCompare(a.date)),
     );
+  }
+
+  /**
+   * The week bonus, by the rule migration 0024 applies in Postgres: every
+   * non-rest session of the week complete. It does not wait for Sunday.
+   */
+  private async awardWeekIfComplete(athleteId: UUID, date: ISODate): Promise<void> {
+    const weekStart = startOfWeek(date);
+    const weekEnd = addDays(weekStart, 6);
+    const week = dataset().scheduled.filter(
+      (w) => w.athleteId === athleteId && w.date >= weekStart && w.date <= weekEnd && w.type !== 'rest',
+    );
+    if (!week.length || week.some((w) => w.status !== 'completed')) return;
+    await this.awardForgePoints({
+      athleteId,
+      kind: 'full_week_adherence',
+      points: FORGE_POINTS.full_week_adherence,
+      date: weekEnd,
+      label: '100% weekly adherence',
+      sourceId: `week-${weekStart}`,
+    });
   }
 
   async awardForgePoints(event: Omit<ForgeScoreEvent, 'id'>): Promise<void> {
