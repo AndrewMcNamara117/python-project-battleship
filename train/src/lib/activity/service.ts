@@ -3,7 +3,8 @@ import { addDays } from '@/lib/domain/dates';
 import type { CompletedWorkout, Profile, ScheduledWorkout } from '@/lib/domain/types';
 import { buildActivity, decodeFile, fingerprint } from './import';
 import { matchSession, sportFits } from './match';
-import type { Activity } from './types';
+import { findEfforts, type Effort } from './segments';
+import type { Activity, TrackPoint } from './types';
 
 /**
  * Importing an activity against the plan.
@@ -14,12 +15,18 @@ import type { Activity } from './types';
  * never overwritten: the file only fills in what the athlete left blank.
  */
 
-export type ImportOutcome =
+/** A segment timed on this import, and whether it beat the athlete's previous best. */
+export interface TimedSegment extends Effort {
+  name: string;
+  personalBest: boolean;
+}
+
+export type ImportOutcome = (
   | { status: 'matched'; activity: Activity; session: ScheduledWorkout }
   | { status: 'enriched'; activity: Activity; session: ScheduledWorkout }
   | { status: 'ambiguous'; activity: Activity; options: ScheduledWorkout[] }
   | { status: 'unmatched'; activity: Activity; reason: string }
-  | { status: 'duplicate'; activity: Activity };
+) & { segments: TimedSegment[] } | { status: 'duplicate'; activity: Activity; segments?: undefined };
 
 /** Two uploads starting this close together are the same run exported twice. */
 const SAME_RUN_WINDOW_MS = 2 * 60 * 1000;
@@ -75,13 +82,19 @@ async function completeFrom(
   return { completed, enriched: Boolean(existing) };
 }
 
+/**
+ * `effortWriter` records segment times. In production it is the service
+ * repo: no user may write a time (0023 has no insert policy), so the server
+ * writes the one it computed from the athlete's own file, and nothing else.
+ */
 export async function importActivity(
   repo: IronMilesRepo,
   profile: Profile,
   bytes: Uint8Array,
+  effortWriter: IronMilesRepo | null = repo,
 ): Promise<ImportOutcome> {
   const parsed = decodeFile(bytes);
-  const { draft } = buildActivity(parsed, fingerprint(bytes), {
+  const { draft, analysis } = buildActivity(parsed, fingerprint(bytes), {
     athleteId: profile.id,
     timeZone: profile.timezone,
     privacyTrimM: profile.privacyTrimM,
@@ -98,6 +111,9 @@ export async function importActivity(
   const { activity, duplicate } = await repo.saveActivity(draft);
   if (duplicate) return { status: 'duplicate', activity };
 
+  // segments are timed now, from the full track — the only moment it exists
+  const segments = await timeSegments(repo, effortWriter, activity, parsed.points, analysis.cumulative);
+
   const sessions = await repo.listScheduled(profile.id, draft.localDate, draft.localDate);
   const match = matchSession(sessions, draft.localDate, draft.sport);
 
@@ -105,12 +121,43 @@ export async function importActivity(
     const session = sessions.find((s) => s.id === match.scheduledId) as ScheduledWorkout;
     const { completed, enriched } = await completeFrom(repo, activity, session);
     const linked = { ...activity, scheduledWorkoutId: session.id, completedWorkoutId: completed.id };
-    return enriched ? { status: 'enriched', activity: linked, session } : { status: 'matched', activity: linked, session };
+    return enriched
+      ? { status: 'enriched', activity: linked, session, segments }
+      : { status: 'matched', activity: linked, session, segments };
   }
   if (match.kind === 'ambiguous') {
-    return { status: 'ambiguous', activity, options: sessions.filter((s) => match.candidateIds.includes(s.id)) };
+    return { status: 'ambiguous', activity, options: sessions.filter((s) => match.candidateIds.includes(s.id)), segments };
   }
-  return { status: 'unmatched', activity, reason: match.reason };
+  return { status: 'unmatched', activity, reason: match.reason, segments };
+}
+
+async function timeSegments(
+  repo: IronMilesRepo,
+  writer: IronMilesRepo | null,
+  activity: Activity,
+  points: TrackPoint[],
+  cumulative: number[],
+): Promise<TimedSegment[]> {
+  // no writer (the service key is not configured): the import still succeeds, untimed
+  if (!writer) return [];
+  const all = await repo.listSegments();
+  if (!all.length) return [];
+  const found = findEfforts(points, cumulative, all, activity.sport, activity.privacyTrimM);
+  if (!found.length) return [];
+
+  const previous = await repo.listEfforts(activity.athleteId);
+  await writer.saveEfforts(
+    found.map((e) => ({ segmentId: e.segmentId, activityId: activity.id, athleteId: activity.athleteId, startedAt: e.startedAt, elapsedS: e.elapsedS })),
+  );
+  return found.map((e) => {
+    const before = previous.filter((p) => p.segmentId === e.segmentId && p.activityId !== activity.id);
+    return {
+      ...e,
+      name: all.find((s) => s.id === e.segmentId)?.name ?? 'Segment',
+      // a first effort is not a "personal best" worth announcing; a beaten one is
+      personalBest: before.length > 0 && before.every((p) => e.elapsedS < p.elapsedS),
+    };
+  });
 }
 
 /** Sessions an unattached activity could still be attached to: that day, the day either side. */

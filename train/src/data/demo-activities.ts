@@ -1,5 +1,8 @@
+import { cumulativeDistance } from '@/lib/activity/analyse';
 import { buildActivity, fingerprint } from '@/lib/activity/import';
 import { syntheticRun } from '@/lib/activity/fixtures';
+import { findEfforts, segmentFromLine, type Segment, type SegmentEffort } from '@/lib/activity/segments';
+import type { TrackPoint } from '@/lib/activity/types';
 import type { Activity } from '@/lib/activity/types';
 import { isRun } from '@/lib/domain/analytics';
 import type { CompletedWorkout, Profile } from '@/lib/domain/types';
@@ -34,10 +37,14 @@ const HR_BY_TYPE: Record<string, number> = {
 
 const enc = new TextEncoder();
 
-export function demoActivities(completed: CompletedWorkout[], profiles: Profile[]): Activity[] {
+export function demoActivities(
+  completed: CompletedWorkout[],
+  profiles: Profile[],
+): { activities: Activity[]; efforts: SegmentEffort[] } {
   const dates = completed.map((c) => c.date).sort();
   const latest = dates[dates.length - 1];
-  if (!latest) return [];
+  if (!latest) return { activities: [], efforts: [] };
+  const efforts: SegmentEffort[] = [];
   const cutoff = new Date(Date.parse(`${latest}T00:00:00Z`) - 21 * 86_400_000).toISOString().slice(0, 10);
 
   const out: Activity[] = [];
@@ -64,15 +71,50 @@ export function demoActivities(completed: CompletedWorkout[], profiles: Profile[
           units: profile?.units,
         },
       );
+      const id = `act-${c.id}`;
       out.push({
         ...draft,
-        id: `act-${c.id}`,
+        id,
         scheduledWorkoutId: c.scheduledWorkoutId,
         completedWorkoutId: c.id,
         createdAt: `${c.date}T08:00:00.000Z`,
       });
+      efforts.push(...timed(points, id, c.athleteId, draft.privacyTrimM));
     });
-  return out;
+  return { activities: out, efforts };
+}
+
+/* ---------------- segments ---------------- */
+
+const loop = (km: number, centre: number) =>
+  syntheticRun({ start: '2026-01-01T00:00:00Z', distanceKm: km, paceSecPerKm: 300, intervalS: 2, centre: CENTRES[centre] }).map(
+    (p): [number, number] => [p.lat as number, p.lon as number],
+  );
+
+/** Three stretches the club runs every week, drawn from the loops the demo runs use. */
+export const DEMO_SEGMENTS: Segment[] = [
+  { id: 'seg-canal-drag', name: 'Canal bank drag', description: 'Lock gate to the Plassey bridge. Flat, exposed, honest.', km: 10, centre: 1, from: 2000, to: 4000 },
+  { id: 'seg-riverside-mile', name: 'Riverside mile', description: 'The UL boardwalk mile. Watch the footbridge on wet mornings.', km: 10, centre: 0, from: 1000, to: 2609 },
+  { id: 'seg-castletroy-climb', name: 'Castletroy climb', description: 'The long drag up from the park. Even effort, not even pace.', km: 9, centre: 2, from: 3000, to: 4200 },
+].map((d) => ({
+  id: d.id,
+  name: d.name,
+  description: d.description,
+  ...segmentFromLine(loop(d.km, d.centre), d.from, d.to),
+  createdBy: 'demo-coach',
+  archived: false,
+  createdAt: '2026-01-05T09:00:00.000Z',
+}));
+
+function timed(points: TrackPoint[], activityId: string, athleteId: string, trimM: number): SegmentEffort[] {
+  return findEfforts(points, cumulativeDistance(points), DEMO_SEGMENTS, 'run', trimM).map((e) => ({
+    id: `eff-${activityId}-${e.segmentId}`,
+    segmentId: e.segmentId,
+    activityId,
+    athleteId,
+    startedAt: e.startedAt,
+    elapsedS: e.elapsedS,
+  }));
 }
 
 /* ---------------- the club ---------------- */
@@ -97,7 +139,12 @@ const CLUB_RUNS: ClubRun[] = [
   { member: 'demo-athlete-7', daysAgo: 3, name: 'Back-to-back, day two', km: 18, pace: 360, hour: '07:30', centre: 0, hill: 40 },
   { member: 'demo-athlete-8', daysAgo: 3, name: 'Parkrun shakeout', km: 5, pace: 290, hour: '09:30', centre: 1, hill: 4 },
   { member: 'demo-athlete-2', daysAgo: 4, name: 'Recovery jog', km: 6, pace: 355, hour: '12:30', centre: 0, hill: 5 },
-  { member: 'demo-athlete-6', daysAgo: 5, name: 'Riverside 12', km: 12, pace: 320, hour: '07:00', centre: 0, hill: 10 },
+  { member: 'demo-athlete-6', daysAgo: 5, name: 'Riverside 10', km: 10, pace: 320, hour: '07:00', centre: 0, hill: 10 },
+  { member: 'demo-athlete-5', daysAgo: 6, name: 'Canal 10, steady', km: 10, pace: 305, hour: '07:15', centre: 1, hill: 6 },
+  { member: 'demo-athlete-9', daysAgo: 9, name: 'Canal tempo', km: 10, pace: 262, hour: '18:00', centre: 1, hill: 6 },
+  { member: 'demo-athlete-10', daysAgo: 10, name: 'Canal easy with Aoife', km: 10, pace: 345, hour: '10:00', centre: 1, hill: 6 },
+  { member: 'demo-athlete-7', daysAgo: 7, name: 'Riverside recovery', km: 10, pace: 350, hour: '12:00', centre: 0, hill: 10 },
+  { member: 'demo-athlete-3', daysAgo: 5, name: 'Castletroy repeats', km: 9, pace: 300, hour: '18:45', centre: 2, hill: 35 },
   { member: 'demo-athlete-9', daysAgo: 6, name: 'Marathon pace 3 x 5K', km: 18, pace: 285, hour: '08:15', centre: 1, hill: 8 },
   { member: 'demo-athlete-3', daysAgo: 8, name: 'Night trail with headtorch', km: 14, pace: 372, hour: '19:30', centre: 2, hill: 70 },
 ];
@@ -116,10 +163,18 @@ const CLUB_COMMENTS: [run: number, author: string, body: string][] = [
  * the lead athlete's most recent run shared so they see the other side of it.
  */
 export function demoClub(
-  own: Activity[],
+  ownBuilt: { activities: Activity[]; efforts: SegmentEffort[] },
   profiles: Profile[],
   today: string,
-): { activities: Activity[]; kudos: { activityId: string; athleteId: string; createdAt: string }[]; comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[] } {
+): {
+  activities: Activity[];
+  kudos: { activityId: string; athleteId: string; createdAt: string }[];
+  comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[];
+  segments: Segment[];
+  efforts: SegmentEffort[];
+} {
+  const own = ownBuilt.activities;
+  const efforts: SegmentEffort[] = [...ownBuilt.efforts];
   const club: Activity[] = CLUB_RUNS.map((r, i) => {
     const date = new Date(Date.parse(`${today}T00:00:00Z`) - r.daysAgo * 86_400_000).toISOString().slice(0, 10);
     const points = syntheticRun({
@@ -137,6 +192,7 @@ export function demoClub(
       fingerprint(enc.encode(`demo-club-${i}-${r.member}`)),
       { athleteId: r.member, timeZone: profile?.timezone ?? 'Europe/Dublin', privacyTrimM: 200 },
     );
+    efforts.push(...timed(points, `act-club-${i}`, r.member, draft.privacyTrimM));
     return { ...draft, id: `act-club-${i}`, visibility: 'club', createdAt: `${date}T${r.hour}:00.000Z` };
   });
 
@@ -170,5 +226,5 @@ export function demoClub(
     });
   }
 
-  return { activities: [...ownShared, ...club], kudos, comments };
+  return { activities: [...ownShared, ...club], kudos, comments, segments: DEMO_SEGMENTS, efforts };
 }

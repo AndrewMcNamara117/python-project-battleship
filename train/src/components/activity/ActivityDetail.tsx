@@ -27,6 +27,7 @@ export function ActivityDetail({
   controls,
   attach,
   social,
+  segments,
 }: {
   activity: Activity;
   session: ScheduledWorkout | null;
@@ -37,6 +38,8 @@ export function ActivityDetail({
   attach?: ReactNode;
   /** Sharing, kudos and comments. */
   social?: ReactNode;
+  /** Segments timed on this run, and for a coach, drawing a new one. */
+  segments?: ReactNode;
 }) {
   return (
     <div className="space-y-5">
@@ -95,6 +98,7 @@ export function ActivityDetail({
           <Rise delay={120}>
             <ProfileCharts activity={activity} units={units} />
           </Rise>
+          {segments && <Rise delay={140}>{segments}</Rise>}
         </div>
         <div className="min-w-0">
           <Rise delay={100}>

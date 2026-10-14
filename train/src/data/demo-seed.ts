@@ -33,6 +33,7 @@ import { triageCheckIn } from '@/lib/domain/checkin-rules';
 import { DEMO_STRENGTH_TEMPLATES } from './demo-library.generated';
 import { demoActivities, demoClub } from './demo-activities';
 import type { Activity } from '@/lib/activity/types';
+import type { Segment, SegmentEffort } from '@/lib/activity/segments';
 
 /**
  * The demo athlete's strength days point at the shipped templates by name —
@@ -103,6 +104,8 @@ export interface DemoDataset {
   activities: Activity[];
   kudos: { activityId: string; athleteId: string; createdAt: string }[];
   comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[];
+  segments: Segment[];
+  efforts: SegmentEffort[];
 }
 
 /* ---------- the weekly frame ---------- */

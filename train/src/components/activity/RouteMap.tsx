@@ -20,6 +20,7 @@ export function RouteMap({
   className,
   height = 320,
   compact = false,
+  caption,
 }: {
   route: string | null;
   label: string;
@@ -28,6 +29,8 @@ export function RouteMap({
   height?: number;
   /** A thumbnail: no nodes, no caption. */
   compact?: boolean;
+  /** Replaces the privacy line — for a segment, which is a public stretch, not someone's run. */
+  caption?: string;
 }) {
   const width = Math.round(height * 1.4);
   const segments = decodeRoute(route);
@@ -98,7 +101,9 @@ export function RouteMap({
               <span className="inline-block h-2 w-2 rounded-full bg-mint" aria-hidden /> Finish
             </span>
           </span>
-          <span>{trimM > 0 ? `First and last ${trimM} m hidden for privacy` : 'Full route shown — privacy trim is off'}</span>
+          <span>
+            {caption ?? (trimM > 0 ? `First and last ${trimM} m hidden for privacy` : 'Full route shown — privacy trim is off')}
+          </span>
         </figcaption>
       )}
     </figure>

@@ -97,6 +97,7 @@ is covered by `e2e/loop.mjs`.
    …                                        # and every later file, in order, through
    supabase/migrations/0021_activities.sql  # imported watch activities
    supabase/migrations/0022_club_feed.sql   # member directory fix, club feed
+   supabase/migrations/0023_segments.sql    # segments and server-written efforts
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -217,6 +218,30 @@ Postgres enforces it the same way as the leaderboard: there is no club-wide poli
 
 Tests: `supabase/test/club-feed.test.mjs` (RLS), `src/lib/activity/club.test.ts` (demo parity),
 and steps 16–21 of `e2e/activities.mjs`.
+
+---
+
+## Segments
+
+`/app/segments` — named stretches around Limerick, drawn by coaches from an athlete's route
+(`/coach/athletes/[id]/activities/[activityId]` → "Draw a segment from this route"), managed at
+`/coach/segments`. The demo has three: Canal bank drag, Riverside mile, Castletroy climb.
+
+- **Timed at import, from the full track** (`src/lib/activity/segments.ts`). An effort must pass
+  near the start, every checkpoint along the segment, and the finish, over a distance close to the
+  segment's own, at a speed a person could manage for that sport. The raw track is never stored, so
+  **a new segment times runs imported after it exists, not before.**
+- **Only the server writes a time.** Migration 0023 has no insert or update policy on
+  `segment_efforts`; the import action writes through the service repo after computing the time from
+  the athlete's own file. Without `SUPABASE_SERVICE_ROLE_KEY` imports still work, untimed.
+- **The club board counts shared runs only** (`im_segment_leaders`). A time from a private run is
+  the athlete's and their coach's.
+- **Privacy:** an effort that starts or ends inside the athlete's hidden stretch is dropped, and a
+  coach cannot draw a segment within 500 m of either visible end of an athlete's route.
+- Personal bests are announced on import only when an earlier time is beaten.
+
+Tests: `src/lib/activity/segments.test.ts` (matching), `segment-import.test.ts` (through the
+import), `supabase/test/segments.test.mjs` (RLS), steps 21–24 of `e2e/activities.mjs`.
 
 ---
 

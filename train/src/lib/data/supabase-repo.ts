@@ -29,6 +29,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
+import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
 import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
 import type {
   BlockWithWeeks,
@@ -205,6 +206,26 @@ export class SupabaseRepo implements IronMilesRepo {
     kudosCount: r.kudos_count,
     commentCount: r.comment_count,
     viewerKudos: r.viewer_kudos,
+  });
+
+  private toSegment = (r: any): Segment => ({
+    id: r.id,
+    name: r.name,
+    description: r.description ?? '',
+    route: r.route,
+    distanceM: r.distance_m,
+    createdBy: r.created_by,
+    archived: r.archived,
+    createdAt: r.created_at,
+  });
+
+  private toEffort = (r: any): SegmentEffort => ({
+    id: r.id,
+    segmentId: r.segment_id,
+    activityId: r.activity_id,
+    athleteId: r.athlete_id,
+    startedAt: r.started_at,
+    elapsedS: r.elapsed_s,
   });
 
   private toScheduled = (r: any): ScheduledWorkout => ({
@@ -774,6 +795,77 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
     const author = await this.getProfile(authorId);
     return { id: data.id, authorId: data.author_id, authorName: author?.fullName ?? 'Member', body: data.body, createdAt: data.created_at };
+  }
+
+  /* ---------- segments ---------- */
+
+  listSegments(includeArchived = false) {
+    let q = this.db.from('segments').select('*').order('name');
+    if (!includeArchived) q = q.eq('archived', false);
+    return this.rows(q, this.toSegment);
+  }
+
+  getSegment(id: UUID) {
+    return this.one(this.db.from('segments').select('*').eq('id', id).maybeSingle(), this.toSegment);
+  }
+
+  async createSegment(draft: SegmentDraft): Promise<Segment> {
+    const { data, error } = await this.db
+      .from('segments')
+      .insert({
+        name: draft.name.trim(),
+        description: draft.description,
+        route: draft.route,
+        distance_m: draft.distanceM,
+        created_by: draft.createdBy,
+      })
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toSegment(data);
+  }
+
+  async setSegmentArchived(id: UUID, archived: boolean) {
+    const { error } = await this.db.from('segments').update({ archived }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async saveEfforts(efforts: EffortDraft[]) {
+    if (!efforts.length) return;
+    const { error } = await this.db.from('segment_efforts').upsert(
+      efforts.map((e) => ({
+        segment_id: e.segmentId,
+        activity_id: e.activityId,
+        athlete_id: e.athleteId,
+        started_at: e.startedAt,
+        elapsed_s: e.elapsedS,
+      })),
+      { onConflict: 'segment_id,activity_id' },
+    );
+    if (error) throw new Error(error.message);
+  }
+
+  listEfforts(athleteId: UUID, segmentId?: UUID) {
+    let q = this.db.from('segment_efforts').select('*').eq('athlete_id', athleteId).order('started_at', { ascending: false });
+    if (segmentId) q = q.eq('segment_id', segmentId);
+    return this.rows(q, this.toEffort);
+  }
+
+  listEffortsForActivity(activityId: UUID) {
+    return this.rows(this.db.from('segment_efforts').select('*').eq('activity_id', activityId), this.toEffort);
+  }
+
+  getSegmentLeaders(segmentId: UUID, limit = 20) {
+    return this.rows(
+      this.db.rpc('im_segment_leaders', { target: segmentId, p_limit: limit }),
+      (r: any): SegmentLeader => ({
+        athleteId: r.athlete_id,
+        athleteName: r.athlete_name,
+        activityId: r.activity_id,
+        elapsedS: r.elapsed_s,
+        startedAt: r.started_at,
+      }),
+    );
   }
 
   async deleteComment(commentId: UUID, _byUserId: UUID) {

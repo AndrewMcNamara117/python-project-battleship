@@ -43,6 +43,7 @@ import type {
   UUID,
 } from '@/lib/domain/types';
 import { FORGE_POINTS, weekdayList } from '@/lib/domain/types';
+import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
 import { toFeedItem, type Activity, type ActivityComment, type ActivityDraft, type ActivitySocial, type ActivityVisibility, type FeedItem } from '@/lib/activity/types';
 import type { Weekday } from '@/lib/domain/types';
 import type {
@@ -508,6 +509,7 @@ export class DemoRepo implements IronMilesRepo {
     d.activities = d.activities.filter((a) => a.id !== id);
     d.kudos = d.kudos.filter((k) => k.activityId !== id);
     d.comments = d.comments.filter((c) => c.activityId !== id);
+    d.efforts = d.efforts.filter((e) => e.activityId !== id);
   }
 
   /* ---------- the club feed ----------
@@ -591,6 +593,80 @@ export class DemoRepo implements IronMilesRepo {
     const row = { id: uid('cmt'), activityId, authorId, body: text, createdAt: new Date().toISOString() };
     d.comments.push(row);
     return { id: row.id, authorId, authorName: d.profiles.find((p) => p.id === authorId)?.fullName ?? 'Member', body: text, createdAt: row.createdAt };
+  }
+
+  /* ---------- segments ---------- */
+
+  async listSegments(includeArchived = false): Promise<Segment[]> {
+    return clone(dataset().segments.filter((s) => includeArchived || !s.archived).sort((a, b) => a.name.localeCompare(b.name)));
+  }
+
+  async getSegment(id: UUID): Promise<Segment | null> {
+    return clone(dataset().segments.find((s) => s.id === id) ?? null);
+  }
+
+  async createSegment(draft: SegmentDraft): Promise<Segment> {
+    const d = dataset();
+    const role = d.profiles.find((p) => p.id === draft.createdBy)?.role;
+    // as segments_staff_write
+    if (role !== 'coach' && role !== 'admin') throw new Error('segment refused by policy');
+    const name = draft.name.trim();
+    if (name.length < 2 || name.length > 80 || draft.distanceM < 100 || draft.distanceM > 50000) {
+      throw new Error('segment violates check constraint');
+    }
+    const row: Segment = { ...draft, name, id: uid('seg'), archived: false, createdAt: new Date().toISOString() };
+    d.segments.push(row);
+    return clone(row);
+  }
+
+  async setSegmentArchived(id: UUID, archived: boolean): Promise<void> {
+    const s = dataset().segments.find((x) => x.id === id);
+    if (s) s.archived = archived;
+  }
+
+  async saveEfforts(efforts: EffortDraft[]): Promise<void> {
+    const d = dataset();
+    for (const e of efforts) {
+      const i = d.efforts.findIndex((x) => x.segmentId === e.segmentId && x.activityId === e.activityId);
+      const row = { ...e, id: i >= 0 ? d.efforts[i].id : uid('eff') };
+      if (i >= 0) d.efforts[i] = row;
+      else d.efforts.push(row);
+    }
+  }
+
+  async listEfforts(athleteId: UUID, segmentId?: UUID): Promise<SegmentEffort[]> {
+    const live = new Set(dataset().activities.map((a) => a.id));
+    return clone(
+      dataset()
+        .efforts.filter((e) => e.athleteId === athleteId && (!segmentId || e.segmentId === segmentId) && live.has(e.activityId))
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+    );
+  }
+
+  async listEffortsForActivity(activityId: UUID): Promise<SegmentEffort[]> {
+    return clone(dataset().efforts.filter((e) => e.activityId === activityId));
+  }
+
+  async getSegmentLeaders(segmentId: UUID, limit = 20): Promise<SegmentLeader[]> {
+    const d = dataset();
+    const best = new Map<string, SegmentEffort>();
+    for (const e of d.efforts) {
+      if (e.segmentId !== segmentId) continue;
+      // the club sees a time only from a run shared with it
+      if (d.activities.find((a) => a.id === e.activityId)?.visibility !== 'club') continue;
+      const cur = best.get(e.athleteId);
+      if (!cur || e.elapsedS < cur.elapsedS) best.set(e.athleteId, e);
+    }
+    return [...best.values()]
+      .sort((a, b) => a.elapsedS - b.elapsedS || a.startedAt.localeCompare(b.startedAt))
+      .slice(0, limit)
+      .map((e) => ({
+        athleteId: e.athleteId,
+        athleteName: d.profiles.find((p) => p.id === e.athleteId)?.fullName ?? 'Member',
+        activityId: e.activityId,
+        elapsedS: e.elapsedS,
+        startedAt: e.startedAt,
+      }));
   }
 
   async deleteComment(commentId: UUID, byUserId: UUID): Promise<void> {

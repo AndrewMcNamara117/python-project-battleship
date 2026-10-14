@@ -32,6 +32,10 @@ const junk = join(dir, 'notes.gpx');
 writeFileSync(fit, toFit(run));
 writeFileSync(gpx, toGpx(run));
 writeFileSync(junk, 'this is not a gpx file');
+// a run round the demo's canal loop, a year out so it matches no session
+const canal = join(dir, 'canal.fit');
+const later = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+writeFileSync(canal, toFit(syntheticRun({ start: `${later}T07:00:00Z`, distanceKm: 10, paceSecPerKm: 290, intervalS: 1, centre: [52.6593, -8.6105] })));
 
 const browser = await chromium.launch({
   ...(CHROMIUM ? { executablePath: CHROMIUM } : {}),
@@ -146,7 +150,34 @@ await page.reload({ waitUntil: 'networkidle' });
 step(19, 'a comment posts and stays', ((await page.textContent('main')) ?? '').includes(note));
 step(20, 'your own run in the feed links to your own page', Boolean(await page.goto(`${BASE}/app/club`).then(() => page.$('article a[href^="/app/activities/"]'))));
 
-step(21, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+// segments
+await page.goto(`${BASE}/app/segments`, { waitUntil: 'networkidle' });
+step(21, 'the club’s segments are listed', (await page.$$('a[href^="/app/segments/"]')).length >= 3);
+await page.goto(`${BASE}/app/activities`, { waitUntil: 'networkidle' });
+await page.setInputFiles('input[type=file]', [canal]);
+await page.waitForFunction(
+  () => [...document.querySelectorAll('[aria-live] li')].some((r) => /canal\.fit/.test(r.textContent ?? '') && !/Reading…|Waiting/.test(r.textContent ?? '')),
+  null,
+  { timeout: 60000 },
+);
+const canalRow = await page.$eval('[aria-live] li', (l) => l.textContent ?? '');
+step(22, 'an import over the canal is timed on its segment', /Canal bank drag \d+:\d\d/.test(canalRow), canalRow);
+await page.goto(`${BASE}/app/segments/seg-canal-drag`, { waitUntil: 'networkidle' });
+step(23, 'the segment page shows the athlete’s effort', /Best \d+:\d\d/.test((await page.textContent('main')) ?? ''));
+
+// a coach draws a new segment from one of the athlete's routes
+const firstActivity = await page.goto(`${BASE}/app/activities`, { waitUntil: 'networkidle' }).then(() =>
+  page.$eval('a[href^="/app/activities/act-"]', (a) => a.getAttribute('href')),
+);
+await cp.goto(`${BASE}${firstActivity.replace('/app/activities/', '/coach/athletes/demo-athlete-andrew/activities/')}`, { waitUntil: 'networkidle' });
+const segName = `QA stretch ${Date.now().toString().slice(-4)}`;
+await cp.fill('input[placeholder="e.g. Canal bank drag"]', segName);
+await cp.click('button:has-text("Draw segment")');
+await cp.waitForFunction(() => /drawn\./.test(document.querySelector('[role=status]')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
+await page.goto(`${BASE}/app/segments`, { waitUntil: 'networkidle' });
+step(24, 'a coach-drawn segment appears for athletes', ((await page.textContent('main')) ?? '').includes(segName));
+
+step(25, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
 console.log(`\n${pass} passed, ${fail} failed\n`);

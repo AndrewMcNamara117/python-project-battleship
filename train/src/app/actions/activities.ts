@@ -2,12 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
-import { getRepo } from '@/lib/data';
+import { getRepo, getServiceRepo } from '@/lib/data';
 import { rateLimit } from '@/lib/rate-limit';
 import { attachActivity, importActivity, removeActivity } from '@/lib/activity/service';
 import { ActivityFileError } from '@/lib/activity/types';
 import { PRIVACY_TRIM_OPTIONS } from '@/lib/activity/route';
-import { formatDayMonth } from '@/lib/domain/dates';
+import { formatDayMonth, formatDuration } from '@/lib/domain/dates';
 
 export interface ImportResult {
   ok: boolean;
@@ -55,9 +55,25 @@ export async function importActivityFile(formData: FormData): Promise<ImportResu
 
   try {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const out = await importActivity(repo, profile, bytes);
+    // segment times are the server's to write, from this file — see importActivity
+    let writer: Awaited<ReturnType<typeof getServiceRepo>>['repo'] | null = null;
+    try {
+      writer = (await getServiceRepo()).repo;
+    } catch (error) {
+      // a missing service key must not cost the athlete their import
+      console.warn('[activities] segments not timed: no service repo', error);
+    }
+    const out = await importActivity(repo, profile, bytes, writer);
     revalidateTraining();
     const when = formatDayMonth(out.activity.localDate);
+    const timed = out.segments?.length
+      ? ' ' +
+        out.segments
+          .map((s) => `${s.name} ${formatDuration(s.elapsedS)}${s.personalBest ? ' — a personal best' : ''}`)
+          .join(', ') +
+        '.'
+      : '';
+    const result = ((): ImportResult => {
     switch (out.status) {
       case 'matched':
         return { ok: true, status: out.status, activityId: out.activity.id, message: `Logged against ${out.session.name} on ${when}.` };
@@ -75,6 +91,8 @@ export async function importActivityFile(formData: FormData): Promise<ImportResu
       case 'duplicate':
         return { ok: true, status: out.status, activityId: out.activity.id, message: `Already imported — that is the run from ${when}.` };
     }
+    })();
+    return { ...result, message: result.message + timed };
   } catch (error) {
     if (error instanceof ActivityFileError) return { ok: false, message: error.message };
     console.error('[activities] import failed', error);

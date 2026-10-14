@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ActivityDetail } from '@/components/activity/ActivityDetail';
 import { CommentThread } from '@/components/activity/Social';
+import { ActivitySegments } from '@/components/activity/SegmentPanels';
+import { SegmentDrawer } from '@/components/activity/SegmentDrawer';
+import { longestPiece, SEGMENT_END_CLEARANCE_M } from '@/lib/activity/segments';
 import { SectionHeading } from '@/components/forge/AppHeader';
 import { Panel } from '@/components/ui/Panel';
 import { AppPage } from '@/components/app/PageHeader';
@@ -30,10 +33,14 @@ export default async function CoachActivityPage({
 
   const activity = await repo.getActivity(activityId);
   if (!activity || activity.athleteId !== athlete.id) notFound();
-  const [scheduled, social] = await Promise.all([
+  const [scheduled, social, efforts, segmentList, history] = await Promise.all([
     activity.scheduledWorkoutId ? repo.getScheduled(activity.scheduledWorkoutId) : Promise.resolve(null),
     repo.getActivitySocial(session.userId, activity.id),
+    repo.listEffortsForActivity(activity.id),
+    repo.listSegments(true),
+    repo.listEfforts(athlete.id),
   ]);
+  const piece = longestPiece(activity.route);
 
   return (
     <AppPage>
@@ -55,6 +62,25 @@ export default async function CoachActivityPage({
           units={athlete.units}
           maxHr={athlete.maxHeartRate}
           viewer="coach"
+          segments={
+            <div className="space-y-5">
+              <ActivitySegments
+                efforts={efforts}
+                segments={segmentList}
+                history={history}
+                units={athlete.units}
+                hrefFor={() => '/coach/segments'}
+              />
+              {piece.line.length > 1 && (
+                <Panel className="p-5 sm:p-6">
+                  <SectionHeading label="Draw a segment from this route" />
+                  <div className="mt-4">
+                    <SegmentDrawer activityId={activity.id} line={piece.line} lengthM={piece.length} clearanceM={SEGMENT_END_CLEARANCE_M} />
+                  </div>
+                </Panel>
+              )}
+            </div>
+          }
           social={
             <Panel className="p-5 sm:p-6">
               <SectionHeading

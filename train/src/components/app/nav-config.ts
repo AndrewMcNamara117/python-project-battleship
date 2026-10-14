@@ -18,6 +18,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { href: '/app/check-in', label: 'Check-in', short: 'Check-in', icon: 'checkin', group: 'progress' },
   { href: '/app/leaderboard', label: 'Leaderboard', short: 'Board', icon: 'board', group: 'club' },
   { href: '/app/club', label: 'Club feed', short: 'Feed', icon: 'activity', group: 'club' },
+  { href: '/app/segments', label: 'Segments', short: 'Segments', icon: 'segment', group: 'club' },
   { href: '/app/community', label: 'Community', short: 'Club', icon: 'community', group: 'club' },
   { href: '/app/coach', label: 'Coach', short: 'Coach', icon: 'coach', group: 'club' },
   { href: '/app/forge', label: 'FORGE', short: 'FORGE', icon: 'forge', group: 'club' },
@@ -58,6 +59,7 @@ const COACH_NAV_ITEMS: NavItem[] = [
   { href: '/coach/strength', label: 'S&C library', short: 'Strength', icon: 'strength', group: 'progress' },
   { href: '/coach/races', label: 'Race calendar', short: 'Races', icon: 'board', group: 'club' },
   { href: '/coach/analytics', label: 'Analytics', short: 'Analytics', icon: 'chart', group: 'club' },
+  { href: '/coach/segments', label: 'Segments', short: 'Segments', icon: 'segment', group: 'club' },
   { href: '/coach/notifications', label: 'Notifications', short: 'Alerts', icon: 'checkin', group: 'account' },
 ];
 
@@ -71,10 +73,12 @@ export const COACH_NAV = COACH_NAV_ITEMS;
  * On a phone that made the notification centre unreachable, which is the one
  * place a coach reads an alert.
  */
+const coachByHref = (href: string) => COACH_NAV_ITEMS.find((n) => n.href === href) as NavItem;
+
 export const COACH_MOBILE_NAV: NavItem[] = [
-  COACH_NAV_ITEMS[0],  // Overview
-  COACH_NAV_ITEMS[1],  // Athletes
-  COACH_NAV_ITEMS[3],  // Check-ins
-  COACH_NAV_ITEMS[4],  // Messages
-  COACH_NAV_ITEMS[10], // Notifications
+  coachByHref('/coach'),
+  coachByHref('/coach/athletes'),
+  coachByHref('/coach/checkins'),
+  coachByHref('/coach/messages'),
+  coachByHref('/coach/notifications'),
 ];

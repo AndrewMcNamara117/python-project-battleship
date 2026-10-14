@@ -15,6 +15,7 @@ import type {
   WorkoutTemplate,
 } from '@/lib/domain/library';
 import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
+import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
@@ -215,6 +216,23 @@ export interface IronMilesRepo {
   takeBackKudos(activityId: UUID, athleteId: UUID): Promise<void>;
   addComment(activityId: UUID, authorId: UUID, body: string): Promise<ActivityComment>;
   deleteComment(commentId: UUID, byUserId: UUID): Promise<void>;
+
+  /* segments — named stretches, timed from imported files */
+  listSegments(includeArchived?: boolean): Promise<Segment[]>;
+  getSegment(id: UUID): Promise<Segment | null>;
+  /** Staff only; the database refuses anyone else. */
+  createSegment(draft: SegmentDraft): Promise<Segment>;
+  setSegmentArchived(id: UUID, archived: boolean): Promise<void>;
+  /**
+   * Record efforts computed from an uploaded file. Called with the service
+   * repo only: no user may write a time (migration 0023 has no insert policy).
+   */
+  saveEfforts(efforts: EffortDraft[]): Promise<void>;
+  /** An athlete's own efforts, as they or their coach may read them. */
+  listEfforts(athleteId: UUID, segmentId?: UUID): Promise<SegmentEffort[]>;
+  listEffortsForActivity(activityId: UUID): Promise<SegmentEffort[]>;
+  /** Each athlete's best on a segment, from runs shared with the club. */
+  getSegmentLeaders(segmentId: UUID, limit?: number): Promise<SegmentLeader[]>;
 
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]>;
   getStrengthSession(id: UUID): Promise<StrengthSession | null>;
