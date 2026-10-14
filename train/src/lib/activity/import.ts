@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { analyse, type ActivityAnalysis } from './analyse';
 import { looksLikeFit, parseFit } from './fit';
+import { bestEfforts } from './records';
 import { localDate } from './match';
 import { encodeRoute, privateSegments, simplify, type LatLon, type PrivacyZone } from './route';
 import {
@@ -151,6 +152,7 @@ export function buildActivity(
     splits: analysis.splits,
     series: analysis.series,
     hrHistogram: hrHistogram(points),
+    bestEfforts: bestEfforts(points, analysis.cumulative, parsed.sport),
     scheduledWorkoutId: null,
     completedWorkoutId: null,
     visibility: 'coach',

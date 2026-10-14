@@ -98,6 +98,8 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0021_activities.sql  # imported watch activities
    supabase/migrations/0022_club_feed.sql   # member directory fix, club feed
    supabase/migrations/0023_segments.sql    # segments and server-written efforts
+   supabase/migrations/0024_forge_awards.sql # Forge points awarded by triggers
+   supabase/migrations/0025_best_efforts.sql # personal-record data on activities
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -245,6 +247,25 @@ import), `supabase/test/segments.test.mjs` (RLS), steps 21–24 of `e2e/activiti
 
 ---
 
+## Training load and personal records
+
+**Training load** (`src/lib/domain/load.ts`, `src/lib/activity/training-load.ts`) — session-RPE:
+effort out of ten × minutes, for runs and strength alike. An imported run without an RPE is
+estimated from time in heart-rate zones (when max HR is set) and counted as an estimate; a session
+with neither is counted as unscored, never guessed. Fitness is the 42-day exponentially weighted
+average, fatigue the 7-day, form the difference; the ratio is the last 7 days against the 28-day
+weekly average, banded easing / steady / building / building fast. It replaced the old
+kilometres-only load ratio. Shown to the coach (athlete page) and the athlete (Progress), worded
+as context, never an instruction.
+
+**Personal records** (`src/lib/activity/records.ts`) — the fastest 1K, mile, 5K, 10K, half and
+marathon *inside* every imported run, found at import from the full track and kept on the
+activity (`best_efforts`, migration 0025). Records are the minimum per distance across activities,
+so deleting a run hands its records back. An import that beats an earlier time says so; a first
+time does not. Watch files only, and only runs imported since records existed.
+
+---
+
 ## Stripe
 
 Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_EVENT_READY`. Without them the
@@ -305,6 +326,13 @@ Rewards *doing the plan*, not exceeding it — running further than prescribed e
 a leaderboard that rewarded raw volume would reward overtraining. Rules live in
 `src/lib/domain/forge-score.ts`. The ledger is idempotent: a unique index on
 `(athlete, kind, source)` means re-running an award is harmless.
+
+Against Postgres, points are awarded **by the database** (migration 0024): triggers on
+`completed_workouts`, `scheduled_workouts`, `strength_sessions` and `checkins` write the ledger.
+There is no callable award function — Supabase grants clients execute on new functions, and a
+trigger function cannot be called directly — so nobody awards themselves. The full-week bonus is
+given as soon as every non-rest session of the week is complete. The demo adapter applies the same
+rules in code.
 
 ---
 

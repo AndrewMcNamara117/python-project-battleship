@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AttachPicker, DeleteActivity, RenameActivity } from '@/components/activity/ActivityControls';
 import { CommentThread, KudosButton, ShareToggle } from '@/components/activity/Social';
 import { ActivitySegments } from '@/components/activity/SegmentPanels';
+import { BestEffortsPanel } from '@/components/activity/Records';
 import { SectionHeading } from '@/components/forge/AppHeader';
 import { Panel } from '@/components/ui/Panel';
 import { ActivityDetail } from '@/components/activity/ActivityDetail';
@@ -36,12 +37,13 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   if (!profile) notFound();
   const units = profile.units;
 
-  const [options, social, efforts, segmentList, history] = await Promise.all([
+  const [options, social, efforts, segmentList, history, allActivities] = await Promise.all([
     scheduled ? Promise.resolve([]) : attachOptions(repo, activity),
     repo.getActivitySocial(session.userId, activity.id),
     repo.listEffortsForActivity(activity.id),
     repo.listSegments(true),
     repo.listEfforts(session.userId),
+    repo.listActivities(session.userId, 1000),
   ]);
   const createdLog = completed.some((c) => c.id === activity.completedWorkoutId && c.source === 'upload');
 
@@ -70,6 +72,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
               <DeleteActivity activityId={activity.id} createdLog={createdLog} />
             </>
           }
+          records={<BestEffortsPanel activity={activity} others={allActivities} units={units} />}
           segments={
             <ActivitySegments
               efforts={efforts}

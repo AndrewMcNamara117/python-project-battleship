@@ -117,22 +117,6 @@ export function consistency(buckets: WeekBucket[]): number {
   return Math.round((active / buckets.length) * 100);
 }
 
-/**
- * Acute:chronic workload ratio — last 7 days against the 28-day average.
- * Shown as context for a coach, never as an instruction to an athlete.
- */
-export function loadRatio(completed: CompletedWorkout[], today: ISODate): number | null {
-  const km = (from: ISODate, to: ISODate) =>
-    completed
-      .filter((w) => w.date >= from && w.date <= to && isRun(w.type))
-      .reduce((a, w) => a + (w.actualDistanceKm ?? 0), 0);
-
-  const acute = km(addDays(today, -6), today);
-  const chronic = km(addDays(today, -27), today) / 4;
-  if (chronic <= 0) return null;
-  return Math.round((acute / chronic) * 100) / 100;
-}
-
 export interface WellbeingPoint {
   weekStart: ISODate;
   label: string;

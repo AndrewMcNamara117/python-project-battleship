@@ -4,6 +4,7 @@ import type { CompletedWorkout, Profile, ScheduledWorkout } from '@/lib/domain/t
 import { buildActivity, decodeFile, fingerprint } from './import';
 import { matchSession, sportFits } from './match';
 import { findEfforts, type Effort } from './segments';
+import { newRecords } from './records';
 import type { Activity, TrackPoint } from './types';
 
 /**
@@ -21,12 +22,19 @@ export interface TimedSegment extends Effort {
   personalBest: boolean;
 }
 
+/** A distance this import set a new best at, and the time it beat. */
+export interface NewRecord {
+  label: string;
+  elapsedS: number;
+  previousS: number;
+}
+
 export type ImportOutcome = (
   | { status: 'matched'; activity: Activity; session: ScheduledWorkout }
   | { status: 'enriched'; activity: Activity; session: ScheduledWorkout }
   | { status: 'ambiguous'; activity: Activity; options: ScheduledWorkout[] }
   | { status: 'unmatched'; activity: Activity; reason: string }
-) & { segments: TimedSegment[] } | { status: 'duplicate'; activity: Activity; segments?: undefined };
+) & { segments: TimedSegment[]; records: NewRecord[] } | { status: 'duplicate'; activity: Activity; segments?: undefined; records?: undefined };
 
 /** Two uploads starting this close together are the same run exported twice. */
 const SAME_RUN_WINDOW_MS = 2 * 60 * 1000;
@@ -113,6 +121,10 @@ export async function importActivity(
 
   // segments are timed now, from the full track — the only moment it exists
   const segments = await timeSegments(repo, effortWriter, activity, parsed.points, analysis.cumulative);
+  // a first time at a distance is not announced; beating one is
+  const records: NewRecord[] = newRecords(activity, await repo.listActivities(profile.id, 1000))
+    .filter((r) => r.previousS != null)
+    .map((r) => ({ label: r.distance.label, elapsedS: r.elapsedS, previousS: r.previousS as number }));
 
   const sessions = await repo.listScheduled(profile.id, draft.localDate, draft.localDate);
   const match = matchSession(sessions, draft.localDate, draft.sport);
@@ -122,13 +134,13 @@ export async function importActivity(
     const { completed, enriched } = await completeFrom(repo, activity, session);
     const linked = { ...activity, scheduledWorkoutId: session.id, completedWorkoutId: completed.id };
     return enriched
-      ? { status: 'enriched', activity: linked, session, segments }
-      : { status: 'matched', activity: linked, session, segments };
+      ? { status: 'enriched', activity: linked, session, segments, records }
+      : { status: 'matched', activity: linked, session, segments, records };
   }
   if (match.kind === 'ambiguous') {
-    return { status: 'ambiguous', activity, options: sessions.filter((s) => match.candidateIds.includes(s.id)), segments };
+    return { status: 'ambiguous', activity, options: sessions.filter((s) => match.candidateIds.includes(s.id)), segments, records };
   }
-  return { status: 'unmatched', activity, reason: match.reason, segments };
+  return { status: 'unmatched', activity, reason: match.reason, segments, records };
 }
 
 async function timeSegments(

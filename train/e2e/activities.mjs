@@ -35,6 +35,9 @@ writeFileSync(junk, 'this is not a gpx file');
 // a run round the demo's canal loop, a year out so it matches no session
 const canal = join(dir, 'canal.fit');
 const later = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+// faster than any of the demo athlete's seeded runs (best 4:39/km), so it sets records
+const quick = join(dir, 'quick.fit');
+writeFileSync(quick, toFit(syntheticRun({ start: `${new Date(Date.now() + 400 * 86400000).toISOString().slice(0, 10)}T07:00:00Z`, distanceKm: 6, paceSecPerKm: 255, intervalS: 1 })));
 writeFileSync(canal, toFit(syntheticRun({ start: `${later}T07:00:00Z`, distanceKm: 10, paceSecPerKm: 290, intervalS: 1, centre: [52.6593, -8.6105] })));
 
 const browser = await chromium.launch({
@@ -177,7 +180,24 @@ await cp.waitForFunction(() => /drawn\./.test(document.querySelector('[role=stat
 await page.goto(`${BASE}/app/segments`, { waitUntil: 'networkidle' });
 step(24, 'a coach-drawn segment appears for athletes', ((await page.textContent('main')) ?? '').includes(segName));
 
-step(25, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+// records and training load
+await page.goto(`${BASE}/app/activities`, { waitUntil: 'networkidle' });
+await page.setInputFiles('input[type=file]', [quick]);
+await page.waitForFunction(
+  () => [...document.querySelectorAll('[aria-live] li')].some((r) => /quick\.fit/.test(r.textContent ?? '') && !/Reading…|Waiting/.test(r.textContent ?? '')),
+  null,
+  { timeout: 60000 },
+);
+const quickRow = await page.$eval('[aria-live] li', (l) => l.textContent ?? '');
+step(25, 'a faster run announces its new records', /New records: 1K \d+:\d\d, Mile \d+:\d\d, 5K \d+:\d\d/.test(quickRow), quickRow);
+await page.goto(`${BASE}/app/progress`, { waitUntil: 'networkidle' });
+const progress = (await page.textContent('main')) ?? '';
+step(26, 'progress shows training load and personal records', /Training load/i.test(progress) && /Personal records/i.test(progress));
+await cp.goto(`${BASE}/coach/athletes/demo-athlete-andrew`, { waitUntil: 'networkidle' });
+const coachPage = (await cp.textContent('main')) ?? '';
+step(27, 'the coach sees fitness, fatigue and form', /Fitness/.test(coachPage) && /Fatigue/.test(coachPage) && /Form/.test(coachPage));
+
+step(28, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
 console.log(`\n${pass} passed, ${fail} failed\n`);

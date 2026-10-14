@@ -1,4 +1,5 @@
 import type { SeriesPoint, Split } from './analyse';
+import type { BestEffort } from './records';
 
 /**
  * Activity files, normalised.
@@ -110,6 +111,8 @@ export interface Activity {
   splits: Split[];
   series: SeriesPoint[];
   hrHistogram: HrHistogram;
+  /** Fastest standard distances inside this run, found at import. */
+  bestEfforts: BestEffort[];
   scheduledWorkoutId: string | null;
   completedWorkoutId: string | null;
   visibility: ActivityVisibility;

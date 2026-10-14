@@ -9,6 +9,8 @@ import { Rise } from '@/components/motion/Rise';
 import { StatusTag, adherenceTone } from '@/components/ui/StatusTag';
 import { Panel } from '@/components/ui/Panel';
 import { loadAthleteContext } from '@/lib/app-data';
+import { TrainingLoad } from '@/components/charts/TrainingLoad';
+import { PersonalRecords } from '@/components/activity/Records';
 import { getRepo } from '@/lib/data';
 import { formatDate, formatDistance, formatPace } from '@/lib/domain/dates';
 
@@ -28,6 +30,7 @@ export const metadata: Metadata = { title: 'Progress' };
  */
 export default async function ProgressPage() {
   const ctx = await loadAthleteContext();
+  const activities = await (await getRepo()).listActivities(ctx.session.userId, 1000);
   const repo = await getRepo();
   const achievements = await repo.listAchievements(ctx.session.userId);
 
@@ -154,6 +157,16 @@ export default async function ProgressPage() {
               delay={120}
             />
           </MetricCard>
+        </Rise>
+      </div>
+
+      {/* ---- training load ---- */}
+      <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+        <Rise delay={40}>
+          <TrainingLoad load={ctx.stats.load} audience="athlete" />
+        </Rise>
+        <Rise delay={60}>
+          <PersonalRecords activities={activities} units={ctx.profile.units} hrefFor={(a) => `/app/activities/${a}`} />
         </Rise>
       </div>
 

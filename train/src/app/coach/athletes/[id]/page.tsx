@@ -19,7 +19,6 @@ import {
   adherence,
   buildWeekBuckets,
   consistency,
-  loadRatio,
   wellbeingSeries,
 } from '@/lib/domain/analytics';
 import { attentionLabel } from '@/lib/domain/checkin-rules';
@@ -35,6 +34,9 @@ import { waitedFor } from '@/lib/domain/roster';
 import { CoachingContextControl } from './PhaseControl';
 import { AthleteContext } from '@/components/forge/AthleteContext';
 import { ActivityList } from '@/components/activity/ActivityList';
+import { TrainingLoad } from '@/components/charts/TrainingLoad';
+import { PersonalRecords } from '@/components/activity/Records';
+import { athleteLoad } from '@/lib/activity/training-load';
 
 export const metadata: Metadata = { title: 'Athlete' };
 
@@ -64,8 +66,9 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
       repo.listCoachNotes(id, 'coach'),
       repo.listForgeEvents(id),
       repo.listMessages(id),
-      repo.listActivities(id, 8),
+      repo.listActivities(id, 200),
     ]);
+  const load = athleteLoad({ completed, strength, activities, maxHr: profile.maxHeartRate, today });
 
   // Who is waiting, by the same rule the roster and migration 0020 use: the
   // athlete is waiting when the last human message in the thread is theirs.
@@ -158,9 +161,9 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
         <RevealItem>
           <StatCard
             label="Load ratio"
-            value={loadRatio(completed, today) ?? 0}
+            value={load.ratio ?? 0}
             decimals={2}
-            note="Last 7 days against the 28-day average."
+            note={load.ratio == null ? 'Needs four weeks of scored sessions.' : 'Effort × minutes, last 7 days against the 28-day average.'}
           />
         </RevealItem>
         <RevealItem>
@@ -262,13 +265,26 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
             </Reveal>
           </div>
 
+          <div className="grid min-w-0 gap-6">
+            <Reveal delay={0.145}>
+              <TrainingLoad load={load} audience="coach" />
+            </Reveal>
+            <Reveal delay={0.148}>
+              <PersonalRecords
+                activities={activities}
+                units={profile.units}
+                hrefFor={(a) => `/coach/athletes/${id}/activities/${a}`}
+              />
+            </Reveal>
+          </div>
+
           <Reveal delay={0.15}>
             <Panel className="p-6 sm:p-8">
               <PanelHeader label="From the watch" />
               {activities.length ? (
                 <div className="mt-5">
                   <ActivityList
-                    activities={activities}
+                    activities={activities.slice(0, 8)}
                     units={profile.units}
                     hrefFor={(a) => `/coach/athletes/${id}/activities/${a.id}`}
                   />

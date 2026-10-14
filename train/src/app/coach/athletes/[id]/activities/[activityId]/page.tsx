@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ActivityDetail } from '@/components/activity/ActivityDetail';
 import { CommentThread } from '@/components/activity/Social';
 import { ActivitySegments } from '@/components/activity/SegmentPanels';
+import { BestEffortsPanel } from '@/components/activity/Records';
 import { SegmentDrawer } from '@/components/activity/SegmentDrawer';
 import { longestPiece, SEGMENT_END_CLEARANCE_M } from '@/lib/activity/segments';
 import { SectionHeading } from '@/components/forge/AppHeader';
@@ -33,12 +34,13 @@ export default async function CoachActivityPage({
 
   const activity = await repo.getActivity(activityId);
   if (!activity || activity.athleteId !== athlete.id) notFound();
-  const [scheduled, social, efforts, segmentList, history] = await Promise.all([
+  const [scheduled, social, efforts, segmentList, history, allActivities] = await Promise.all([
     activity.scheduledWorkoutId ? repo.getScheduled(activity.scheduledWorkoutId) : Promise.resolve(null),
     repo.getActivitySocial(session.userId, activity.id),
     repo.listEffortsForActivity(activity.id),
     repo.listSegments(true),
     repo.listEfforts(athlete.id),
+    repo.listActivities(athlete.id, 1000),
   ]);
   const piece = longestPiece(activity.route);
 
@@ -62,6 +64,7 @@ export default async function CoachActivityPage({
           units={athlete.units}
           maxHr={athlete.maxHeartRate}
           viewer="coach"
+          records={<BestEffortsPanel activity={activity} others={allActivities} units={athlete.units} />}
           segments={
             <div className="space-y-5">
               <ActivitySegments

@@ -28,6 +28,7 @@ export function ActivityDetail({
   attach,
   social,
   segments,
+  records,
 }: {
   activity: Activity;
   session: ScheduledWorkout | null;
@@ -40,6 +41,8 @@ export function ActivityDetail({
   social?: ReactNode;
   /** Segments timed on this run, and for a coach, drawing a new one. */
   segments?: ReactNode;
+  /** Best efforts inside this run. */
+  records?: ReactNode;
 }) {
   return (
     <div className="space-y-5">
@@ -104,6 +107,11 @@ export function ActivityDetail({
           <Rise delay={100}>
             <SplitsTable splits={activity.splits} units={units} />
           </Rise>
+          {records && (
+            <Rise delay={110}>
+              <div className="mt-5">{records}</div>
+            </Rise>
+          )}
           {social && (
             <Rise delay={120}>
               <div className="mt-5">{social}</div>

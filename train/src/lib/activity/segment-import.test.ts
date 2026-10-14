@@ -77,3 +77,34 @@ describe('segments through the import', () => {
     assert.ok(!(await repo.listSegments()).some((x) => x.id === made.id), 'archived segments leave the list');
   });
 });
+
+describe('records through the import', () => {
+  const run = (daysAhead: number, km: number, pace: number) =>
+    toFit(syntheticRun({ start: `${addDays(toISODate(new Date()), daysAhead)}T07:00:00Z`, distanceKm: km, paceSecPerKm: pace, intervalS: 1 }));
+
+  it('stores best efforts, and announces a record only when it beats an earlier time', async () => {
+    const repo = new DemoRepo();
+    const me = await athlete(repo);
+    const first = await importActivity(repo, me, run(600, 6, 320));
+    assert.ok((await repo.getActivity(first.activity.id))?.bestEfforts.some((e) => e.key === '5k'));
+    // slower than the seeded runs (built through the same pipeline, best 279 s/km): no record
+    assert.deepEqual(first.records, []);
+
+    const faster = await importActivity(repo, me, run(601, 6, 260));
+    assert.deepEqual(faster.records?.map((r) => r.label), ['1K', 'Mile', '5K']);
+    assert.ok(faster.records!.every((r) => r.elapsedS < r.previousS));
+
+    const slower = await importActivity(repo, me, run(602, 6, 330));
+    assert.deepEqual(slower.records, []);
+  });
+
+  it('deleting the record-setting run hands the record back', async () => {
+    const repo = new DemoRepo();
+    const me = await athlete(repo);
+    const best = await importActivity(repo, me, run(611, 5.2, 255));
+    await repo.deleteActivity(best.activity.id);
+    // 265 s/km would not beat 255, but 255 is gone; it beats the seeded 279
+    const again = await importActivity(repo, me, run(612, 5.2, 265));
+    assert.deepEqual(again.records?.map((r) => r.label), ['1K', 'Mile', '5K']);
+  });
+});

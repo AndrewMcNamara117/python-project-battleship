@@ -1,6 +1,8 @@
 import { getRepo } from '@/lib/data';
 import { requireSession, type Session } from '@/lib/auth';
-import { adherence, buildWeekBuckets, consistency, loadRatio, type WeekBucket } from '@/lib/domain/analytics';
+import { adherence, buildWeekBuckets, consistency, type WeekBucket } from '@/lib/domain/analytics';
+import { athleteLoad } from '@/lib/activity/training-load';
+import type { LoadSummary } from '@/lib/domain/load';
 import { addDays, daysBetween, endOfWeek, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { currentStreakWeeks, monthlyScore, tierFor, totalScore, weeklyScore } from '@/lib/domain/forge-score';
 import type {
@@ -42,6 +44,7 @@ export interface AthleteContext {
     blockAdherencePct: number;
     consistencyPct: number;
     loadRatio: number | null;
+    load: LoadSummary;
     forgeTotal: number;
     forgeWeek: number;
     forgeMonth: number;
@@ -66,7 +69,7 @@ export async function loadAthleteContext(): Promise<AthleteContext> {
   const weekEnd = endOfWeek(today);
   const historyFrom = addDays(weekStart, -7 * 19);
 
-  const [profile, coach, goal, week, completedRange, strengthRange, scheduledRange, checkins, forgeEvents, messages] =
+  const [profile, coach, goal, week, completedRange, strengthRange, scheduledRange, checkins, forgeEvents, messages, activities] =
     await Promise.all([
       repo.getProfile(session.userId),
       repo.getCoachForAthlete(session.userId),
@@ -78,9 +81,11 @@ export async function loadAthleteContext(): Promise<AthleteContext> {
       repo.listCheckIns(session.userId, 20),
       repo.listForgeEvents(session.userId),
       repo.listMessages(session.userId),
+      repo.listActivities(session.userId, 200),
     ]);
 
   if (!profile) throw new Error('Profile not found');
+  const load = athleteLoad({ completed: completedRange, strength: strengthRange, activities, maxHr: profile.maxHeartRate, today });
 
   const race = goal?.raceId ? await repo.getRace(goal.raceId) : null;
   const buckets = buildWeekBuckets(scheduledRange, completedRange, strengthRange, 12, today);
@@ -116,7 +121,8 @@ export async function loadAthleteContext(): Promise<AthleteContext> {
       weekAdherencePct: weekAdherence.pct,
       blockAdherencePct: blockAdherence.pct,
       consistencyPct: consistency(buckets),
-      loadRatio: loadRatio(completedRange, today),
+      loadRatio: load.ratio,
+      load,
       forgeTotal: total,
       forgeWeek: weeklyScore(forgeEvents, today),
       forgeMonth: monthlyScore(forgeEvents, today),

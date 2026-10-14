@@ -66,6 +66,9 @@ export async function importActivityFile(formData: FormData): Promise<ImportResu
     const out = await importActivity(repo, profile, bytes, writer);
     revalidateTraining();
     const when = formatDayMonth(out.activity.localDate);
+    const records = out.records?.length
+      ? ' New record' + (out.records.length > 1 ? 's' : '') + ': ' + out.records.map((r) => `${r.label} ${formatDuration(r.elapsedS)}`).join(', ') + '.'
+      : '';
     const timed = out.segments?.length
       ? ' ' +
         out.segments
@@ -92,7 +95,7 @@ export async function importActivityFile(formData: FormData): Promise<ImportResu
         return { ok: true, status: out.status, activityId: out.activity.id, message: `Already imported — that is the run from ${when}.` };
     }
     })();
-    return { ...result, message: result.message + timed };
+    return { ...result, message: result.message + records + timed };
   } catch (error) {
     if (error instanceof ActivityFileError) return { ok: false, message: error.message };
     console.error('[activities] import failed', error);
