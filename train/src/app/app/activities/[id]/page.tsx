@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AttachPicker, DeleteActivity, RenameActivity } from '@/components/activity/ActivityControls';
+import { CommentThread, KudosButton, ShareToggle } from '@/components/activity/Social';
+import { SectionHeading } from '@/components/forge/AppHeader';
+import { Panel } from '@/components/ui/Panel';
 import { ActivityDetail } from '@/components/activity/ActivityDetail';
 import { AppPage } from '@/components/app/PageHeader';
 import { AppHeader } from '@/components/forge/AppHeader';
@@ -32,7 +35,10 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   if (!profile) notFound();
   const units = profile.units;
 
-  const options = scheduled ? [] : await attachOptions(repo, activity);
+  const [options, social] = await Promise.all([
+    scheduled ? Promise.resolve([]) : attachOptions(repo, activity),
+    repo.getActivitySocial(session.userId, activity.id),
+  ]);
   const createdLog = completed.some((c) => c.id === activity.completedWorkoutId && c.source === 'upload');
 
   return (
@@ -59,6 +65,33 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
               <RenameActivity activityId={activity.id} name={activity.name} />
               <DeleteActivity activityId={activity.id} createdLog={createdLog} />
             </>
+          }
+          social={
+            <Panel className="space-y-6 p-5 sm:p-6">
+              <ShareToggle activityId={activity.id} shared={activity.visibility === 'club'} />
+              {(activity.visibility === 'club' || social.comments.length > 0) && (
+                <div className="border-t border-hairline pt-5">
+                  <SectionHeading
+                    label="Kudos and comments"
+                    action={<KudosButton activityId={activity.id} given={false} count={social.kudos.length} disabled />}
+                  />
+                  {social.kudos.length > 0 && (
+                    <p className="mt-3 text-[12px] leading-relaxed text-ink-secondary">
+                      From {social.kudos.map((k) => k.name).join(', ')}
+                    </p>
+                  )}
+                  <div className="mt-4">
+                    <CommentThread
+                      activityId={activity.id}
+                      comments={social.comments}
+                      viewerId={session.userId}
+                      canModerate
+                      canComment
+                    />
+                  </div>
+                </div>
+              )}
+            </Panel>
           }
           attach={
             <AttachPicker

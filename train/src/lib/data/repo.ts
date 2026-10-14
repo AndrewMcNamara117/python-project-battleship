@@ -14,7 +14,7 @@ import type {
   WeekVolume,
   WorkoutTemplate,
 } from '@/lib/domain/library';
-import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
+import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
@@ -204,6 +204,17 @@ export interface IronMilesRepo {
   linkActivity(id: UUID, link: { scheduledWorkoutId: UUID | null; completedWorkoutId: UUID | null }): Promise<void>;
   updateActivity(id: UUID, patch: { name?: string; visibility?: ActivityVisibility }): Promise<void>;
   deleteActivity(id: UUID): Promise<void>;
+
+  /* the club feed — shared activities, as the club may see them */
+  listClubFeed(viewerId: UUID, limit?: number, before?: ISOTimestamp): Promise<FeedItem[]>;
+  /** One shared activity, or the viewer's own. Null when the viewer may not see it. */
+  getFeedItem(viewerId: UUID, activityId: UUID): Promise<FeedItem | null>;
+  /** Comments and kudos with names. Empty when the viewer may not see the activity. */
+  getActivitySocial(viewerId: UUID, activityId: UUID): Promise<ActivitySocial>;
+  giveKudos(activityId: UUID, athleteId: UUID): Promise<void>;
+  takeBackKudos(activityId: UUID, athleteId: UUID): Promise<void>;
+  addComment(activityId: UUID, authorId: UUID, body: string): Promise<ActivityComment>;
+  deleteComment(commentId: UUID, byUserId: UUID): Promise<void>;
 
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]>;
   getStrengthSession(id: UUID): Promise<StrengthSession | null>;

@@ -96,6 +96,7 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0003_acceptance.sql  # intake: acceptance and auto-linking
    …                                        # and every later file, in order, through
    supabase/migrations/0021_activities.sql  # imported watch activities
+   supabase/migrations/0022_club_feed.sql   # member directory fix, club feed
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -109,7 +110,10 @@ RLS is the enforcement boundary, not the application. Default deny on every tabl
 - A coach reads rows for athletes **actively linked** to them via `coach_athlete_links`.
 - Private coach notes are invisible to the athlete by policy, not by a UI filter.
 - The Forge ledger and billing tables are read-only to clients; only the service role writes them.
-- Leaderboard visibility requires `leaderboard_opt_in`, which is `false` by default.
+- Leaderboard visibility requires `leaderboard_opt_in`, which is `false` by default. Other members
+  see an opted-in athlete only through `im_leaderboard_members()` — id, name, avatar, group. The
+  profile row itself (email, date of birth, injury notes) is never readable by another member.
+  Until migration 0022 it was: RLS is row-level, and the opt-in policy exposed the whole row.
 - `im_export_athlete_data()` returns an athlete's full record for GDPR export.
 - Deleting a profile cascades through every athlete-owned table.
 
@@ -191,6 +195,28 @@ request ceiling (`serverActions.bodySizeLimit` is 4.4 MB).
 
 Tests: `src/lib/activity/*.test.ts` (unit + service), `supabase/test/activities.test.mjs` (RLS),
 `e2e/activities.mjs` (browser: `npm run test:activities`).
+
+---
+
+## Club feed
+
+`/app/club` — runs members chose to share. Sharing is per activity (a toggle on the activity page)
+with an opt-in default for new imports; both start off.
+
+What the club sees is the run: route (already privacy-trimmed), distance, time, pace, climb, kudos
+and comments. **Never heart rate, splits or the plan** — those stay between athlete and coach.
+Postgres enforces it the same way as the leaderboard: there is no club-wide policy on
+`activities`; members read through `im_club_feed()`, `im_feed_item()` and
+`im_activity_social()`, which return only those columns (migration 0022).
+
+- Kudos: once per member, on a shared run, never your own.
+- Comments: members on shared runs; the coach on any run of their athlete's; 1–500 characters.
+  The author, the activity's athlete and staff may remove one.
+- Un-sharing hides the conversation from the club; it is kept for the athlete and coach.
+- Nothing in the feed is ranked, and kudos earn no Forge points.
+
+Tests: `supabase/test/club-feed.test.mjs` (RLS), `src/lib/activity/club.test.ts` (demo parity),
+and steps 16–21 of `e2e/activities.mjs`.
 
 ---
 
@@ -386,8 +412,6 @@ labelled in the interface, so nothing looks functional when it is not.
   `activities.source` column and `integrations` table are ready for it, and an import arriving by
   webhook would go through the same `importActivity` service. Apple Health needs a native app.
   Google Fit is being shut down by Google — that provider should become Health Connect.
-- **Club feed.** `activities.visibility` exists (`coach` by default, `club` reserved) but no page
-  reads it yet, and no policy lets a club member read another's activity.
 - **Legal pages** are drafts and say so on the page. They need a solicitor's review — particularly
   on health-data handling under GDPR — before the first payment is taken.
 - **Exercise video** is a labelled empty state until real footage is filmed. The player renders the

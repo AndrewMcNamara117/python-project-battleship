@@ -124,7 +124,29 @@ watch(pp);
 await pp.goto(`${BASE}/app/activities`, { waitUntil: 'networkidle' });
 step(15, 'no horizontal scroll at phone width', (await pp.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0);
 
-step(16, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+// the club feed: a club-mate's run, kudos, a comment
+await page.goto(`${BASE}/app/club`, { waitUntil: 'networkidle' });
+step(16, 'the club feed lists shared runs', (await page.$$('article')).length >= 5);
+const feedText = (await page.textContent('main')) ?? '';
+step(17, 'the feed shows no heart rate', !/bpm/i.test(feedText));
+const kudos = page.locator('article button[aria-pressed="false"]').first();
+const countBefore = Number((await kudos.getAttribute('aria-label'))?.match(/\((\d+)\)/)?.[1]);
+await kudos.click();
+await page.waitForTimeout(1200);
+await page.goto(`${BASE}/app/club`, { waitUntil: 'networkidle' });
+const counts = await page.$$eval('article button[aria-pressed="true"]', (bs) => bs.map((b) => b.getAttribute('aria-label')));
+step(18, 'kudos sticks after a reload', counts.some((l) => l?.includes(`(${countBefore + 1})`)), JSON.stringify(counts));
+const runHref = await page.$eval('article a[href^="/app/club/"]', (a) => a.getAttribute('href'));
+await page.goto(`${BASE}${runHref}`, { waitUntil: 'networkidle' });
+const note = `Great running ${Date.now().toString().slice(-4)}`;
+await page.fill('textarea', note);
+await page.click('button:has-text("Post")');
+await page.waitForFunction((t) => document.querySelector('main')?.textContent?.includes(t), note, { timeout: 10000 }).catch(() => {});
+await page.reload({ waitUntil: 'networkidle' });
+step(19, 'a comment posts and stays', ((await page.textContent('main')) ?? '').includes(note));
+step(20, 'your own run in the feed links to your own page', Boolean(await page.goto(`${BASE}/app/club`).then(() => page.$('article a[href^="/app/activities/"]'))));
+
+step(21, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
 console.log(`\n${pass} passed, ${fail} failed\n`);

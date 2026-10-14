@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ActivityDetail } from '@/components/activity/ActivityDetail';
+import { CommentThread } from '@/components/activity/Social';
+import { SectionHeading } from '@/components/forge/AppHeader';
+import { Panel } from '@/components/ui/Panel';
 import { AppPage } from '@/components/app/PageHeader';
 import { AppHeader } from '@/components/forge/AppHeader';
 import { ButtonLink } from '@/components/ui/Button';
@@ -27,7 +30,10 @@ export default async function CoachActivityPage({
 
   const activity = await repo.getActivity(activityId);
   if (!activity || activity.athleteId !== athlete.id) notFound();
-  const scheduled = activity.scheduledWorkoutId ? await repo.getScheduled(activity.scheduledWorkoutId) : null;
+  const [scheduled, social] = await Promise.all([
+    activity.scheduledWorkoutId ? repo.getScheduled(activity.scheduledWorkoutId) : Promise.resolve(null),
+    repo.getActivitySocial(session.userId, activity.id),
+  ]);
 
   return (
     <AppPage>
@@ -49,6 +55,21 @@ export default async function CoachActivityPage({
           units={athlete.units}
           maxHr={athlete.maxHeartRate}
           viewer="coach"
+          social={
+            <Panel className="p-5 sm:p-6">
+              <SectionHeading
+                label="Comments"
+                action={
+                  <span className="im-micro text-ink-tertiary">
+                    {activity.visibility === 'club' ? `Shared with the club · ${social.kudos.length} kudos` : 'Not shared — only you and the athlete see this'}
+                  </span>
+                }
+              />
+              <div className="mt-4">
+                <CommentThread activityId={activity.id} comments={social.comments} viewerId={session.userId} canModerate canComment />
+              </div>
+            </Panel>
+          }
         />
       </div>
     </AppPage>

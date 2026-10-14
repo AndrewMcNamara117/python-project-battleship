@@ -87,6 +87,8 @@ export async function importActivity(
     privacyTrimM: profile.privacyTrimM,
     units: profile.units,
   });
+  // the athlete's standing choice; off unless they turned it on
+  draft.visibility = profile.shareActivitiesDefault ? 'club' : 'coach';
 
   // the same run exported twice in different formats has different bytes
   const nearby = await repo.listActivitiesOn(profile.id, addDays(draft.localDate, -1), addDays(draft.localDate, 1));

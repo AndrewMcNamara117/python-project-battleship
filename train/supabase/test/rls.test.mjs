@@ -288,11 +288,30 @@ describe('leaderboard is opt-in', () => {
     assert.equal(rows.length, 0);
   });
 
-  it('opting in exposes the profile, and nothing else', async () => {
-    await t.asService('update profiles set leaderboard_opt_in = true where id = $1', [athlete]);
+  it('opting in exposes a name and a group, and nothing else', async () => {
+    await t.asService(
+      `update profiles set leaderboard_opt_in = true, injury_notes = 'Stress fracture, left tibia',
+              date_of_birth = '1990-01-01' where id = $1`,
+      [athlete],
+    );
 
-    const visible = await t.asUser(otherAthlete, 'select id from profiles where id = $1', [athlete]);
-    assert.equal(visible.rows.length, 1, 'opted-in profile should be visible');
+    // the row itself stays private: RLS is row-level, and this row carries
+    // email, date of birth and injury notes (migration 0022)
+    const row = await t.asUser(otherAthlete, 'select injury_notes, email from profiles where id = $1', [athlete]);
+    assert.equal(row.rows.length, 0, 'the profile row must not be readable');
+
+    const members = await t.asUser(otherAthlete, 'select * from im_leaderboard_members()');
+    const me = members.rows.find((r) => r.id === athlete);
+    assert.ok(me, 'opted-in athlete is listed');
+    assert.deepEqual(Object.keys(me).sort(), ['avatar_url', 'full_name', 'id', 'training_group']);
+
+    // signed out: a token with no subject, as Supabase issues for the anon key
+    await t.db.exec('set role authenticated;');
+    await t.db.query(`select set_config('request.jwt.claim.sub', '', false)`);
+    await t.db.query(`select set_config('request.jwt.claims', '{"role":"anon"}', false)`);
+    const anon = await t.db.query('select * from im_leaderboard_members()');
+    await t.db.exec('reset role;');
+    assert.equal(anon.rows.length, 0, 'nobody signed out sees the list');
 
     // consent to appear on a leaderboard is not consent to share training data
     const sessions = await t.asUser(otherAthlete, 'select id from scheduled_workouts where athlete_id = $1', [

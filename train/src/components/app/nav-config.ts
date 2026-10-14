@@ -17,6 +17,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { href: '/app/progress', label: 'Progress', short: 'Progress', icon: 'chart', group: 'progress' },
   { href: '/app/check-in', label: 'Check-in', short: 'Check-in', icon: 'checkin', group: 'progress' },
   { href: '/app/leaderboard', label: 'Leaderboard', short: 'Board', icon: 'board', group: 'club' },
+  { href: '/app/club', label: 'Club feed', short: 'Feed', icon: 'activity', group: 'club' },
   { href: '/app/community', label: 'Community', short: 'Club', icon: 'community', group: 'club' },
   { href: '/app/coach', label: 'Coach', short: 'Coach', icon: 'coach', group: 'club' },
   { href: '/app/forge', label: 'FORGE', short: 'FORGE', icon: 'forge', group: 'club' },

@@ -31,7 +31,7 @@ import type {
 import { FORGE_POINTS } from '@/lib/domain/types';
 import { triageCheckIn } from '@/lib/domain/checkin-rules';
 import { DEMO_STRENGTH_TEMPLATES } from './demo-library.generated';
-import { demoActivities } from './demo-activities';
+import { demoActivities, demoClub } from './demo-activities';
 import type { Activity } from '@/lib/activity/types';
 
 /**
@@ -101,6 +101,8 @@ export interface DemoDataset {
   integrations: Integration[];
   notifications: Notification[];
   activities: Activity[];
+  kudos: { activityId: string; athleteId: string; createdAt: string }[];
+  comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[];
 }
 
 /* ---------- the weekly frame ---------- */
@@ -318,6 +320,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     limitationsNotes: null,
     maxHeartRate: null,
     privacyTrimM: 200,
+    shareActivitiesDefault: false,
   };
 
   const profiles: Profile[] = [
@@ -352,6 +355,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       // the lead athlete has had a lab test; the rest have not, and see no zones until they say
       maxHeartRate: i === 0 ? 188 : null,
       privacyTrimM: 200,
+      // the rest of the club shares by default, so the demo feed has a club in it
+      shareActivitiesDefault: i !== 0,
     })),
   ];
 
@@ -959,7 +964,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     subscriptions,
     integrations,
     notifications,
-    activities: demoActivities(completed, profiles),
+    ...demoClub(demoActivities(completed, profiles), profiles, today),
   };
 }
 

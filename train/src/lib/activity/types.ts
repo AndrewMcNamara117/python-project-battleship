@@ -117,3 +117,66 @@ export interface Activity {
 }
 
 export type ActivityDraft = Omit<Activity, 'id' | 'createdAt'>;
+
+/**
+ * A shared activity as the club sees it. Deliberately not an `Activity`:
+ * no heart rate, no splits, no link to the plan — those stay between the
+ * athlete and their coach.
+ */
+export interface FeedItem {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  trainingGroup: string | null;
+  name: string;
+  sport: ActivitySport;
+  startedAt: string;
+  localDate: string;
+  distanceM: number;
+  movingS: number;
+  avgPaceSecPerKm: number | null;
+  ascentM: number | null;
+  route: string | null;
+  privacyTrimM: number;
+  kudosCount: number;
+  commentCount: number;
+  viewerKudos: boolean;
+}
+
+export interface ActivityComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface ActivitySocial {
+  comments: ActivityComment[];
+  kudos: { athleteId: string; name: string; createdAt: string }[];
+}
+
+/** The shareable columns of an activity, in the shape the feed uses. */
+export function toFeedItem(
+  a: Activity,
+  athlete: { fullName: string; trainingGroup: string | null },
+  social: { kudosCount: number; commentCount: number; viewerKudos: boolean },
+): FeedItem {
+  return {
+    id: a.id,
+    athleteId: a.athleteId,
+    athleteName: athlete.fullName,
+    trainingGroup: athlete.trainingGroup,
+    name: a.name,
+    sport: a.sport,
+    startedAt: a.startedAt,
+    localDate: a.localDate,
+    distanceM: a.distanceM,
+    movingS: a.movingS,
+    avgPaceSecPerKm: a.avgPaceSecPerKm,
+    ascentM: a.ascentM,
+    route: a.route,
+    privacyTrimM: a.privacyTrimM,
+    ...social,
+  };
+}

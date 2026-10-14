@@ -26,6 +26,7 @@ export function ActivityDetail({
   viewer,
   controls,
   attach,
+  social,
 }: {
   activity: Activity;
   session: ScheduledWorkout | null;
@@ -34,6 +35,8 @@ export function ActivityDetail({
   viewer: 'athlete' | 'coach';
   controls?: ReactNode;
   attach?: ReactNode;
+  /** Sharing, kudos and comments. */
+  social?: ReactNode;
 }) {
   return (
     <div className="space-y-5">
@@ -97,6 +100,11 @@ export function ActivityDetail({
           <Rise delay={100}>
             <SplitsTable splits={activity.splits} units={units} />
           </Rise>
+          {social && (
+            <Rise delay={120}>
+              <div className="mt-5">{social}</div>
+            </Rise>
+          )}
         </div>
       </div>
     </div>

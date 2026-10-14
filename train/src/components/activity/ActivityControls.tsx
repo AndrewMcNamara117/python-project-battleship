@@ -163,7 +163,15 @@ const TRIMS = [
   { value: '1000', label: '1 km' },
 ] as const;
 
-export function ActivitySettings({ maxHeartRate, privacyTrimM }: { maxHeartRate: number | null; privacyTrimM: number }) {
+export function ActivitySettings({
+  maxHeartRate,
+  privacyTrimM,
+  shareDefault,
+}: {
+  maxHeartRate: number | null;
+  privacyTrimM: number;
+  shareDefault: boolean;
+}) {
   const [trim, setTrim] = useState(String(privacyTrimM) as (typeof TRIMS)[number]['value']);
   const [result, setResult] = useState<ActivityResult | null>(null);
   const [pending, start] = useTransition();
@@ -201,6 +209,15 @@ export function ActivitySettings({ maxHeartRate, privacyTrimM }: { maxHeartRate:
           stored, so it cannot be recovered later. Your distance and pace still count it.
         </p>
       </div>
+      <label className="flex cursor-pointer items-start gap-3">
+        <input type="checkbox" name="shareActivitiesDefault" defaultChecked={shareDefault} className="mt-0.5 h-4 w-4 accent-[var(--color-mint)]" />
+        <span>
+          <span className="block text-[14px] font-bold text-ink">Share new imports with the club</span>
+          <span className="mt-1 block text-[12px] leading-relaxed text-ink-tertiary">
+            Off by default. You can change any single activity either way afterwards.
+          </span>
+        </span>
+      </label>
       <div className="flex flex-wrap items-center gap-4">
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save settings'}

@@ -140,11 +140,72 @@ export async function saveActivitySettings(formData: FormData): Promise<Activity
     return { ok: false, message: 'Choose one of the privacy distances.' };
   }
 
-  await repo.updateProfile(session.userId, { maxHeartRate: max, privacyTrimM: trim });
+  const shareDefault = formData.get('shareActivitiesDefault') === 'on';
+  await repo.updateProfile(session.userId, { maxHeartRate: max, privacyTrimM: trim, shareActivitiesDefault: shareDefault });
   revalidatePath('/app/activities');
   revalidatePath('/app/profile');
   return {
     ok: true,
     message: 'Saved. The privacy distance applies to files you import from now on.',
   };
+}
+
+/* ---------------- the club ---------------- */
+
+export async function setActivitySharing(activityId: string, share: boolean): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+  const activity = await repo.getActivity(activityId);
+  if (!activity || activity.athleteId !== session.userId) return { ok: false, message: 'That activity no longer exists.' };
+  await repo.updateActivity(activityId, { visibility: share ? 'club' : 'coach' });
+  revalidatePath(`/app/activities/${activityId}`);
+  revalidatePath('/app/club');
+  return {
+    ok: true,
+    message: share ? 'Shared with the club. They see the route, distance and pace — never your heart rate.' : 'Only you and your coach can see it now.',
+  };
+}
+
+export async function toggleKudos(activityId: string, give: boolean): Promise<ActivityResult> {
+  const session = await requireSession();
+  if (!rateLimit(`kudos:${session.userId}`, 120, 10 * 60 * 1000)) return { ok: false, message: 'Slow down a moment.' };
+  const repo = await getRepo();
+  try {
+    if (give) await repo.giveKudos(activityId, session.userId);
+    else await repo.takeBackKudos(activityId, session.userId);
+  } catch {
+    return { ok: false, message: 'Kudos could not be given on that one.' };
+  }
+  revalidatePath('/app/club');
+  revalidatePath(`/app/club/${activityId}`);
+  return { ok: true, message: give ? 'Kudos given.' : 'Kudos taken back.' };
+}
+
+export async function postComment(activityId: string, body: string): Promise<ActivityResult> {
+  const session = await requireSession();
+  if (!rateLimit(`comment:${session.userId}`, 20, 10 * 60 * 1000)) {
+    return { ok: false, message: 'That is a lot of comments in a few minutes. Give it a moment.' };
+  }
+  const text = body.replace(/\s+/g, ' ').trim();
+  if (!text) return { ok: false, message: 'Write something first.' };
+  if (text.length > 500) return { ok: false, message: 'Keep it under 500 characters.' };
+  const repo = await getRepo();
+  try {
+    await repo.addComment(activityId, session.userId, text);
+  } catch {
+    return { ok: false, message: 'That activity is not open for comments.' };
+  }
+  revalidatePath(`/app/club/${activityId}`);
+  revalidatePath(`/app/activities/${activityId}`);
+  revalidatePath('/app/club');
+  return { ok: true, message: 'Posted.' };
+}
+
+export async function removeComment(commentId: string, activityId: string): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+  await repo.deleteComment(commentId, session.userId);
+  revalidatePath(`/app/club/${activityId}`);
+  revalidatePath(`/app/activities/${activityId}`);
+  return { ok: true, message: 'Removed.' };
 }

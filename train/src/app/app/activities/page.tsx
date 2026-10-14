@@ -94,9 +94,13 @@ export default async function ActivitiesPage() {
         </h2>
         <Rise delay={60}>
           <Panel className="p-5 sm:p-6">
-            <SectionHeading label="Zones and privacy" />
+            <SectionHeading label="Zones, privacy and sharing" />
             <div className="mt-5 max-w-xl">
-              <ActivitySettings maxHeartRate={profile.maxHeartRate} privacyTrimM={profile.privacyTrimM} />
+              <ActivitySettings
+                maxHeartRate={profile.maxHeartRate}
+                privacyTrimM={profile.privacyTrimM}
+                shareDefault={profile.shareActivitiesDefault}
+              />
             </div>
           </Panel>
         </Rise>

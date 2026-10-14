@@ -129,6 +129,8 @@ export interface Profile {
   maxHeartRate: number | null;
   /** Metres hidden at each end of an imported route. 0, 200, 500 or 1000. */
   privacyTrimM: number;
+  /** New imports start shared with the club. Off unless the athlete turns it on. */
+  shareActivitiesDefault: boolean;
 }
 
 export interface CoachAthleteLink {

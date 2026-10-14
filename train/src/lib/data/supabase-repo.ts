@@ -29,7 +29,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
-import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
+import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
 import type {
   BlockWithWeeks,
   ProgramBlock,
@@ -155,6 +155,7 @@ export class SupabaseRepo implements IronMilesRepo {
     limitationsNotes: r.limitations_notes ?? null,
     maxHeartRate: r.max_heart_rate ?? null,
     privacyTrimM: r.privacy_trim_m ?? 200,
+    shareActivitiesDefault: r.share_activities_default ?? false,
   });
 
   private toActivity = (r: any): Activity => ({
@@ -184,6 +185,26 @@ export class SupabaseRepo implements IronMilesRepo {
     completedWorkoutId: r.completed_workout_id,
     visibility: r.visibility,
     createdAt: r.created_at,
+  });
+
+  private toFeedItem = (r: any): FeedItem => ({
+    id: r.id,
+    athleteId: r.athlete_id,
+    athleteName: r.athlete_name,
+    trainingGroup: r.training_group ?? null,
+    name: r.name,
+    sport: r.sport,
+    startedAt: r.started_at,
+    localDate: r.local_date,
+    distanceM: r.distance_m,
+    movingS: r.moving_s,
+    avgPaceSecPerKm: r.avg_pace_sec_per_km,
+    ascentM: r.ascent_m,
+    route: r.route,
+    privacyTrimM: r.privacy_trim_m,
+    kudosCount: r.kudos_count,
+    commentCount: r.comment_count,
+    viewerKudos: r.viewer_kudos,
   });
 
   private toScheduled = (r: any): ScheduledWorkout => ({
@@ -363,6 +384,7 @@ export class SupabaseRepo implements IronMilesRepo {
     if (patch.limitationsNotes !== undefined) row.limitations_notes = patch.limitationsNotes;
     if (patch.maxHeartRate !== undefined) row.max_heart_rate = patch.maxHeartRate;
     if (patch.privacyTrimM !== undefined) row.privacy_trim_m = patch.privacyTrimM;
+    if (patch.shareActivitiesDefault !== undefined) row.share_activities_default = patch.shareActivitiesDefault;
 
     const { data, error } = await this.db.from('profiles').update(row).eq('id', userId).select('*').single();
     if (error) throw new Error(error.message);
@@ -704,6 +726,62 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
   }
 
+  /* ---------- the club feed ----------
+     Read through 0022's definer functions, which return only the shareable
+     columns; the viewer is the session's own auth.uid(), never a parameter. */
+
+  listClubFeed(_viewerId: UUID, limit = 30, before?: string) {
+    return this.rows(this.db.rpc('im_club_feed', { p_limit: limit, p_before: before ?? null }), this.toFeedItem);
+  }
+
+  async getFeedItem(_viewerId: UUID, activityId: UUID): Promise<FeedItem | null> {
+    const items = await this.rows(this.db.rpc('im_feed_item', { target: activityId }), this.toFeedItem);
+    return items[0] ?? null;
+  }
+
+  async getActivitySocial(_viewerId: UUID, activityId: UUID): Promise<ActivitySocial> {
+    const { data, error } = await this.db.rpc('im_activity_social', { target: activityId });
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as any[];
+    return {
+      comments: rows
+        .filter((r) => r.kind === 'comment')
+        .map((r) => ({ id: r.id, authorId: r.person_id, authorName: r.person_name, body: r.body, createdAt: r.created_at })),
+      kudos: rows
+        .filter((r) => r.kind === 'kudos')
+        .map((r) => ({ athleteId: r.person_id, name: r.person_name, createdAt: r.created_at })),
+    };
+  }
+
+  async giveKudos(activityId: UUID, athleteId: UUID) {
+    const { error } = await this.db
+      .from('activity_kudos')
+      .upsert({ activity_id: activityId, athlete_id: athleteId }, { onConflict: 'activity_id,athlete_id', ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+  }
+
+  async takeBackKudos(activityId: UUID, athleteId: UUID) {
+    const { error } = await this.db.from('activity_kudos').delete().eq('activity_id', activityId).eq('athlete_id', athleteId);
+    if (error) throw new Error(error.message);
+  }
+
+  async addComment(activityId: UUID, authorId: UUID, body: string): Promise<ActivityComment> {
+    const { data, error } = await this.db
+      .from('activity_comments')
+      .insert({ activity_id: activityId, author_id: authorId, body: body.trim() })
+      .select('id, author_id, body, created_at')
+      .single();
+    if (error) throw new Error(error.message);
+    const author = await this.getProfile(authorId);
+    return { id: data.id, authorId: data.author_id, authorName: author?.fullName ?? 'Member', body: data.body, createdAt: data.created_at };
+  }
+
+  async deleteComment(commentId: UUID, _byUserId: UUID) {
+    // comments_delete decides who may: the author, the activity's athlete, staff
+    const { error } = await this.db.from('activity_comments').delete().eq('id', commentId);
+    if (error) throw new Error(error.message);
+  }
+
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate) {
     return this.rows(
       this.db
@@ -867,12 +945,10 @@ export class SupabaseRepo implements IronMilesRepo {
     const today = toISODate(new Date());
     const from = scope === 'weekly' ? startOfWeek(today) : scope === 'monthly' ? startOfMonth(today) : '0001-01-01';
 
-    // RLS on profiles only exposes opted-in athletes to other members
-    const { data: people, error: peopleError } = await this.db
-      .from('profiles')
-      .select('id, full_name, avatar_url, training_group')
-      .eq('role', 'athlete')
-      .eq('leaderboard_opt_in', true);
+    // opted-in athletes as other members may see them: name, avatar, group —
+    // never the profile row, which carries health notes (migration 0022)
+    const { data, error: peopleError } = await this.db.rpc('im_leaderboard_members');
+    const people = (data ?? []) as { id: string; full_name: string; avatar_url: string | null; training_group: string | null }[];
     if (peopleError) throw new Error(peopleError.message);
     if (!people?.length) return [];
 

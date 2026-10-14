@@ -43,7 +43,7 @@ import type {
   UUID,
 } from '@/lib/domain/types';
 import { FORGE_POINTS, weekdayList } from '@/lib/domain/types';
-import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
+import { toFeedItem, type Activity, type ActivityComment, type ActivityDraft, type ActivitySocial, type ActivityVisibility, type FeedItem } from '@/lib/activity/types';
 import type { Weekday } from '@/lib/domain/types';
 import type {
   BlockWithWeeks,
@@ -506,6 +506,102 @@ export class DemoRepo implements IronMilesRepo {
   async deleteActivity(id: UUID): Promise<void> {
     const d = dataset();
     d.activities = d.activities.filter((a) => a.id !== id);
+    d.kudos = d.kudos.filter((k) => k.activityId !== id);
+    d.comments = d.comments.filter((c) => c.activityId !== id);
+  }
+
+  /* ---------- the club feed ----------
+     The same limits the 0022 functions and policies set: the club sees a
+     shared run's shareable columns, the athlete and their coach see all. */
+
+  private canReadAthlete(viewerId: UUID, athleteId: UUID): boolean {
+    const d = dataset();
+    if (viewerId === athleteId) return true;
+    if (d.profiles.find((p) => p.id === viewerId)?.role === 'admin') return true;
+    return d.links.some((l) => l.coachId === viewerId && l.athleteId === athleteId && l.status === 'active');
+  }
+
+  private canSeeActivity(viewerId: UUID, a: Activity): boolean {
+    return a.visibility === 'club' || this.canReadAthlete(viewerId, a.athleteId);
+  }
+
+  private feedItem(viewerId: UUID, a: Activity): FeedItem {
+    const d = dataset();
+    const athlete = d.profiles.find((p) => p.id === a.athleteId);
+    return toFeedItem(
+      a,
+      { fullName: athlete?.fullName ?? 'Member', trainingGroup: CLUB_MEMBER_META.find((m) => m.id === a.athleteId)?.group ?? null },
+      {
+        kudosCount: d.kudos.filter((k) => k.activityId === a.id).length,
+        commentCount: d.comments.filter((c) => c.activityId === a.id).length,
+        viewerKudos: d.kudos.some((k) => k.activityId === a.id && k.athleteId === viewerId),
+      },
+    );
+  }
+
+  async listClubFeed(viewerId: UUID, limit = 30, before?: string): Promise<FeedItem[]> {
+    return dataset()
+      .activities.filter((a) => a.visibility === 'club' && (!before || a.startedAt < before))
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .slice(0, Math.min(Math.max(limit, 1), 100))
+      .map((a) => this.feedItem(viewerId, a));
+  }
+
+  async getFeedItem(viewerId: UUID, activityId: UUID): Promise<FeedItem | null> {
+    const a = dataset().activities.find((x) => x.id === activityId);
+    return a && this.canSeeActivity(viewerId, a) ? this.feedItem(viewerId, a) : null;
+  }
+
+  async getActivitySocial(viewerId: UUID, activityId: UUID): Promise<ActivitySocial> {
+    const d = dataset();
+    const a = d.activities.find((x) => x.id === activityId);
+    if (!a || !this.canSeeActivity(viewerId, a)) return { comments: [], kudos: [] };
+    const name = (id: string) => d.profiles.find((p) => p.id === id)?.fullName ?? 'Member';
+    return {
+      comments: d.comments
+        .filter((c) => c.activityId === activityId)
+        .sort((x, y) => x.createdAt.localeCompare(y.createdAt))
+        .map((c) => ({ id: c.id, authorId: c.authorId, authorName: name(c.authorId), body: c.body, createdAt: c.createdAt })),
+      kudos: d.kudos
+        .filter((k) => k.activityId === activityId)
+        .sort((x, y) => x.createdAt.localeCompare(y.createdAt))
+        .map((k) => ({ athleteId: k.athleteId, name: name(k.athleteId), createdAt: k.createdAt })),
+    };
+  }
+
+  async giveKudos(activityId: UUID, athleteId: UUID): Promise<void> {
+    const d = dataset();
+    const a = d.activities.find((x) => x.id === activityId);
+    if (!a || a.visibility !== 'club' || a.athleteId === athleteId) throw new Error('kudos refused by policy');
+    if (d.kudos.some((k) => k.activityId === activityId && k.athleteId === athleteId)) return;
+    d.kudos.push({ activityId, athleteId, createdAt: new Date().toISOString() });
+  }
+
+  async takeBackKudos(activityId: UUID, athleteId: UUID): Promise<void> {
+    const d = dataset();
+    d.kudos = d.kudos.filter((k) => !(k.activityId === activityId && k.athleteId === athleteId));
+  }
+
+  async addComment(activityId: UUID, authorId: UUID, body: string): Promise<ActivityComment> {
+    const d = dataset();
+    const a = d.activities.find((x) => x.id === activityId);
+    if (!a || !this.canSeeActivity(authorId, a)) throw new Error('comment refused by policy');
+    const text = body.trim();
+    if (text.length < 1 || text.length > 500) throw new Error('comment violates check constraint');
+    const row = { id: uid('cmt'), activityId, authorId, body: text, createdAt: new Date().toISOString() };
+    d.comments.push(row);
+    return { id: row.id, authorId, authorName: d.profiles.find((p) => p.id === authorId)?.fullName ?? 'Member', body: text, createdAt: row.createdAt };
+  }
+
+  async deleteComment(commentId: UUID, byUserId: UUID): Promise<void> {
+    const d = dataset();
+    const c = d.comments.find((x) => x.id === commentId);
+    if (!c) return;
+    const owner = d.activities.find((a) => a.id === c.activityId)?.athleteId;
+    const role = d.profiles.find((p) => p.id === byUserId)?.role;
+    // as the policy: silently nothing, rather than an error, when not permitted
+    if (c.authorId !== byUserId && owner !== byUserId && role !== 'coach' && role !== 'admin') return;
+    d.comments = d.comments.filter((x) => x.id !== commentId);
   }
 
   async listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]> {
@@ -902,6 +998,7 @@ export class DemoRepo implements IronMilesRepo {
         limitationsNotes: null,
         maxHeartRate: null,
         privacyTrimM: 200,
+        shareActivitiesDefault: false,
       });
     }
 
