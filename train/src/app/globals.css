@@ -198,19 +198,24 @@ body {
 
 /* Small technical labels. Deliberate spacing is the point — they read
    as instrument markings, not shrunken body copy. */
-.im-micro {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-ink-secondary);
-}
-.im-micro-lg {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-ink-secondary);
+/* In the components layer, below utilities: `im-micro text-mint` must be mint.
+   Unlayered, these beat every Tailwind utility, so each "Completed" and
+   "Coach note" label meant to be accented rendered grey. */
+@layer components {
+  .im-micro {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-ink-secondary);
+  }
+  .im-micro-lg {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ink-secondary);
+  }
 }
 
 /* ---- grain: one shared overlay, GPU-cheap ---- */

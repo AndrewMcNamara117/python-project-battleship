@@ -122,6 +122,13 @@ export interface Profile {
    */
   injuryNotes: string | null;
   limitationsNotes: string | null;
+
+  /* ---- activity import ---- */
+
+  /** Measured or tested, never estimated from age. Zones are cut against it. */
+  maxHeartRate: number | null;
+  /** Metres hidden at each end of an imported route. 0, 200, 500 or 1000. */
+  privacyTrimM: number;
 }
 
 export interface CoachAthleteLink {
@@ -341,8 +348,8 @@ export interface CompletedWorkout {
   sessionRating: number | null;
   soreness: number | null;
   athleteNotes: string | null;
-  /** Where the data came from — manual today, Strava/Garmin later. */
-  source: 'manual' | 'strava' | 'garmin' | 'coros' | 'apple_health' | 'google_fit';
+  /** Where the data came from: typed in, an uploaded watch file, or (later) a provider sync. */
+  source: 'manual' | 'upload' | 'strava' | 'garmin' | 'coros' | 'apple_health' | 'google_fit';
   createdAt: ISOTimestamp;
 }
 

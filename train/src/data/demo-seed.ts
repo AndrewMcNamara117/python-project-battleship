@@ -31,6 +31,8 @@ import type {
 import { FORGE_POINTS } from '@/lib/domain/types';
 import { triageCheckIn } from '@/lib/domain/checkin-rules';
 import { DEMO_STRENGTH_TEMPLATES } from './demo-library.generated';
+import { demoActivities } from './demo-activities';
+import type { Activity } from '@/lib/activity/types';
 
 /**
  * The demo athlete's strength days point at the shipped templates by name —
@@ -98,6 +100,7 @@ export interface DemoDataset {
   subscriptions: Subscription[];
   integrations: Integration[];
   notifications: Notification[];
+  activities: Activity[];
 }
 
 /* ---------- the weekly frame ---------- */
@@ -313,6 +316,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     equipment: [],
     injuryNotes: null,
     limitationsNotes: null,
+    maxHeartRate: null,
+    privacyTrimM: 200,
   };
 
   const profiles: Profile[] = [
@@ -344,6 +349,9 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       injuryNotes:
         i === 0 ? 'Left calf tightens after long runs. Eases within a day.' : null,
       limitationsNotes: null,
+      // the lead athlete has had a lab test; the rest have not, and see no zones until they say
+      maxHeartRate: i === 0 ? 188 : null,
+      privacyTrimM: 200,
     })),
   ];
 
@@ -951,6 +959,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     subscriptions,
     integrations,
     notifications,
+    activities: demoActivities(completed, profiles),
   };
 }
 

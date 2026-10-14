@@ -43,6 +43,7 @@ import type {
   UUID,
 } from '@/lib/domain/types';
 import { FORGE_POINTS, weekdayList } from '@/lib/domain/types';
+import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
 import type { Weekday } from '@/lib/domain/types';
 import type {
   BlockWithWeeks,
@@ -405,8 +406,14 @@ export class DemoRepo implements IronMilesRepo {
 
   async logWorkout(entry: Omit<CompletedWorkout, 'id' | 'createdAt'>): Promise<CompletedWorkout> {
     const d = dataset();
-    const row: CompletedWorkout = { ...entry, id: uid('cw'), createdAt: new Date().toISOString() };
     const existing = d.completed.findIndex((w) => w.scheduledWorkoutId && w.scheduledWorkoutId === entry.scheduledWorkoutId);
+    // an upsert keeps the row's identity, as Postgres's does: an activity
+    // linked to this log must still be linked to it after the athlete edits it
+    const row: CompletedWorkout = {
+      ...entry,
+      id: existing >= 0 ? d.completed[existing].id : uid('cw'),
+      createdAt: existing >= 0 ? d.completed[existing].createdAt : new Date().toISOString(),
+    };
     if (existing >= 0) d.completed[existing] = row;
     else d.completed.push(row);
 
@@ -426,6 +433,79 @@ export class DemoRepo implements IronMilesRepo {
       });
     }
     return clone(row);
+  }
+
+  async unlogWorkout(completedId: UUID): Promise<void> {
+    const d = dataset();
+    const i = d.completed.findIndex((w) => w.id === completedId);
+    if (i < 0) return;
+    const [row] = d.completed.splice(i, 1);
+    if (row.scheduledWorkoutId) {
+      const sched = d.scheduled.find((w) => w.id === row.scheduledWorkoutId);
+      if (sched && sched.status === 'completed') sched.status = 'scheduled';
+    }
+    for (const a of d.activities) if (a.completedWorkoutId === completedId) a.completedWorkoutId = null;
+  }
+
+  /* ---------- activities ---------- */
+
+  async listActivities(athleteId: UUID, limit = 50): Promise<Activity[]> {
+    return clone(
+      dataset()
+        .activities.filter((a) => a.athleteId === athleteId)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .slice(0, limit),
+    );
+  }
+
+  async listActivitiesOn(athleteId: UUID, from: ISODate, to: ISODate): Promise<Activity[]> {
+    return clone(
+      dataset()
+        .activities.filter((a) => a.athleteId === athleteId && a.localDate >= from && a.localDate <= to)
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+    );
+  }
+
+  async getActivity(id: UUID): Promise<Activity | null> {
+    return clone(dataset().activities.find((a) => a.id === id) ?? null);
+  }
+
+  async saveActivity(draft: ActivityDraft): Promise<{ activity: Activity; duplicate: boolean }> {
+    const d = dataset();
+    const existing = d.activities.find((a) => a.athleteId === draft.athleteId && a.fingerprint === draft.fingerprint);
+    if (existing) return { activity: clone(existing), duplicate: true };
+    const row: Activity = { ...clone(draft), id: uid('act'), createdAt: new Date().toISOString() };
+    d.activities.push(row);
+    return { activity: clone(row), duplicate: false };
+  }
+
+  async linkActivity(id: UUID, link: { scheduledWorkoutId: UUID | null; completedWorkoutId: UUID | null }): Promise<void> {
+    const d = dataset();
+    const a = d.activities.find((x) => x.id === id);
+    if (!a) throw new Error('Activity not found');
+    // the same guarantee the database trigger gives: only the athlete's own rows
+    if (link.scheduledWorkoutId) {
+      const s = d.scheduled.find((w) => w.id === link.scheduledWorkoutId);
+      if (!s || s.athleteId !== a.athleteId) throw new Error("activity may only link to the athlete's own session");
+    }
+    if (link.completedWorkoutId) {
+      const c = d.completed.find((w) => w.id === link.completedWorkoutId);
+      if (!c || c.athleteId !== a.athleteId) throw new Error("activity may only link to the athlete's own log");
+    }
+    a.scheduledWorkoutId = link.scheduledWorkoutId;
+    a.completedWorkoutId = link.completedWorkoutId;
+  }
+
+  async updateActivity(id: UUID, patch: { name?: string; visibility?: ActivityVisibility }): Promise<void> {
+    const a = dataset().activities.find((x) => x.id === id);
+    if (!a) throw new Error('Activity not found');
+    if (patch.name !== undefined) a.name = patch.name;
+    if (patch.visibility !== undefined) a.visibility = patch.visibility;
+  }
+
+  async deleteActivity(id: UUID): Promise<void> {
+    const d = dataset();
+    d.activities = d.activities.filter((a) => a.id !== id);
   }
 
   async listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]> {
@@ -820,6 +900,8 @@ export class DemoRepo implements IronMilesRepo {
         equipment: [],
         injuryNotes: null,
         limitationsNotes: null,
+        maxHeartRate: null,
+        privacyTrimM: 200,
       });
     }
 

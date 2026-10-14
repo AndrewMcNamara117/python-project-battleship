@@ -12,6 +12,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { href: '/app/today', label: 'Today', short: 'Today', icon: 'today', group: 'train' },
   { href: '/app/calendar', label: 'Calendar', short: 'Plan', icon: 'calendar', group: 'train' },
   { href: '/app/training', label: 'Endurance', short: 'Run', icon: 'run', group: 'train' },
+  { href: '/app/activities', label: 'Activities', short: 'Files', icon: 'activity', group: 'train' },
   { href: '/app/strength', label: 'Strength', short: 'Lift', icon: 'strength', group: 'train' },
   { href: '/app/progress', label: 'Progress', short: 'Progress', icon: 'chart', group: 'progress' },
   { href: '/app/check-in', label: 'Check-in', short: 'Check-in', icon: 'checkin', group: 'progress' },
@@ -27,12 +28,15 @@ export const ATHLETE_NAV: NavItem[] = [
  * Today first, because the whole product's promise is seeing today's session
  * in under two seconds.
  */
+const byHref = (href: string) => ATHLETE_NAV.find((n) => n.href === href) as NavItem;
+
+// by address rather than position, so adding a destination cannot reshuffle the phone bar
 export const MOBILE_NAV: NavItem[] = [
-  ATHLETE_NAV[1], // Today
-  ATHLETE_NAV[2], // Plan
-  ATHLETE_NAV[5], // Progress
-  ATHLETE_NAV[10], // FORGE
-  ATHLETE_NAV[11], // Profile
+  byHref('/app/today'),
+  byHref('/app/calendar'),
+  byHref('/app/progress'),
+  byHref('/app/forge'),
+  byHref('/app/profile'),
 ];
 
 export const NAV_GROUPS: { key: NavItem['group']; label: string }[] = [

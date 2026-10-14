@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   // repository already documents itself, and a generated file appearing in
   // `git status` after every `npm run dev` is noise, not guidance.
   agentRules: false,
+  experimental: {
+    // Activity uploads. The browser gzips a file before sending it, so this
+    // covers a 12-hour GPX; it stays under Vercel's 4.5 MB request ceiling.
+    serverActions: { bodySizeLimit: '4.4mb' },
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [{ protocol: 'https', hostname: 'ironmiles.ie' }],

@@ -94,6 +94,8 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0001_schema.sql      # tables, enums, foreign keys, triggers
    supabase/migrations/0002_rls.sql         # row-level security — read this one
    supabase/migrations/0003_acceptance.sql  # intake: acceptance and auto-linking
+   …                                        # and every later file, in order, through
+   supabase/migrations/0021_activities.sql  # imported watch activities
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -123,7 +125,7 @@ Four suites. The first three need nothing but `npm install`.
 ```bash
 npm run typecheck
 npm run lint
-npm test              # unit + RLS: 71 assertions
+npm test              # unit + RLS
 npm run test:rls      # RLS only
 
 # the two browser suites need a running server, in demo mode
@@ -150,6 +152,45 @@ product makes about privacy rather than asserting them:
 `e2e/loop.mjs` needs a freshly started server: demo state lives in the server
 process, so a second run against the same process is a different starting state.
 It detects that and says so rather than failing obscurely.
+
+---
+
+## Activities
+
+Athletes import watch files at `/app/activities` — **.fit**, **.gpx** or **.tcx**, gzipped or not
+(Strava's bulk export ships `.fit.gz`). Format is sniffed from the bytes, never the file name.
+Everything lives in `src/lib/activity/` and has no dependencies.
+
+| File | What it does |
+|---|---|
+| `fit.ts`, `xml.ts` | Decoders. FIT checks its CRC; GPX/TCX are scanned linearly and never expand entities |
+| `analyse.ts` | Distance (device channel first, GPS with teleports dropped), moving time, splits, elevation with a dead band, HR zones |
+| `route.ts` | Privacy trim, privacy zones (cut as gaps, never bridged), simplification, encoded polyline |
+| `match.ts` | Which planned session the file was — automatic only when exactly one fits |
+| `service.ts` | Import → dedupe → match → log or enrich → link; attach; delete |
+| `fixtures.ts` | Writes real FIT/GPX/TCX bytes from a synthetic run, for tests and the demo |
+
+What is stored is numbers, never the file: no raw GPS track is kept anywhere. The route saved is
+the trimmed, simplified line (start and finish hidden by the athlete's `privacy_trim_m`, 200 m by
+default). Zones are cut at render time from a stored bpm histogram against the athlete's
+**measured** max HR — never an age formula — so changing max HR re-cuts every past activity.
+
+Rules worth knowing:
+
+- An import completes a session only when exactly one session that day fits the sport. Two
+  candidates → the athlete picks; none → the activity is kept unattached.
+- A session already logged by hand is **enriched**, never overwritten: the file fills blanks only.
+- Re-logging by hand afterwards keeps the watch's heart rate and pace.
+- Deleting an activity removes its log only if the import created that log.
+- The same file twice, or the same run exported as FIT and as GPX, is one activity.
+- Coaches read activities (`/coach/athletes/[id]/activities/[activityId]`), never write them.
+  A DB trigger refuses linking an activity to anyone else's session or log.
+
+Uploads are gzipped in the browser before sending, so a 12-hour GPX stays under Vercel's 4.5 MB
+request ceiling (`serverActions.bodySizeLimit` is 4.4 MB).
+
+Tests: `src/lib/activity/*.test.ts` (unit + service), `supabase/test/activities.test.mjs` (RLS),
+`e2e/activities.mjs` (browser: `npm run test:activities`).
 
 ---
 
@@ -340,9 +381,13 @@ labelled in the interface, so nothing looks functional when it is not.
   Forge rules list marks them "coach records" and the milestones panel says so.
 - **Community reactions are read-only.** The counts are real; there is no way to
   add one, and the UI says that rather than showing a control that does nothing.
-- **Device sync.** Strava, Garmin, COROS, Apple Health and Google Fit have a schema
-  (`integrations`, `activity_imports`) and a settings UI showing "coming soon". No OAuth flows.
-  Manual logging is the supported path today.
+- **Provider sync.** Watch *files* import today (see Activities). Automatic sync from Garmin,
+  COROS and Strava needs each provider's developer-programme approval and OAuth credentials; the
+  `activities.source` column and `integrations` table are ready for it, and an import arriving by
+  webhook would go through the same `importActivity` service. Apple Health needs a native app.
+  Google Fit is being shut down by Google — that provider should become Health Connect.
+- **Club feed.** `activities.visibility` exists (`coach` by default, `club` reserved) but no page
+  reads it yet, and no policy lets a club member read another's activity.
 - **Legal pages** are drafts and say so on the page. They need a solicitor's review — particularly
   on health-data handling under GDPR — before the first payment is taken.
 - **Exercise video** is a labelled empty state until real footage is filmed. The player renders the

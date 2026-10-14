@@ -29,6 +29,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
+import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
 import type {
   BlockWithWeeks,
   ProgramBlock,
@@ -152,6 +153,37 @@ export class SupabaseRepo implements IronMilesRepo {
     equipment: r.equipment ?? [],
     injuryNotes: r.injury_notes ?? null,
     limitationsNotes: r.limitations_notes ?? null,
+    maxHeartRate: r.max_heart_rate ?? null,
+    privacyTrimM: r.privacy_trim_m ?? 200,
+  });
+
+  private toActivity = (r: any): Activity => ({
+    id: r.id,
+    athleteId: r.athlete_id,
+    source: r.source,
+    format: r.format,
+    fingerprint: r.fingerprint,
+    name: r.name,
+    sport: r.sport,
+    startedAt: r.started_at,
+    localDate: r.local_date,
+    distanceM: r.distance_m,
+    movingS: r.moving_s,
+    elapsedS: r.elapsed_s,
+    avgPaceSecPerKm: r.avg_pace_sec_per_km,
+    avgHr: r.avg_hr,
+    maxHr: r.max_hr,
+    ascentM: r.ascent_m,
+    descentM: r.descent_m,
+    route: r.route,
+    privacyTrimM: r.privacy_trim_m,
+    splits: r.splits ?? [],
+    series: r.series ?? [],
+    hrHistogram: r.hr_histogram ?? [],
+    scheduledWorkoutId: r.scheduled_workout_id,
+    completedWorkoutId: r.completed_workout_id,
+    visibility: r.visibility,
+    createdAt: r.created_at,
   });
 
   private toScheduled = (r: any): ScheduledWorkout => ({
@@ -329,6 +361,8 @@ export class SupabaseRepo implements IronMilesRepo {
     if (patch.equipment !== undefined) row.equipment = patch.equipment;
     if (patch.injuryNotes !== undefined) row.injury_notes = patch.injuryNotes;
     if (patch.limitationsNotes !== undefined) row.limitations_notes = patch.limitationsNotes;
+    if (patch.maxHeartRate !== undefined) row.max_heart_rate = patch.maxHeartRate;
+    if (patch.privacyTrimM !== undefined) row.privacy_trim_m = patch.privacyTrimM;
 
     const { data, error } = await this.db.from('profiles').update(row).eq('id', userId).select('*').single();
     if (error) throw new Error(error.message);
@@ -546,6 +580,128 @@ export class SupabaseRepo implements IronMilesRepo {
         .eq('id', entry.scheduledWorkoutId);
     }
     return this.toCompleted(data);
+  }
+
+  async unlogWorkout(completedId: UUID): Promise<void> {
+    const { data, error } = await this.db
+      .from('completed_workouts')
+      .delete()
+      .eq('id', completedId)
+      .select('scheduled_workout_id')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    // the activity's link clears itself: the foreign key is on delete set null
+    if (data?.scheduled_workout_id) {
+      const { error: e } = await this.db
+        .from('scheduled_workouts')
+        .update({ status: 'scheduled' })
+        .eq('id', data.scheduled_workout_id)
+        .eq('status', 'completed');
+      if (e) throw new Error(e.message);
+    }
+  }
+
+  /* ---------- activities ---------- */
+
+  listActivities(athleteId: UUID, limit = 50) {
+    return this.rows(
+      this.db
+        .from('activities')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .order('started_at', { ascending: false })
+        .limit(limit),
+      this.toActivity,
+    );
+  }
+
+  listActivitiesOn(athleteId: UUID, from: ISODate, to: ISODate) {
+    return this.rows(
+      this.db
+        .from('activities')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .gte('local_date', from)
+        .lte('local_date', to)
+        .order('started_at', { ascending: false }),
+      this.toActivity,
+    );
+  }
+
+  getActivity(id: UUID) {
+    return this.one(this.db.from('activities').select('*').eq('id', id).maybeSingle(), this.toActivity);
+  }
+
+  async saveActivity(draft: ActivityDraft): Promise<{ activity: Activity; duplicate: boolean }> {
+    const { data, error } = await this.db
+      .from('activities')
+      .insert({
+        athlete_id: draft.athleteId,
+        source: draft.source,
+        format: draft.format,
+        fingerprint: draft.fingerprint,
+        name: draft.name,
+        sport: draft.sport,
+        started_at: draft.startedAt,
+        local_date: draft.localDate,
+        distance_m: draft.distanceM,
+        moving_s: draft.movingS,
+        elapsed_s: draft.elapsedS,
+        avg_pace_sec_per_km: draft.avgPaceSecPerKm,
+        avg_hr: draft.avgHr,
+        max_hr: draft.maxHr,
+        ascent_m: draft.ascentM,
+        descent_m: draft.descentM,
+        route: draft.route,
+        privacy_trim_m: draft.privacyTrimM,
+        splits: draft.splits,
+        series: draft.series,
+        hr_histogram: draft.hrHistogram,
+        scheduled_workout_id: draft.scheduledWorkoutId,
+        completed_workout_id: draft.completedWorkoutId,
+        visibility: draft.visibility,
+      })
+      .select('*')
+      .single();
+    if (!error) return { activity: this.toActivity(data), duplicate: false };
+
+    // 23505 = unique_violation on (athlete_id, fingerprint): this file is already here
+    if (error.code === '23505') {
+      const existing = await this.one(
+        this.db
+          .from('activities')
+          .select('*')
+          .eq('athlete_id', draft.athleteId)
+          .eq('fingerprint', draft.fingerprint)
+          .maybeSingle(),
+        this.toActivity,
+      );
+      if (existing) return { activity: existing, duplicate: true };
+    }
+    throw new Error(error.message);
+  }
+
+  async linkActivity(id: UUID, link: { scheduledWorkoutId: UUID | null; completedWorkoutId: UUID | null }) {
+    // the activities_links_own_rows trigger refuses a link to anyone else's rows
+    const { error } = await this.db
+      .from('activities')
+      .update({ scheduled_workout_id: link.scheduledWorkoutId, completed_workout_id: link.completedWorkoutId })
+      .eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async updateActivity(id: UUID, patch: { name?: string; visibility?: ActivityVisibility }) {
+    const row: Record<string, unknown> = {};
+    if (patch.name !== undefined) row.name = patch.name;
+    if (patch.visibility !== undefined) row.visibility = patch.visibility;
+    if (!Object.keys(row).length) return;
+    const { error } = await this.db.from('activities').update(row).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async deleteActivity(id: UUID) {
+    const { error } = await this.db.from('activities').delete().eq('id', id);
+    if (error) throw new Error(error.message);
   }
 
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate) {

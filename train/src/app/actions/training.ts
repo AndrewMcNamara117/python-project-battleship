@@ -45,7 +45,23 @@ export async function logWorkout(formData: FormData): Promise<Result> {
 
   const distance = parsed.data.actualDistanceKm ?? null;
   const duration = parsed.data.actualDurationMinutes ?? null;
-  const pace = distance && duration && distance > 0 ? Math.round((duration * 60) / distance) : null;
+
+  // Adding an RPE to a session a watch file already logged must not erase
+  // what the watch measured. The form does not pre-fill heart rate, rating or
+  // soreness, so a blank there means "not touched", not "clear it"; and the
+  // file's moving pace stands while distance and time are as it recorded them.
+  const existing = (await repo.listCompleted(session.userId, scheduled.date, scheduled.date)).find(
+    (c) => c.scheduledWorkoutId === scheduled.id,
+  );
+  const unchangedFromFile =
+    existing?.source === 'upload' &&
+    existing.actualDistanceKm === distance &&
+    existing.actualDurationMinutes === duration;
+  const pace = unchangedFromFile
+    ? existing.averagePaceSecPerKm
+    : distance && duration && distance > 0
+      ? Math.round((duration * 60) / distance)
+      : null;
 
   await repo.logWorkout({
     scheduledWorkoutId: scheduled.id,
@@ -55,13 +71,13 @@ export async function logWorkout(formData: FormData): Promise<Result> {
     actualDistanceKm: distance,
     actualDurationMinutes: duration,
     averagePaceSecPerKm: pace,
-    averageHeartRate: parsed.data.averageHeartRate ?? null,
-    maxHeartRate: parsed.data.maxHeartRate ?? null,
+    averageHeartRate: parsed.data.averageHeartRate ?? existing?.averageHeartRate ?? null,
+    maxHeartRate: parsed.data.maxHeartRate ?? existing?.maxHeartRate ?? null,
     rpe: parsed.data.rpe ?? null,
-    sessionRating: parsed.data.sessionRating ?? null,
-    soreness: parsed.data.soreness ?? null,
+    sessionRating: parsed.data.sessionRating ?? existing?.sessionRating ?? null,
+    soreness: parsed.data.soreness ?? existing?.soreness ?? null,
     athleteNotes: parsed.data.athleteNotes ?? null,
-    source: 'manual',
+    source: existing?.source ?? 'manual',
   });
 
   await awardWeeklyBonuses(session.userId, scheduled.date);

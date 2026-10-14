@@ -1,0 +1,150 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { requireSession } from '@/lib/auth';
+import { getRepo } from '@/lib/data';
+import { rateLimit } from '@/lib/rate-limit';
+import { attachActivity, importActivity, removeActivity } from '@/lib/activity/service';
+import { ActivityFileError } from '@/lib/activity/types';
+import { PRIVACY_TRIM_OPTIONS } from '@/lib/activity/route';
+import { formatDayMonth } from '@/lib/domain/dates';
+
+export interface ImportResult {
+  ok: boolean;
+  message: string;
+  status?: 'matched' | 'enriched' | 'ambiguous' | 'unmatched' | 'duplicate';
+  activityId?: string;
+}
+
+export interface ActivityResult {
+  ok: boolean;
+  message: string;
+}
+
+/** What arrives over the wire: gzip from our own form, so this is generous. */
+const MAX_UPLOAD_BYTES = 4.4 * 1024 * 1024;
+
+function revalidateTraining() {
+  for (const path of ['/app', '/app/today', '/app/calendar', '/app/progress', '/app/training', '/app/activities']) {
+    revalidatePath(path);
+  }
+}
+
+/** Import one watch file. Athletes only; coaches read activities, never create them. */
+export async function importActivityFile(formData: FormData): Promise<ImportResult> {
+  const session = await requireSession();
+  if (session.role !== 'athlete') {
+    return { ok: false, message: 'Only athletes import activities. Coaches see them on the athlete’s page.' };
+  }
+  // generous for a person, a ceiling for a script: thirty files in ten minutes
+  if (!rateLimit(`activity-import:${session.userId}`, 30, 10 * 60 * 1000)) {
+    return { ok: false, message: 'That is a lot of files at once. Give it a few minutes and try the rest.' };
+  }
+
+  const file = formData.get('file');
+  if (!(file instanceof Blob) || file.size === 0) {
+    return { ok: false, message: 'Choose a .fit, .gpx or .tcx file first.' };
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { ok: false, message: 'That file is too large to be one activity.' };
+  }
+
+  const repo = await getRepo();
+  const profile = await repo.getProfile(session.userId);
+  if (!profile) return { ok: false, message: 'Your profile could not be found.' };
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const out = await importActivity(repo, profile, bytes);
+    revalidateTraining();
+    const when = formatDayMonth(out.activity.localDate);
+    switch (out.status) {
+      case 'matched':
+        return { ok: true, status: out.status, activityId: out.activity.id, message: `Logged against ${out.session.name} on ${when}.` };
+      case 'enriched':
+        return {
+          ok: true,
+          status: out.status,
+          activityId: out.activity.id,
+          message: `Added to the ${out.session.name} you logged on ${when}. Nothing you typed was changed.`,
+        };
+      case 'ambiguous':
+        return { ok: true, status: out.status, activityId: out.activity.id, message: `Imported. Two sessions on ${when} could be this one — pick which.` };
+      case 'unmatched':
+        return { ok: true, status: out.status, activityId: out.activity.id, message: `Imported. ${out.reason}` };
+      case 'duplicate':
+        return { ok: true, status: out.status, activityId: out.activity.id, message: `Already imported — that is the run from ${when}.` };
+    }
+  } catch (error) {
+    if (error instanceof ActivityFileError) return { ok: false, message: error.message };
+    console.error('[activities] import failed', error);
+    return { ok: false, message: 'The file could not be imported. Nothing was saved.' };
+  }
+}
+
+export async function attachActivityToSession(activityId: string, scheduledId: string): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+  const out = await attachActivity(repo, session.userId, activityId, scheduledId);
+  if (!out.ok) {
+    const message = {
+      not_found: 'That activity no longer exists.',
+      not_yours: 'That activity no longer exists.',
+      already_attached: 'That activity is already attached to a session.',
+      not_an_option: 'That session cannot take this activity.',
+    }[out.error];
+    return { ok: false, message };
+  }
+  revalidateTraining();
+  revalidatePath(`/app/activities/${activityId}`);
+  return { ok: true, message: `Logged against ${out.session.name}.` };
+}
+
+export async function deleteActivity(activityId: string): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+  const out = await removeActivity(repo, session.userId, activityId);
+  if (!out.ok) return { ok: false, message: 'That activity no longer exists.' };
+  revalidateTraining();
+  return {
+    ok: true,
+    message: out.unlogged ? 'Deleted, and its session is back on your plan.' : 'Deleted. Your log for that session is unchanged.',
+  };
+}
+
+export async function renameActivity(activityId: string, name: string): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+  const activity = await repo.getActivity(activityId);
+  if (!activity || activity.athleteId !== session.userId) return { ok: false, message: 'That activity no longer exists.' };
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!clean) return { ok: false, message: 'Give it a name.' };
+  await repo.updateActivity(activityId, { name: clean });
+  revalidatePath(`/app/activities/${activityId}`);
+  revalidatePath('/app/activities');
+  return { ok: true, message: 'Renamed.' };
+}
+
+/** The two settings the importer reads. */
+export async function saveActivitySettings(formData: FormData): Promise<ActivityResult> {
+  const session = await requireSession();
+  const repo = await getRepo();
+
+  const rawMax = String(formData.get('maxHeartRate') ?? '').trim();
+  const max = rawMax === '' ? null : Number(rawMax);
+  if (max !== null && (!Number.isInteger(max) || max < 100 || max > 240)) {
+    return { ok: false, message: 'Max heart rate is a whole number between 100 and 240.' };
+  }
+  const trim = Number(formData.get('privacyTrimM'));
+  if (!(PRIVACY_TRIM_OPTIONS as readonly number[]).includes(trim)) {
+    return { ok: false, message: 'Choose one of the privacy distances.' };
+  }
+
+  await repo.updateProfile(session.userId, { maxHeartRate: max, privacyTrimM: trim });
+  revalidatePath('/app/activities');
+  revalidatePath('/app/profile');
+  return {
+    ok: true,
+    message: 'Saved. The privacy distance applies to files you import from now on.',
+  };
+}

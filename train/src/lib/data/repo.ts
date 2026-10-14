@@ -14,6 +14,7 @@ import type {
   WeekVolume,
   WorkoutTemplate,
 } from '@/lib/domain/library';
+import type { Activity, ActivityDraft, ActivityVisibility } from '@/lib/activity/types';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
@@ -183,6 +184,26 @@ export interface IronMilesRepo {
 
   listCompleted(athleteId: UUID, from: ISODate, to: ISODate): Promise<CompletedWorkout[]>;
   logWorkout(entry: Omit<CompletedWorkout, 'id' | 'createdAt'>): Promise<CompletedWorkout>;
+
+  /**
+   * Remove a log and put its session back on the plan.
+   * Used when the athlete deletes the imported activity that created it.
+   */
+  unlogWorkout(completedId: UUID): Promise<void>;
+
+  /* activities — what the watch recorded */
+  listActivities(athleteId: UUID, limit?: number): Promise<Activity[]>;
+  /** Activities that started on these calendar dates, for duplicate and match checks. */
+  listActivitiesOn(athleteId: UUID, from: ISODate, to: ISODate): Promise<Activity[]>;
+  getActivity(id: UUID): Promise<Activity | null>;
+  /**
+   * Store an import. The same file twice (same fingerprint) returns the row
+   * already there with `duplicate: true` rather than writing a second one.
+   */
+  saveActivity(draft: ActivityDraft): Promise<{ activity: Activity; duplicate: boolean }>;
+  linkActivity(id: UUID, link: { scheduledWorkoutId: UUID | null; completedWorkoutId: UUID | null }): Promise<void>;
+  updateActivity(id: UUID, patch: { name?: string; visibility?: ActivityVisibility }): Promise<void>;
+  deleteActivity(id: UUID): Promise<void>;
 
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]>;
   getStrengthSession(id: UUID): Promise<StrengthSession | null>;

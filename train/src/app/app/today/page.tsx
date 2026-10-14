@@ -113,6 +113,14 @@ export default async function TodayPage() {
                     </ButtonLink>
                   </div>
                 ) : (
+                  <>
+                  <p className="mb-6 text-[13px] text-ink-secondary">
+                    Ran with a watch?{' '}
+                    <Link href="/app/activities" className="font-bold text-mint hover:underline">
+                      Import the file
+                    </Link>{' '}
+                    and it logs itself, with the route and splits.
+                  </p>
                   <LogSessionForm
                     workout={lead}
                     units={units}
@@ -128,6 +136,7 @@ export default async function TodayPage() {
                         : null;
                     })()}
                   />
+                  </>
                 )}
               </SessionCard>
             </Rise>

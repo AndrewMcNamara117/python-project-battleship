@@ -34,6 +34,7 @@ import { ReplyToAthlete } from '@/components/roster/ReplyToAthlete';
 import { waitedFor } from '@/lib/domain/roster';
 import { CoachingContextControl } from './PhaseControl';
 import { AthleteContext } from '@/components/forge/AthleteContext';
+import { ActivityList } from '@/components/activity/ActivityList';
 
 export const metadata: Metadata = { title: 'Athlete' };
 
@@ -52,7 +53,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
   const weekEnd = endOfWeek(today);
   const from = addDays(weekStart, -7 * 19);
 
-  const [goal, program, scheduled, completed, strength, checkins, notes, forgeEvents, messages] =
+  const [goal, program, scheduled, completed, strength, checkins, notes, forgeEvents, messages, activities] =
     await Promise.all([
       repo.getPrimaryGoal(id),
       repo.getProgram(id),
@@ -63,6 +64,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
       repo.listCoachNotes(id, 'coach'),
       repo.listForgeEvents(id),
       repo.listMessages(id),
+      repo.listActivities(id, 8),
     ]);
 
   // Who is waiting, by the same rule the roster and migration 0020 use: the
@@ -259,6 +261,25 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
               </Panel>
             </Reveal>
           </div>
+
+          <Reveal delay={0.15}>
+            <Panel className="p-6 sm:p-8">
+              <PanelHeader label="From the watch" />
+              {activities.length ? (
+                <div className="mt-5">
+                  <ActivityList
+                    activities={activities}
+                    units={profile.units}
+                    hrefFor={(a) => `/coach/athletes/${id}/activities/${a.id}`}
+                  />
+                </div>
+              ) : (
+                <p className="mt-4 text-[13px] text-ink-secondary">
+                  No watch files imported yet. Their manual logs are above.
+                </p>
+              )}
+            </Panel>
+          </Reveal>
 
           <Reveal delay={0.16}>
             <Panel className="p-6 sm:p-8">

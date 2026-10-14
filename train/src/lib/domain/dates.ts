@@ -100,9 +100,10 @@ export function formatMinutes(minutes: number): string {
 /** Seconds per km -> "5:12 /km" */
 export function formatPace(secPerKm: number | null, units: 'metric' | 'imperial' = 'metric'): string {
   if (secPerKm == null) return '—';
-  const perUnit = units === 'imperial' ? secPerKm * 1.609344 : secPerKm;
+  // round once, then split: rounding the seconds alone turns 4:59.6 into "4:60"
+  const perUnit = Math.round(units === 'imperial' ? secPerKm * 1.609344 : secPerKm);
   const m = Math.floor(perUnit / 60);
-  const s = Math.round(perUnit % 60);
+  const s = perUnit % 60;
   return `${m}:${String(s).padStart(2, '0')} /${units === 'imperial' ? 'mi' : 'km'}`;
 }
 
