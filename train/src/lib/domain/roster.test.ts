@@ -443,6 +443,40 @@ describe('the workload, by the thing that needs doing', () => {
     assert.deepEqual(concernsFor(sarah).sort(), ['ending', 'missed']);
   });
 
+  it('does not bury pain under an empty diary either', () => {
+    // The bug this replaces: `no_future_sessions` was the only signal rated
+    // 'urgent', and compareSignals weighs severity before the concern order.
+    // So an athlete reporting worsening pain who ALSO had nothing scheduled
+    // led with "nothing scheduled" — Slice 11's complaint, arriving through
+    // a door Slice 11 did not close.
+    const both = sore('y', { programmeId: 'p-y', futureSessions: 0 });
+
+    assert.ok(both.signals.some((s) => s.kind === 'no_future_sessions'),
+      'the empty diary is still reported — this is about order, not hiding things');
+    assert.equal(both.topSignal?.kind, 'soreness_reported',
+      'what the athlete said about their body leads an administrative gap');
+
+    // and the severity itself has to say so, because severity is what the
+    // digest and the alert priority read.
+    assert.equal(both.topSignal?.severity, 'urgent');
+  });
+
+  it('leaves a quiet niggle quiet', () => {
+    // The counterweight. A written note with a low soreness score is a note,
+    // not a crisis: promoting it is how a coach gets woken at midnight to be
+    // told nobody is hurt.
+    const mild = buildEntry(facts({
+      athleteId: 'm', fullName: 'Mild',
+      checkIn: {
+        id: 'ci-m', weekStart: '2026-09-14', submittedAt: `${TODAY}T08:00:00Z`,
+        attention: 'none', reasons: [], acknowledgedAt: null, respondedAt: null,
+        fatigue: 4, soreness: 2, painOrNiggles: 'Nothing to report.',
+      },
+    }), TODAY);
+    const niggle = mild.signals.find((s) => s.kind === 'soreness_reported');
+    assert.equal(niggle?.severity, 'information');
+  });
+
   it('does not bury pain under paperwork', () => {
     // both are `attention`; the classifier used to push the renewal date first
     // purely because that code came earlier in the file
@@ -823,8 +857,13 @@ describe('the check-in queue triages by the roster\'s own definitions', () => {
   it('grades pain by the athlete\'s own score, not by whether they typed', () => {
     const loud = queueSignals(painOnly).find((s) => s.kind === 'soreness_reported')!;
     const quiet = queueSignals(painMild).find((s) => s.kind === 'soreness_reported')!;
-    assert.equal(loud.severity, 'attention');
+    // The claim is the gap between them, not the labels. `loud` was raised
+    // from 'attention' to 'urgent' when it turned out an empty diary — the
+    // only other 'urgent' — was outranking somebody's Achilles.
+    assert.equal(loud.severity, 'urgent');
     assert.equal(quiet.severity, 'information');
+    assert.notEqual(loud.severity, quiet.severity,
+      'a written niggle with a low score must never read like reported pain');
   });
 
   it('filters find the right check-ins and only those', () => {

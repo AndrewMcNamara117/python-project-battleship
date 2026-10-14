@@ -481,7 +481,17 @@ export function checkInSignals(
   if (c.attention === 'attention' && !c.respondedAt) {
     out.push({
       kind: 'checkin_flagged',
-      severity: 'attention',
+      // Urgent, and it has to be: `no_future_sessions` is urgent, and while
+      // this sat at 'attention' an athlete who reported worsening pain AND
+      // had an empty diary led with "nothing scheduled". Severity decides
+      // before the concern order does, so no amount of ranking underneath
+      // could rescue it — the fix belongs here.
+      //
+      // The product already believes this: ALERT_SIGNALS, the set of things
+      // worth interrupting a coach for, is exactly checkin_flagged and
+      // soreness_reported. If it is worth a push notification it is not
+      // merely "attention".
+      severity: 'urgent',
       detail: c.reasons.length
         ? `Check-in flagged: ${c.reasons.join(', ')}.`
         : 'Check-in flagged for review.',
@@ -508,7 +518,11 @@ export function checkInSignals(
     // them, and nothing here decides what they mean.
     out.push({
       kind: 'soreness_reported',
-      severity: (c.soreness ?? 0) >= SORENESS_RAISES ? 'attention' : 'information',
+      // Above the threshold this is the athlete's body talking, and it leads
+      // everything. Below it, it stays 'information' — a written niggle with
+      // a low score is a note, and promoting that would be the midnight-wake
+      // mistake the comment above exists to prevent.
+      severity: (c.soreness ?? 0) >= SORENESS_RAISES ? 'urgent' : 'information',
       detail: `Reported: ${c.painOrNiggles}`,
       href: `${athleteHref}#checkins`,
     });
