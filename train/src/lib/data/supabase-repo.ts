@@ -107,6 +107,12 @@ import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Every activities column but series and splits: see listActivities. */
+const ACTIVITY_LIST_COLUMNS =
+  'id, athlete_id, source, format, fingerprint, name, sport, started_at, local_date, distance_m, moving_s, elapsed_s, ' +
+  'avg_pace_sec_per_km, avg_hr, max_hr, ascent_m, descent_m, route, privacy_trim_m, hr_histogram, best_efforts, ' +
+  'scheduled_workout_id, completed_workout_id, visibility, created_at';
+
 export class SupabaseRepo implements IronMilesRepo {
   readonly mode = 'supabase' as const;
 
@@ -675,7 +681,7 @@ export class SupabaseRepo implements IronMilesRepo {
     return this.rows(
       this.db
         .from('activities')
-        .select('*')
+        .select(ACTIVITY_LIST_COLUMNS)
         .eq('athlete_id', athleteId)
         .order('started_at', { ascending: false })
         .limit(limit),
@@ -687,7 +693,7 @@ export class SupabaseRepo implements IronMilesRepo {
     return this.rows(
       this.db
         .from('activities')
-        .select('*')
+        .select(ACTIVITY_LIST_COLUMNS)
         .eq('athlete_id', athleteId)
         .gte('local_date', from)
         .lte('local_date', to)

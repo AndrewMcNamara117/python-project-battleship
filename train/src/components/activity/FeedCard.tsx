@@ -29,7 +29,7 @@ export function FeedCard({ item, units, viewerId, href }: { item: FeedItem; unit
       </header>
 
       <Link href={href} className="group block px-5 pt-3">
-        <h3 className="text-[17px] font-bold text-ink group-hover:text-mint">{item.name}</h3>
+        <h2 className="text-[17px] font-bold text-ink group-hover:text-mint">{item.name}</h2>
         <dl className="mt-3 grid grid-cols-4 gap-3">
           {[
             ['Distance', distanceLabel(item.distanceM, units)],

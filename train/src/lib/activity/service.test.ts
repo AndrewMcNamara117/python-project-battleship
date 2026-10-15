@@ -207,7 +207,11 @@ describe('demo seed', () => {
     const list = await repo.listActivities(DEMO_ATHLETE_ID);
     assert.ok(list.length >= 6, `got ${list.length}`);
     const a = list[0];
-    assert.ok(a.route && a.splits.length && a.hrHistogram.length);
+    assert.ok(a.route && a.hrHistogram.length);
     assert.ok(a.completedWorkoutId);
+    // a list item is light; the activity itself has the full detail
+    assert.equal(a.series.length + a.splits.length, 0);
+    const full = await repo.getActivity(a.id);
+    assert.ok(full?.splits.length && full.series.length);
   });
 });

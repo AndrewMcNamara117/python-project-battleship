@@ -258,6 +258,9 @@ function forgeKindFor(name: string, type: string): ForgeEventKind {
   return 'run_completed';
 }
 
+/** A list item, as the Supabase adapter selects it: no series or splits. */
+const light = (a: Activity): Activity => ({ ...a, series: [], splits: [] });
+
 /** As 0024's "a day's grace for time zones": later than tomorrow has not happened. */
 const aheadOfToday = (date: ISODate) => date > addDays(toISODate(new Date()), 1);
 
@@ -483,7 +486,8 @@ export class DemoRepo implements IronMilesRepo {
       dataset()
         .activities.filter((a) => a.athleteId === athleteId)
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-        .slice(0, limit),
+        .slice(0, limit)
+        .map(light),
     );
   }
 
@@ -491,7 +495,8 @@ export class DemoRepo implements IronMilesRepo {
     return clone(
       dataset()
         .activities.filter((a) => a.athleteId === athleteId && a.localDate >= from && a.localDate <= to)
-        .sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+        .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+        .map(light),
     );
   }
 

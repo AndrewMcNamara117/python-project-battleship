@@ -178,3 +178,14 @@ describe('every database function the repository calls exists with the parameter
     assert.ok(used.size >= 25, `only ${used.size} functions reached`);
   });
 });
+
+describe('named column lists exist on their table', () => {
+  it('ACTIVITY_LIST_COLUMNS names real activities columns, and leaves out only series and splits', () => {
+    const m = SOURCE.match(/const ACTIVITY_LIST_COLUMNS =([\s\S]*?);\n/);
+    assert.ok(m, 'ACTIVITY_LIST_COLUMNS is declared');
+    const listed = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]).join('').split(',').map((c) => c.trim()).filter(Boolean);
+    const real = tables.get('activities');
+    for (const c of listed) assert.ok(real.has(c), `activities.${c} does not exist`);
+    assert.deepEqual([...real].filter((c) => !listed.includes(c)).sort(), ['series', 'splits']);
+  });
+});

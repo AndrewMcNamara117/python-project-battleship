@@ -197,8 +197,13 @@ export interface IronMilesRepo {
   unlogWorkout(completedId: UUID): Promise<void>;
 
   /* activities — what the watch recorded */
+  /**
+   * Newest first. A list item carries no `series` or `splits` (both empty):
+   * they are the bulk of a row and only the activity's own page draws them.
+   * Read one with getActivity for those.
+   */
   listActivities(athleteId: UUID, limit?: number): Promise<Activity[]>;
-  /** Activities that started on these calendar dates, for duplicate and match checks. */
+  /** Activities that started on these calendar dates, for duplicate and match checks. Light, as listActivities. */
   listActivitiesOn(athleteId: UUID, from: ISODate, to: ISODate): Promise<Activity[]>;
   getActivity(id: UUID): Promise<Activity | null>;
   /**
