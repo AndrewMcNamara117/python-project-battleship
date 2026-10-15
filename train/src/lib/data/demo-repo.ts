@@ -43,6 +43,7 @@ import type {
   UUID,
 } from '@/lib/domain/types';
 import { FORGE_POINTS, weekdayList } from '@/lib/domain/types';
+import { canJoin, progressFor, type Challenge, type ChallengeDraft, type ChallengeSummary } from '@/lib/domain/challenges';
 import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
 import { toFeedItem, type Activity, type ActivityComment, type ActivityDraft, type ActivitySocial, type ActivityVisibility, type FeedItem } from '@/lib/activity/types';
 import type { Weekday } from '@/lib/domain/types';
@@ -672,6 +673,77 @@ export class DemoRepo implements IronMilesRepo {
         elapsedS: e.elapsedS,
         startedAt: e.startedAt,
       }));
+  }
+
+  /* ---------- challenges ---------- */
+
+  async listChallenges(includeArchived = false): Promise<Challenge[]> {
+    return clone(
+      dataset()
+        .challenges.filter((c) => includeArchived || !c.archived)
+        .sort((a, b) => b.startsOn.localeCompare(a.startsOn) || a.name.localeCompare(b.name)),
+    );
+  }
+
+  async getChallenge(id: UUID): Promise<Challenge | null> {
+    return clone(dataset().challenges.find((c) => c.id === id) ?? null);
+  }
+
+  async createChallenge(draft: ChallengeDraft): Promise<Challenge> {
+    const d = dataset();
+    const role = d.profiles.find((p) => p.id === draft.createdBy)?.role;
+    // the same limits 0027 sets: staff only, a sane name and target, a window under a year
+    if (role !== 'coach' && role !== 'admin') throw new Error('challenge refused by policy');
+    const name = draft.name.trim();
+    const days = daysBetween(draft.startsOn, draft.endsOn);
+    if (name.length < 3 || name.length > 80 || !(draft.target > 0 && draft.target <= 10000) || days < 0 || days > 366) {
+      throw new Error('challenge violates check constraint');
+    }
+    const row: Challenge = { ...draft, name, id: uid('ch'), archived: false, createdAt: new Date().toISOString() };
+    d.challenges.push(row);
+    return clone(row);
+  }
+
+  async setChallengeArchived(id: UUID, archived: boolean): Promise<void> {
+    const c = dataset().challenges.find((x) => x.id === id);
+    if (c) c.archived = archived;
+  }
+
+  async joinChallenge(challengeId: UUID, athleteId: UUID): Promise<void> {
+    const d = dataset();
+    const c = d.challenges.find((x) => x.id === challengeId);
+    if (!c || !canJoin(c, toISODate(new Date()))) throw new Error('join refused by policy');
+    if (d.challengeParticipants.some((p) => p.challengeId === challengeId && p.athleteId === athleteId)) return;
+    d.challengeParticipants.push({ challengeId, athleteId, joinedAt: new Date().toISOString() });
+  }
+
+  async leaveChallenge(challengeId: UUID, athleteId: UUID): Promise<void> {
+    const d = dataset();
+    const c = d.challenges.find((x) => x.id === challengeId);
+    if (!c || !canJoin(c, toISODate(new Date()))) return; // closed: as the policy, nothing happens
+    d.challengeParticipants = d.challengeParticipants.filter((p) => !(p.challengeId === challengeId && p.athleteId === athleteId));
+  }
+
+  async getChallengeSummary(viewerId: UUID, challengeId: UUID): Promise<ChallengeSummary> {
+    const d = dataset();
+    const c = d.challenges.find((x) => x.id === challengeId);
+    if (!c) return { participants: 0, finishers: [], viewerJoined: false, viewerProgress: null };
+    const people = d.challengeParticipants.filter((p) => p.challengeId === challengeId);
+    const progress = (athleteId: UUID) =>
+      progressFor(c, {
+        scheduled: d.scheduled.filter((s) => s.athleteId === athleteId),
+        completed: d.completed.filter((w) => w.athleteId === athleteId),
+        forge: d.forgeEvents.filter((f) => f.athleteId === athleteId),
+        checkins: d.checkins.filter((k) => k.athleteId === athleteId),
+      });
+    const name = (id: UUID) => d.profiles.find((p) => p.id === id)?.fullName ?? 'Member';
+    const joined = people.some((p) => p.athleteId === viewerId);
+    return {
+      participants: people.length,
+      finishers: people.filter((p) => progress(p.athleteId) >= c.target).map((p) => name(p.athleteId)).sort(),
+      viewerJoined: joined,
+      viewerProgress: joined ? progress(viewerId) : null,
+    };
   }
 
   async deleteComment(commentId: UUID, byUserId: UUID): Promise<void> {

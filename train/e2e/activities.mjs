@@ -197,7 +197,33 @@ await cp.goto(`${BASE}/coach/athletes/demo-athlete-andrew`, { waitUntil: 'networ
 const coachPage = (await cp.textContent('main')) ?? '';
 step(27, 'the coach sees fitness, fatigue and form', /Fitness/.test(coachPage) && /Fatigue/.test(coachPage) && /Form/.test(coachPage));
 
-step(28, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+// notifications
+await page.goto(`${BASE}/app`, { waitUntil: 'networkidle' });
+step(28, 'the top bar shows unread notifications', Boolean(await page.$('a[href="/app/notifications"]')));
+await page.goto(`${BASE}/app/notifications`, { waitUntil: 'networkidle' });
+const inbox = (await page.textContent('main')) ?? '';
+step(29, 'the inbox has the club’s kudos and comment', /kudos/i.test(inbox) && /commented on/i.test(inbox), inbox.slice(0, 200));
+await page.locator('main ul li button', { hasText: /kudos/i }).first().click();
+await page.waitForURL(/\/app\/activities\//, { timeout: 15000 }).catch(() => {});
+step(30, 'opening a notification goes to the activity', /\/app\/activities\//.test(page.url()), page.url());
+
+// challenges
+await page.goto(`${BASE}/app/challenges`, { waitUntil: 'networkidle' });
+step(31, 'the month’s challenges are listed', (await page.$$('main h2')).length >= 3);
+const joinable = page.locator('button:has-text("Join")').first();
+await joinable.click();
+await page.waitForTimeout(1200);
+step(32, 'joining shows your progress', (await page.$$('[role="progressbar"]')).length >= 3);
+const challengeName = `QA month ${Date.now().toString().slice(-4)}`;
+await cp.goto(`${BASE}/coach/challenges`, { waitUntil: 'networkidle' });
+await cp.fill('input[name="name"]', challengeName);
+await cp.fill('input[name="target"]', '12');
+await cp.click('button:has-text("Set challenge")');
+await cp.waitForFunction(() => /is set/.test(document.querySelector('[role=status]')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => {});
+await page.goto(`${BASE}/app/challenges`, { waitUntil: 'networkidle' });
+step(33, 'a challenge a coach sets appears for athletes', ((await page.textContent('main')) ?? '').includes(challengeName));
+
+step(34, 'no console or page errors', errors.length === 0, errors.slice(0, 3).join(' | '));
 
 await browser.close();
 console.log(`\n${pass} passed, ${fail} failed\n`);

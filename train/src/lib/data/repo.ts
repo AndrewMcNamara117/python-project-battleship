@@ -16,6 +16,7 @@ import type {
 } from '@/lib/domain/library';
 import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
 import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
+import type { Challenge, ChallengeDraft, ChallengeSummary } from '@/lib/domain/challenges';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
@@ -233,6 +234,17 @@ export interface IronMilesRepo {
   listEffortsForActivity(activityId: UUID): Promise<SegmentEffort[]>;
   /** Each athlete's best on a segment, from runs shared with the club. */
   getSegmentLeaders(segmentId: UUID, limit?: number): Promise<SegmentLeader[]>;
+
+  /* challenges — a target over a window, finished rather than won */
+  listChallenges(includeArchived?: boolean): Promise<Challenge[]>;
+  getChallenge(id: UUID): Promise<Challenge | null>;
+  /** Staff only. */
+  createChallenge(draft: ChallengeDraft): Promise<Challenge>;
+  setChallengeArchived(id: UUID, archived: boolean): Promise<void>;
+  joinChallenge(challengeId: UUID, athleteId: UUID): Promise<void>;
+  leaveChallenge(challengeId: UUID, athleteId: UUID): Promise<void>;
+  /** Participants, finishers' names, and the viewer's own progress — nobody else's numbers. */
+  getChallengeSummary(viewerId: UUID, challengeId: UUID): Promise<ChallengeSummary>;
 
   listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]>;
   getStrengthSession(id: UUID): Promise<StrengthSession | null>;

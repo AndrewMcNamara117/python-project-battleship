@@ -100,6 +100,8 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0023_segments.sql    # segments and server-written efforts
    supabase/migrations/0024_forge_awards.sql # Forge points awarded by triggers
    supabase/migrations/0025_best_efforts.sql # personal-record data on activities
+   supabase/migrations/0026_social_notifications.sql # kudos and comment notices
+   supabase/migrations/0027_challenges.sql   # club challenges
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -263,6 +265,25 @@ marathon *inside* every imported run, found at import from the full track and ke
 activity (`best_efforts`, migration 0025). Records are the minimum per distance across activities,
 so deleting a run hands its records back. An import that beats an earlier time says so; a first
 time does not. Watch files only, and only runs imported since records existed.
+
+---
+
+## Notifications for athletes, and club challenges
+
+**Inbox** (`/app/notifications`, count in the top bar). Kudos and comments on an athlete's
+activities are written there by triggers (migration 0026): kudos fold into one notification per
+activity, each comment is its own with an excerpt, nobody is told about their own action, and
+`profiles.notify_social` turns it off. In-app only — email goes through `notification_deliveries`,
+which only `im_notify` (the coach channel) creates. Opening a notification marks it read; loading
+the page does not.
+
+**Challenges** (`/app/challenges`, set at `/coach/challenges`). A target over a window of up to a
+year — sessions completed as written, club runs, weekly check-ins, or kilometres — that athletes
+opt into. **Finished, not won**: nothing is ranked. Progress is computed from the athlete's own
+rows (never submitted), visible to them and their coach; the club sees how many joined and who
+finished, via `im_challenge_summary`. The progress rule exists in SQL (migration 0027) and in
+`src/lib/domain/challenges.ts` for the demo; the challenges RLS suite and demo parity tests keep
+them in step. A distance challenge warns the coach that it rewards volume.
 
 ---
 

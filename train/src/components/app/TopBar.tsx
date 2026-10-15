@@ -40,7 +40,8 @@ export function TopBar({
               href={home === '/app' ? '/app/notifications' : '/coach/notifications'}
               aria-label={`${notifications} unread ${notifications === 1 ? 'notification' : 'notifications'}`}
             >
-              <Badge tone="alert">
+              {/* red is for a coach's alerts; an athlete's inbox is kudos and comments */}
+              <Badge tone={home === '/app' ? 'green' : 'alert'}>
                 {notifications} new
               </Badge>
             </Link>

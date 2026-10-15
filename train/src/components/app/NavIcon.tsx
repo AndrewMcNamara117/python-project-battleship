@@ -8,6 +8,7 @@ const PATHS: Record<string, string> = {
   today: 'M12 4v8l5 3M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18z',
   calendar: 'M4 7h16v13H4zM4 7V5h16v2M8 3v4M16 3v4M8 12h3M8 16h8',
   activity: 'M5 19.5a1.5 1.5 0 1 0 0-.1M19 6.5a1.5 1.5 0 1 0 0-.1M6.3 18.2c3-2.4 1.6-5.6 4.7-6.6 3-.9 5.4.4 6.7-4.1',
+  flag: 'M6 21V4M6 4h11l-2.5 4L17 12H6',
   segment: 'M4 17c4 0 4-10 8-10s4 10 8 10M4 14v6M20 14v6',
   run: 'M13 4.5a1.4 1.4 0 1 0 0-.1zM7 21l3-5 3 2 1 3M10 16l-2-4 4-3 3 3h3',
   strength: 'M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12',

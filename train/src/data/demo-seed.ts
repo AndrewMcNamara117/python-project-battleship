@@ -1,5 +1,6 @@
 import {
   addDays,
+  startOfMonth,
   startOfWeek,
   toISODate,
   weekdayIndex,
@@ -34,6 +35,7 @@ import { DEMO_STRENGTH_TEMPLATES } from './demo-library.generated';
 import { demoActivities, demoClub } from './demo-activities';
 import type { Activity } from '@/lib/activity/types';
 import type { Segment, SegmentEffort } from '@/lib/activity/segments';
+import type { Challenge } from '@/lib/domain/challenges';
 
 /**
  * The demo athlete's strength days point at the shipped templates by name —
@@ -106,6 +108,8 @@ export interface DemoDataset {
   comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[];
   segments: Segment[];
   efforts: SegmentEffort[];
+  challenges: Challenge[];
+  challengeParticipants: { challengeId: string; athleteId: string; joinedAt: string }[];
 }
 
 /* ---------- the weekly frame ---------- */
@@ -972,6 +976,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     integrations,
     ...club,
     notifications: [...notifications, ...club.notifications],
+    ...demoChallenges(today),
   };
 }
 
@@ -983,3 +988,45 @@ export const CLUB_MEMBER_META = CLUB_MEMBERS;
 
 /** Weekday index helper re-exported so demo consumers do not import twice. */
 export { weekdayIndex };
+
+/* ---------------- challenges ---------------- */
+
+/** This month's challenges, with most of the club in. */
+function demoChallenges(today: ISODate): Pick<DemoDataset, 'challenges' | 'challengeParticipants'> {
+  const monthStart = startOfMonth(today);
+  const next = new Date(Date.parse(`${monthStart}T00:00:00Z`));
+  next.setUTCMonth(next.getUTCMonth() + 1);
+  const monthEnd = addDays(next.toISOString().slice(0, 10), -1);
+  const month = new Date(`${monthStart}T00:00:00Z`).toLocaleDateString('en-IE', { month: 'long', timeZone: 'UTC' });
+
+  const challenges: Challenge[] = [
+    {
+      id: 'ch-sessions', name: `${month}: twenty sessions as written`,
+      description: 'Every prescribed session counts the same, whatever its length. Rest days do not count — and do not need to.',
+      metric: 'sessions', target: 20, startsOn: monthStart, endsOn: monthEnd,
+      createdBy: DEMO_COACH_ID, archived: false, createdAt: `${monthStart}T08:00:00.000Z`,
+    },
+    {
+      id: 'ch-club-runs', name: 'Saturday regulars',
+      description: 'Four Iron Miles club runs this month. Come for the run, stay for the coffee.',
+      metric: 'club_runs', target: 4, startsOn: monthStart, endsOn: monthEnd,
+      createdBy: DEMO_COACH_ID, archived: false, createdAt: `${monthStart}T08:00:00.000Z`,
+    },
+    {
+      id: 'ch-checkins', name: 'Tell us how it went',
+      description: 'A weekly check-in every week of the month. Two minutes on a Sunday.',
+      metric: 'checkins', target: 4, startsOn: monthStart, endsOn: monthEnd,
+      createdBy: DEMO_COACH_ID, archived: false, createdAt: `${monthStart}T08:00:00.000Z`,
+    },
+  ];
+  const joined = (challengeId: string, ids: string[]) =>
+    ids.map((athleteId, i) => ({ challengeId, athleteId, joinedAt: `${monthStart}T${String(9 + (i % 9)).padStart(2, '0')}:00:00.000Z` }));
+  return {
+    challenges,
+    challengeParticipants: [
+      ...joined('ch-sessions', [DEMO_ATHLETE_ID, 'demo-athlete-2', 'demo-athlete-3', 'demo-athlete-5', 'demo-athlete-9']),
+      ...joined('ch-club-runs', ['demo-athlete-2', 'demo-athlete-4', 'demo-athlete-6', 'demo-athlete-8']),
+      ...joined('ch-checkins', [DEMO_ATHLETE_ID, 'demo-athlete-3']),
+    ],
+  };
+}

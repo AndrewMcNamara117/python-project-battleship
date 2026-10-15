@@ -29,6 +29,7 @@ import type {
   Subscription,
   UUID,
 } from '@/lib/domain/types';
+import type { Challenge, ChallengeDraft, ChallengeSummary } from '@/lib/domain/challenges';
 import type { EffortDraft, Segment, SegmentDraft, SegmentEffort, SegmentLeader } from '@/lib/activity/segments';
 import type { Activity, ActivityComment, ActivityDraft, ActivitySocial, ActivityVisibility, FeedItem } from '@/lib/activity/types';
 import type {
@@ -230,6 +231,19 @@ export class SupabaseRepo implements IronMilesRepo {
     athleteId: r.athlete_id,
     startedAt: r.started_at,
     elapsedS: r.elapsed_s,
+  });
+
+  private toChallenge = (r: any): Challenge => ({
+    id: r.id,
+    name: r.name,
+    description: r.description ?? '',
+    metric: r.metric,
+    target: Number(r.target),
+    startsOn: r.starts_on,
+    endsOn: r.ends_on,
+    createdBy: r.created_by,
+    archived: r.archived,
+    createdAt: r.created_at,
   });
 
   private toScheduled = (r: any): ScheduledWorkout => ({
@@ -872,6 +886,65 @@ export class SupabaseRepo implements IronMilesRepo {
         startedAt: r.started_at,
       }),
     );
+  }
+
+  /* ---------- challenges ---------- */
+
+  listChallenges(includeArchived = false) {
+    let q = this.db.from('challenges').select('*').order('starts_on', { ascending: false }).order('name');
+    if (!includeArchived) q = q.eq('archived', false);
+    return this.rows(q, this.toChallenge);
+  }
+
+  getChallenge(id: UUID) {
+    return this.one(this.db.from('challenges').select('*').eq('id', id).maybeSingle(), this.toChallenge);
+  }
+
+  async createChallenge(draft: ChallengeDraft): Promise<Challenge> {
+    const { data, error } = await this.db
+      .from('challenges')
+      .insert({
+        name: draft.name.trim(),
+        description: draft.description,
+        metric: draft.metric,
+        target: draft.target,
+        starts_on: draft.startsOn,
+        ends_on: draft.endsOn,
+        created_by: draft.createdBy,
+      })
+      .select('*')
+      .single();
+    if (error) throw new Error(error.message);
+    return this.toChallenge(data);
+  }
+
+  async setChallengeArchived(id: UUID, archived: boolean) {
+    const { error } = await this.db.from('challenges').update({ archived }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async joinChallenge(challengeId: UUID, athleteId: UUID) {
+    const { error } = await this.db
+      .from('challenge_participants')
+      .upsert({ challenge_id: challengeId, athlete_id: athleteId }, { onConflict: 'challenge_id,athlete_id', ignoreDuplicates: true });
+    if (error) throw new Error(error.message);
+  }
+
+  async leaveChallenge(challengeId: UUID, athleteId: UUID) {
+    const { error } = await this.db.from('challenge_participants').delete().eq('challenge_id', challengeId).eq('athlete_id', athleteId);
+    if (error) throw new Error(error.message);
+  }
+
+  async getChallengeSummary(_viewerId: UUID, challengeId: UUID): Promise<ChallengeSummary> {
+    const { data, error } = await this.db.rpc('im_challenge_summary', { p_challenge: challengeId });
+    if (error) throw new Error(error.message);
+    const r = (Array.isArray(data) ? data[0] : data) as any;
+    return {
+      participants: r?.participants ?? 0,
+      finishers: r?.finishers ?? [],
+      viewerJoined: r?.viewer_joined ?? false,
+      viewerProgress: r?.viewer_progress == null ? null : Number(r.viewer_progress),
+    };
   }
 
   async deleteComment(commentId: UUID, _byUserId: UUID) {

@@ -19,6 +19,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { href: '/app/leaderboard', label: 'Leaderboard', short: 'Board', icon: 'board', group: 'club' },
   { href: '/app/club', label: 'Club feed', short: 'Feed', icon: 'activity', group: 'club' },
   { href: '/app/segments', label: 'Segments', short: 'Segments', icon: 'segment', group: 'club' },
+  { href: '/app/challenges', label: 'Challenges', short: 'Challenges', icon: 'flag', group: 'club' },
   { href: '/app/community', label: 'Community', short: 'Club', icon: 'community', group: 'club' },
   { href: '/app/coach', label: 'Coach', short: 'Coach', icon: 'coach', group: 'club' },
   { href: '/app/forge', label: 'FORGE', short: 'FORGE', icon: 'forge', group: 'club' },
@@ -60,6 +61,7 @@ const COACH_NAV_ITEMS: NavItem[] = [
   { href: '/coach/races', label: 'Race calendar', short: 'Races', icon: 'board', group: 'club' },
   { href: '/coach/analytics', label: 'Analytics', short: 'Analytics', icon: 'chart', group: 'club' },
   { href: '/coach/segments', label: 'Segments', short: 'Segments', icon: 'segment', group: 'club' },
+  { href: '/coach/challenges', label: 'Challenges', short: 'Challenges', icon: 'flag', group: 'club' },
   { href: '/coach/notifications', label: 'Notifications', short: 'Alerts', icon: 'checkin', group: 'account' },
 ];
 
