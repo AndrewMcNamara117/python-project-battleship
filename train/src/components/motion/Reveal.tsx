@@ -13,6 +13,14 @@ import type { ReactNode } from 'react';
  * instead of letting it scroll inside its own container.
  */
 const WRAPPER = 'min-w-0';
+/**
+ * On the moving path only. The server cannot know the visitor's motion
+ * preference, so it renders the hidden starting state inline; React keeps a
+ * server style on hydration, so a reduced-motion visitor would keep it — the
+ * whole section invisible. globals.css settles `.im-reveal` to shown under
+ * prefers-reduced-motion, whatever the inline style says.
+ */
+const MOVING = 'im-reveal';
 const cx = (...parts: (string | undefined | false)[]) => parts.filter(Boolean).join(' ');
 export function Reveal({
   children,
@@ -32,7 +40,7 @@ export function Reveal({
 
   return (
     <motion.div
-      className={cx(WRAPPER, className)}
+      className={cx(WRAPPER, MOVING, className)}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once, margin: '-12% 0px -8% 0px' }}
@@ -58,7 +66,7 @@ export function RevealGroup({
 
   return (
     <motion.div
-      className={cx(WRAPPER, className)}
+      className={cx(WRAPPER, MOVING, className)}
       initial="hidden"
       whileInView="shown"
       viewport={{ once: true, margin: '-10% 0px' }}
@@ -75,7 +83,7 @@ export function RevealItem({ children, className }: { children: ReactNode; class
 
   return (
     <motion.div
-      className={cx(WRAPPER, className)}
+      className={cx(WRAPPER, MOVING, className)}
       variants={{
         hidden: { opacity: 0, y: 22 },
         shown: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },

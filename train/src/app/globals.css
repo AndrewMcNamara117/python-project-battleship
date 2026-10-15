@@ -465,6 +465,11 @@ body {
     opacity: 1;
     transform: none;
   }
+  /* Reveal's inline starting state, from a server that could not know */
+  .im-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
   /* the drawn line renders complete, not faded — the data is the point, and it
      must be visible whether or not the line ever scrolls into view */
   .im-anim-draw,
