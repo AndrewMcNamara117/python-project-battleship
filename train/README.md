@@ -268,6 +268,24 @@ time does not. Watch files only, and only runs imported since records existed.
 
 ---
 
+## Recording in the browser
+
+`/app/record` — GPS from the phone, for a run without a watch. The recorder
+(`src/lib/activity/recorder.ts`) drops vague fixes (worse than ±35 m) and impossible jumps, adds
+no distance for GPS drift at a standstill, and nothing across a pause. It saves as **TCX** so the
+import keeps the recorder's own distance rather than re-deriving it (which would bridge a pause
+with a straight line); then it is an ordinary import — matching, privacy trim, segments, records.
+
+Limits, stated on the page: a browser records only while the page is on screen. A wake lock keeps
+the screen awake; if the phone is locked anyway, the page says how long the gap was. The track is
+kept in the phone's storage as it grows, so a refresh or crashed tab does not lose a run. The
+`Permissions-Policy` header allows geolocation for this origin only (`geolocation=(self)`).
+Recording with the screen locked needs a native app.
+
+Tests: `src/lib/activity/recorder.test.ts`, and `e2e/record.mjs` (simulated GPS, a real minute).
+
+---
+
 ## Notifications for athletes, and club challenges
 
 **Inbox** (`/app/notifications`, count in the top bar). Kudos and comments on an athlete's

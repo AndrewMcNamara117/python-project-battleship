@@ -119,7 +119,11 @@ export default async function TodayPage() {
                     <Link href="/app/activities" className="font-bold text-mint hover:underline">
                       Import the file
                     </Link>{' '}
-                    and it logs itself, with the route and splits.
+                    and it logs itself, with the route and splits. No watch?{' '}
+                    <Link href="/app/record" className="font-bold text-mint hover:underline">
+                      Record it here
+                    </Link>
+                    .
                   </p>
                   <LogSessionForm
                     workout={lead}

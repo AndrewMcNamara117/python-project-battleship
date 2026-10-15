@@ -13,6 +13,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { href: '/app/calendar', label: 'Calendar', short: 'Plan', icon: 'calendar', group: 'train' },
   { href: '/app/training', label: 'Endurance', short: 'Run', icon: 'run', group: 'train' },
   { href: '/app/activities', label: 'Activities', short: 'Files', icon: 'activity', group: 'train' },
+  { href: '/app/record', label: 'Record', short: 'Record', icon: 'record', group: 'train' },
   { href: '/app/strength', label: 'Strength', short: 'Lift', icon: 'strength', group: 'train' },
   { href: '/app/progress', label: 'Progress', short: 'Progress', icon: 'chart', group: 'progress' },
   { href: '/app/check-in', label: 'Check-in', short: 'Check-in', icon: 'checkin', group: 'progress' },
