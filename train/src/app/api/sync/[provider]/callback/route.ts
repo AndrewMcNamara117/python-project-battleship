@@ -32,6 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
   });
   const back = new URL('/app/profile', siteUrl);
   back.searchParams.set('sync', result.ok ? `connected:${provider.name}` : 'failed');
-  if (!result.ok) back.searchParams.set('reason', result.reason.slice(0, 160));
+  // a code, not text: the page says it in its own words, so a crafted link cannot put words in its mouth
+  if (!result.ok) back.searchParams.set('reason', result.code);
   return NextResponse.redirect(back);
 }

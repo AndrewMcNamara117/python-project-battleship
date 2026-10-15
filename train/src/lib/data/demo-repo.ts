@@ -88,6 +88,7 @@ import type {
   ChannelName, DeliveryStatus, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
 import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import { CLAIM_LEASE_MS } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -163,7 +164,7 @@ function dataset(): DemoDataset {
  */
 interface DemoSyncStore {
   connections: Map<string, { athleteId: UUID; provider: IntegrationProvider; externalUserId: string; sealedTokens: string; expiresAt: string | null }>;
-  imports: Map<string, { athleteId: UUID; outcome: string; activityId: UUID | null; detail: string | null }>;
+  imports: Map<string, { athleteId: UUID; outcome: string; activityId: UUID | null; detail: string | null; claimedAt: number }>;
 }
 const syncKey = Symbol.for('ironmiles.demo.sync');
 function syncStore(): DemoSyncStore {
@@ -1136,6 +1137,18 @@ export class DemoRepo implements IronMilesRepo {
     this.setIntegrationStatus(athleteId, provider, 'available');
   }
 
+  async updateTokens(athleteId: UUID, provider: IntegrationProvider, sealedTokens: string, expiresAt: string | null): Promise<boolean> {
+    const c = syncStore().connections.get(`${athleteId}:${provider}`);
+    if (!c) return false;
+    Object.assign(c, { sealedTokens, expiresAt });
+    return true;
+  }
+
+  async markNeedsReconnect(athleteId: UUID, provider: IntegrationProvider): Promise<void> {
+    const i = dataset().integrations.find((x) => x.athleteId === athleteId && x.provider === provider);
+    if (i) i.status = 'error';
+  }
+
   async markSynced(athleteId: UUID, provider: IntegrationProvider): Promise<void> {
     const i = dataset().integrations.find((x) => x.athleteId === athleteId && x.provider === provider);
     if (i) i.lastSyncAt = new Date().toISOString();
@@ -1145,8 +1158,9 @@ export class DemoRepo implements IronMilesRepo {
     const key = `${provider}:${externalId}`;
     const s = syncStore();
     const prior = s.imports.get(key);
-    if (prior && prior.outcome !== 'failed') return false;
-    s.imports.set(key, { athleteId, outcome: 'claimed', activityId: null, detail: null });
+    const stale = prior?.outcome === 'claimed' && Date.now() - prior.claimedAt > CLAIM_LEASE_MS;
+    if (prior && prior.outcome !== 'failed' && !stale) return false;
+    s.imports.set(key, { athleteId, outcome: 'claimed', activityId: null, detail: null, claimedAt: Date.now() });
     return true;
   }
 

@@ -24,6 +24,16 @@ const PROVIDER_LABEL: Record<string, string> = {
   google_fit: 'Google Fit',
 };
 
+/** finishConnect's failure codes, in the page's words. Anything else in the URL is ignored. */
+const CONNECT_FAILURE: Record<string, string> = {
+  state: 'That connection link was not one this page started. Start again from here.',
+  expired: 'The connection took too long. Start again.',
+  denied: 'Access was not granted, so nothing was connected.',
+  refused: 'The watch company did not accept the connection. Try again.',
+  taken: 'That watch account is already connected to another Iron Miles athlete.',
+  error: 'The connection could not be saved. Try again.',
+};
+
 export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ sync?: string; reason?: string }> }) {
   const { sync, reason } = await searchParams;
   const ctx = await loadAthleteContext();
@@ -46,7 +56,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
         available: ready && p.configured(),
         connected: i?.status === 'connected',
         lastSyncAt: i?.lastSyncAt ?? null,
-        note: p.configured() ? (ready ? null : 'Sync is not switched on for this deployment yet.') : p.setupRequired,
+        note: p.configured()
+          ? ready
+            ? i?.status === 'error'
+              ? 'Lost the connection — connect again to keep runs arriving.'
+              : null
+            : 'Sync is not switched on for this deployment yet.'
+          : p.setupRequired,
       };
     }),
     { name: 'apple_health', label: 'Apple Health', available: false, connected: false, lastSyncAt: null, note: 'Needs the phone app. Apps like HealthFit export files that import today.' },
@@ -56,7 +72,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
     sync?.startsWith('connected:')
       ? { ok: true, text: `${PROVIDER_LABEL[sync.slice(10)] ?? 'Your watch'} is connected. New activities will arrive by themselves.` }
       : sync === 'failed'
-        ? { ok: false, text: reason ?? 'The connection did not complete.' }
+        ? { ok: false, text: CONNECT_FAILURE[reason ?? ''] ?? 'The connection did not complete.' }
         : sync === 'unavailable'
           ? { ok: false, text: 'That connection is not available yet.' }
           : null;

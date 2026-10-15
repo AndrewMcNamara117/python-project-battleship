@@ -36,7 +36,10 @@ alter table activity_imports
   add column if not exists activity_id uuid references activities(id) on delete set null,
   add column if not exists outcome     text not null default 'claimed'
     check (outcome in ('claimed', 'imported', 'duplicate', 'failed')),
-  add column if not exists detail      text;
+  add column if not exists detail      text,
+  -- when the current claim was taken: a claim that never finished (the
+  -- function died mid-import) may be taken over once it is stale
+  add column if not exists claimed_at  timestamptz not null default now();
 
 -- the athlete may see that a connection exists and when it last synced, but
 -- the row is now the server's to write: a client could otherwise mark itself

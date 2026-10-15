@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it } from 'node:test';
+import { beforeEach, describe, it, mock } from 'node:test';
 import { DEMO_ATHLETE_ID } from '@/data/demo-seed';
 import { DemoRepo, resetDemoData } from '@/lib/data/demo-repo';
 import { syntheticRun, toFit } from '@/lib/activity/fixtures';
@@ -45,7 +45,7 @@ describe('sealed tokens', () => {
 });
 
 /** A provider in memory: files by ref, tokens that can expire, a fetch that can fail once. */
-function fakeProvider(opts: { failFirstFetch?: boolean; expiresAt?: string | null } = {}) {
+function fakeProvider(opts: { failFirstFetch?: boolean; expiresAt?: string | null; onRefresh?: () => Promise<void> | void; refuseRefresh?: boolean } = {}) {
   const files = new Map<string, Uint8Array>();
   let fetches = 0;
   let refreshes = 0;
@@ -61,6 +61,8 @@ function fakeProvider(opts: { failFirstFetch?: boolean; expiresAt?: string | nul
     },
     refresh: async (t: SyncTokens) => {
       refreshes++;
+      await opts.onRefresh?.();
+      if (opts.refuseRefresh) throw new Error('invalid_grant');
       return { ...t, accessToken: `access-${refreshes + 1}`, expiresAt: new Date(Date.now() + 3600_000).toISOString() };
     },
     verifyPush: (raw, headers) => (headers.get('x-sync-signature') === hmacHex(PUSH_SECRET, raw) ? { ok: true } : { ok: false, reason: 'bad sig' }),
@@ -169,7 +171,8 @@ describe('a push', () => {
     f.files.set('r1', run(302));
     const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
     const first = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
-    assert.equal(first.failed, 1);
+    // not 200: a provider retries only what it was not told succeeded
+    assert.deepEqual([first.status, first.failed], [503, 1]);
     const retry = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
     assert.equal(retry.imported, 1);
   });
@@ -204,5 +207,85 @@ describe('a push', () => {
     const r = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
     assert.equal(r.imported, 0);
     assert.equal(f.stats().fetches, 0);
+  });
+
+  it('a claim that never finished is taken over once stale, not counted a duplicate for ever', async () => {
+    const f = fakeProvider();
+    const repo = await connected(f);
+    f.files.set('r1', run(305));
+    // as if an earlier attempt died between claiming and finishing
+    assert.equal(await repo.claimImport('garmin', 'a1', DEMO_ATHLETE_ID), true);
+    const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
+    const soon = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
+    assert.equal(soon.duplicates, 1, 'a fresh claim may still be in flight');
+    const now = Date.now();
+    mock.method(Date, 'now', () => now + 16 * 60_000);
+    try {
+      const later = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
+      assert.equal(later.imported, 1);
+    } finally {
+      mock.restoreAll();
+    }
+  });
+
+  it('a refresh racing a disconnect does not bring the connection back', async () => {
+    const box: { repo?: DemoRepo } = {};
+    const f = fakeProvider({ expiresAt: new Date(Date.now() - 1000).toISOString(), onRefresh: () => box.repo!.removeConnection(DEMO_ATHLETE_ID, 'garmin') });
+    const repo = (box.repo = await connected(f));
+    f.files.set('r1', run(306));
+    const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
+    const r = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
+    assert.deepEqual([r.status, r.imported, f.stats().fetches], [200, 0, 0]);
+    assert.equal(await repo.getConnection(DEMO_ATHLETE_ID, 'garmin'), null);
+    assert.notEqual((await repo.listIntegrations(DEMO_ATHLETE_ID)).find((i) => i.provider === 'garmin')?.status, 'connected');
+  });
+
+  it('a refused refresh asks for a retry and tells the athlete to reconnect', async () => {
+    const f = fakeProvider({ expiresAt: new Date(Date.now() - 1000).toISOString(), refuseRefresh: true });
+    const repo = await connected(f);
+    const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
+    const r = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
+    assert.equal(r.status, 503);
+    assert.equal((await repo.listIntegrations(DEMO_ATHLETE_ID)).find((i) => i.provider === 'garmin')?.status, 'error');
+  });
+
+  it('a refresh refused because a concurrent push already rotated the token uses that push’s tokens', async () => {
+    const box: { repo?: DemoRepo } = {};
+    const f = fakeProvider({
+      expiresAt: new Date(Date.now() - 1000).toISOString(),
+      refuseRefresh: true,
+      // the other push stored its refreshed tokens while this one waited
+      onRefresh: async () => {
+        await box.repo!.updateTokens(DEMO_ATHLETE_ID, 'garmin', encryptTokens(SECRET, { accessToken: 'access-9', externalUserId: 'garmin-user-7', expiresAt: null }), null);
+      },
+    });
+    const repo = (box.repo = await connected(f));
+    f.files.set('r1', run(307));
+    const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
+    const r = await handlePush({ provider: f.provider, secret: SECRET, raw, headers, service: repo });
+    assert.deepEqual([r.status, r.imported], [200, 1]);
+  });
+
+  it('tokens sealed under another SYNC_SECRET are settled (200), and the athlete is told to reconnect', async () => {
+    const f = fakeProvider();
+    const repo = await connected(f);
+    const { raw, headers } = signed({ user_id: 'garmin-user-7', activities: [{ id: 'a1', ref: 'r1' }] });
+    const r = await handlePush({ provider: f.provider, secret: 'z'.repeat(40), raw, headers, service: repo });
+    assert.equal(r.status, 200);
+    assert.equal((await repo.listIntegrations(DEMO_ATHLETE_ID)).find((i) => i.provider === 'garmin')?.status, 'error');
+  });
+});
+
+describe('connecting at the same moment', () => {
+  it('two athletes finishing for one watch account: the second is told, not shown a 500', async () => {
+    const f = fakeProvider();
+    const repo = await connected(f);
+    // the check passed for both before either saved
+    const racing = Object.assign(Object.create(repo), { findConnection: async () => null }) as DemoRepo;
+    const out = await finishConnect({
+      provider: f.provider, secret: SECRET, athleteId: 'demo-athlete-2', code: 'good-code',
+      state: signState(SECRET, 'demo-athlete-2', 'garmin'), redirectUri: 'x', service: racing,
+    });
+    assert.deepEqual(out.ok ? null : out.code, 'taken');
   });
 });

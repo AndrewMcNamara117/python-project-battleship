@@ -74,6 +74,7 @@ import type {
   ChannelName, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
 import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import { CLAIM_LEASE_MS } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
   CheckInContext,
@@ -1448,6 +1449,22 @@ export class SupabaseRepo implements IronMilesRepo {
     if (e2) throw new Error(e2.message);
   }
 
+  async updateTokens(athleteId: UUID, provider: IntegrationProvider, sealedTokens: string, expiresAt: string | null) {
+    const { data, error } = await this.db
+      .from('integration_secrets')
+      .update({ token_ciphertext: sealedTokens, expires_at: expiresAt, updated_at: new Date().toISOString() })
+      .eq('athlete_id', athleteId)
+      .eq('provider', provider)
+      .select('athlete_id');
+    if (error) throw new Error(error.message);
+    return Array.isArray(data) && data.length > 0;
+  }
+
+  async markNeedsReconnect(athleteId: UUID, provider: IntegrationProvider) {
+    const { error } = await this.db.from('integrations').update({ status: 'error' }).eq('athlete_id', athleteId).eq('provider', provider);
+    if (error) throw new Error(error.message);
+  }
+
   async markSynced(athleteId: UUID, provider: IntegrationProvider) {
     const { error } = await this.db
       .from('integrations')
@@ -1464,13 +1481,15 @@ export class SupabaseRepo implements IronMilesRepo {
       .select('id');
     if (error) throw new Error(error.message);
     if (Array.isArray(data) && data.length > 0) return true;
-    // already there: reclaim it only if the earlier attempt failed
+    // already there: reclaim it only if the earlier attempt failed, or died
+    // holding the claim. One conditional update, so two retries cannot both win.
+    const stale = new Date(Date.now() - CLAIM_LEASE_MS).toISOString();
     const { data: retried, error: e2 } = await this.db
       .from('activity_imports')
-      .update({ outcome: 'claimed', detail: null })
+      .update({ outcome: 'claimed', detail: null, athlete_id: athleteId, claimed_at: new Date().toISOString() })
       .eq('provider', provider)
       .eq('external_id', externalId)
-      .eq('outcome', 'failed')
+      .or(`outcome.eq.failed,and(outcome.eq.claimed,claimed_at.lt.${stale})`)
       .select('id');
     if (e2) throw new Error(e2.message);
     return Array.isArray(retried) && retried.length > 0;

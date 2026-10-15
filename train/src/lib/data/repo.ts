@@ -158,6 +158,9 @@ export interface DeliveryAttempt {
   nextAttemptAt?: ISOTimestamp | null;
 }
 
+/** How long a claimed import may sit unfinished before a retry may take it over. */
+export const CLAIM_LEASE_MS = 15 * 60 * 1000;
+
 export interface IronMilesRepo {
   readonly mode: 'supabase' | 'demo';
 
@@ -300,11 +303,17 @@ export interface IronMilesRepo {
   getConnection(athleteId: UUID, provider: IntegrationProvider): Promise<{ externalUserId: string; sealedTokens: string } | null>;
   findConnection(provider: IntegrationProvider, externalUserId: string): Promise<{ athleteId: UUID; sealedTokens: string } | null>;
   removeConnection(athleteId: UUID, provider: IntegrationProvider): Promise<void>;
+  /** Store refreshed tokens on an existing connection only; false when it is gone (disconnected meanwhile). */
+  updateTokens(athleteId: UUID, provider: IntegrationProvider, sealedTokens: string, expiresAt: string | null): Promise<boolean>;
+  /** The tokens no longer work: show the athlete it needs connecting again. */
+  markNeedsReconnect(athleteId: UUID, provider: IntegrationProvider): Promise<void>;
   markSynced(athleteId: UUID, provider: IntegrationProvider): Promise<void>;
   /**
    * Claim a provider activity before fetching it. False when it was already
-   * claimed — unless that earlier attempt failed, so a provider's retry of a
-   * push that failed mid-fetch is not mistaken for a duplicate.
+   * claimed — unless that earlier attempt failed, or its claim is older than
+   * CLAIM_LEASE_MS without finishing (the function died mid-import), so a
+   * provider's retry is not mistaken for a duplicate. A reclaim takes the row
+   * for the athlete now connected.
    */
   claimImport(provider: IntegrationProvider, externalId: string, athleteId: UUID): Promise<boolean>;
   finishImport(provider: IntegrationProvider, externalId: string, outcome: 'imported' | 'duplicate' | 'failed', activityId: UUID | null, detail: string | null): Promise<void>;
