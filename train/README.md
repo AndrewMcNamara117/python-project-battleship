@@ -130,7 +130,7 @@ that slipped past it still could not read another athlete's data.
 
 ## Testing
 
-Four suites. The first three need nothing but `npm install`.
+Typecheck, lint and the unit + RLS tests need nothing but `npm install`; the browser suites need a running server.
 
 ```bash
 npm run typecheck
@@ -138,11 +138,19 @@ npm run lint
 npm test              # unit + RLS
 npm run test:rls      # RLS only
 
-# the two browser suites need a running server, in demo mode
+# the browser suites need a running server, in demo mode
 npm run build && npx next start -p 3000 &
-BASE_URL=http://localhost:3000 npm run test:e2e      # the coach ↔ athlete loop, 19 steps
+BASE_URL=http://localhost:3000 npm run test:e2e      # the coach ↔ athlete loop, 20 steps
 BASE_URL=http://localhost:3000 npm run test:guards   # access control + failure states, 53 checks
+BASE_URL=http://localhost:3000 npm run test:e2e:all  # every suite, in the order they need
 ```
+
+`test:e2e:all` runs the suites in the order `package.json` documents, ending with activities
+(34 steps) and recording (9). The sync suite (`npm run test:sync`, 12 steps) needs the server
+started with `SYNC_SECRET` (32+ characters), `SYNC_SIMULATOR_URL=http://127.0.0.1:4600` and
+`SYNC_SIMULATOR_SECRET=push-secret`; the email suite needs `CRON_SECRET`. Demo state lives in
+the server process, so run each suite once per fresh server: activities, run twice, finds its
+own imports already there.
 
 **`supabase/test/rls.test.mjs` is the one to read first.** It runs the shipped
 migrations against a real Postgres — PGlite, Postgres compiled to WASM — as a
@@ -373,6 +381,13 @@ There is no callable award function — Supabase grants clients execute on new f
 trigger function cannot be called directly — so nobody awards themselves. The full-week bonus is
 given as soon as every non-rest session of the week is complete. The demo adapter applies the same
 rules in code.
+
+What a client chooses cannot mint points. A check-in is credited to the week its date falls in,
+whatever day was sent, and a future week earns nothing. Strength points need a strength session
+on the plan; nothing is awarded for a session whose day has not come (a day's grace for time
+zones). An athlete may change a session's status or move it within its week, and nothing else —
+`im_guard_athlete_session_edit` is an allow-list, so a column added later is the coach's by
+default — and marking one completed needs a log or a finished strength session behind it.
 
 ---
 
