@@ -35,7 +35,8 @@ export function InboxList({ items }: { items: Notification[] }) {
             disabled={pending}
             onClick={() =>
               start(async () => {
-                await markRead();
+                // exactly the ones shown: one that arrived since the page loaded stays unread
+                await markRead(items.filter((n) => !n.readAt).map((n) => n.id));
                 router.refresh();
               })
             }
@@ -69,7 +70,9 @@ export function InboxList({ items }: { items: Notification[] }) {
                 </span>
                 {n.body && <span className="mt-0.5 block truncate text-[13px] text-ink-secondary">{n.body}</span>}
               </span>
-              <span className="shrink-0 text-[11px] text-ink-tertiary">{when(n.createdAt)}</span>
+              <span className="shrink-0 text-[11px] text-ink-tertiary" suppressHydrationWarning>
+                {when(n.createdAt)}
+              </span>
             </button>
           </li>
         ))}

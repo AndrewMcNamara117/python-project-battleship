@@ -62,7 +62,8 @@ export function ChallengeCard({
             aria-label={`${c.name}: your progress`}
             aria-valuemin={0}
             aria-valuemax={c.target}
-            aria-valuenow={progress}
+            aria-valuenow={Math.min(progress, c.target)}
+            aria-valuetext={`${formatAmount(c.metric, progress)} of ${formatAmount(c.metric, c.target)}`}
           >
             <div className="h-1.5 origin-left bg-mint transition-transform duration-700" style={{ transform: `scaleX(${share.toFixed(3)})` }} />
           </div>

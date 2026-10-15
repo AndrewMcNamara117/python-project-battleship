@@ -1,4 +1,5 @@
 import type { CheckIn, CompletedWorkout, ForgeScoreEvent, ISODate, ScheduledWorkout } from './types';
+import { startOfWeek } from './dates';
 
 /**
  * Club challenges: a target over a window, opted into, finished rather than
@@ -59,10 +60,16 @@ export function progressFor(
   switch (c.metric) {
     case 'sessions':
       return data.scheduled.filter((s) => s.status === 'completed' && s.type !== 'rest' && inWindow(s.date)).length;
-    case 'club_runs':
-      return data.forge.filter((f) => f.kind === 'community_run' && inWindow(f.date)).length;
-    case 'checkins':
-      return data.checkins.filter((k) => inWindow(k.weekStart)).length;
+    case 'club_runs': {
+      // by the session's date, as 0027: the log's date is the athlete's to write
+      const dateOf = new Map(data.scheduled.map((s) => [s.id, s.date]));
+      return data.forge.filter((f) => f.kind === 'community_run' && f.sourceId != null && inWindow(dateOf.get(f.sourceId) ?? '')).length;
+    }
+    case 'checkins': {
+      // distinct weeks that have begun: week_start is chosen by the client
+      const today = new Date().toISOString().slice(0, 10);
+      return new Set(data.checkins.filter((k) => inWindow(k.weekStart) && startOfWeek(k.weekStart) <= today).map((k) => startOfWeek(k.weekStart))).size;
+    }
     case 'distance_km':
       return Math.round(data.completed.filter((w) => inWindow(w.date)).reduce((a, w) => a + (w.actualDistanceKm ?? 0), 0) * 10) / 10;
   }

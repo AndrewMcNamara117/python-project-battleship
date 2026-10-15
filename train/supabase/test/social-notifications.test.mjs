@@ -51,6 +51,15 @@ describe('kudos notifications', () => {
     assert.equal(rows[0].read_at, null);
   });
 
+  it('taking kudos back and giving it again does not make it unread again', async () => {
+    await t.asUser(runner, `update notifications set read_at = now() where user_id = $1`, [runner]);
+    await t.asUser(other, 'delete from activity_kudos where activity_id = $1 and athlete_id = $2', [run, other]);
+    await t.asUser(other, 'insert into activity_kudos (activity_id, athlete_id) values ($1, $2)', [run, other]);
+    const kudos = (await inbox(runner)).filter((n) => n.kind === 'kudos');
+    assert.equal(kudos.length, 1);
+    assert.ok(kudos[0].read_at, 'still read');
+  });
+
   it('nobody else is told', async () => {
     assert.equal((await inbox(friend)).length, 0);
     assert.equal((await inbox(other)).length, 0);

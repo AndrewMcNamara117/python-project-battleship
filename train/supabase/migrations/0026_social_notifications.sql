@@ -42,8 +42,11 @@ begin
     '/app/activities/' || a.id,
     'alert', 'information', 'kudos:' || a.id, 'pending'
   )
+  -- unread again only when there is something new to say: taking kudos back
+  -- and giving it again gives the same title, and must not bump the inbox
   on conflict (user_id, dedupe_key) where dedupe_key is not null do update
-    set title = excluded.title, body = excluded.body, read_at = null, created_at = now();
+    set title = excluded.title, body = excluded.body, read_at = null, created_at = now()
+    where notifications.title is distinct from excluded.title;
   return new;
 end $$;
 

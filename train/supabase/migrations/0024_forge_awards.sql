@@ -203,6 +203,11 @@ begin
   if changed then
     raise exception 'An athlete can change a session''s status, or move it within its week. The rest is the coach''s.';
   end if;
+  -- a completed session stays on the day it was done: moving it would move
+  -- what it counts for (a challenge window that has closed, say)
+  if old.status = 'completed' and new.date is distinct from old.date then
+    raise exception 'A completed session stays on the day it was done.';
+  end if;
   if date_trunc('week', new.date) is distinct from date_trunc('week', old.date) then
     raise exception 'Sessions move within their own week. Ask your coach to change the week itself.';
   end if;

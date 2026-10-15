@@ -87,6 +87,13 @@ create policy participants_leave on challenge_participants for delete
 -- (Parameters are p_challenge, not target: challenges has a column called
 -- target, and inside these functions the column would win.)
 
+-- The rules, the same in both functions below and in progressFor (the demo):
+--   sessions   completed, not rest, scheduled inside the window
+--   club_runs  community-run points, by the session's date (not the log's,
+--              which the athlete writes)
+--   checkins   distinct weeks that have begun — a client chooses week_start,
+--              so a check-in "for" every day of a month is still one a week
+--   distance   logged kilometres, rounded to 0.1 before comparing
 -- Progress, for the athlete themselves or their coach. Anyone else gets null:
 -- this function is callable, so it checks its caller like a policy would.
 create or replace function im_challenge_progress(p_challenge uuid, who uuid)
@@ -105,11 +112,12 @@ begin
       where s.athlete_id = who and s.status = 'completed' and s.type <> 'rest'
         and s.date between c.starts_on and c.ends_on)
     when 'club_runs' then (
-      select count(*) from forge_score_events f
-      where f.athlete_id = who and f.kind = 'community_run' and f.date between c.starts_on and c.ends_on)
+      select count(*) from forge_score_events f join scheduled_workouts s on s.id = f.source_id
+      where f.athlete_id = who and f.kind = 'community_run' and s.date between c.starts_on and c.ends_on)
     when 'checkins' then (
-      select count(*) from checkins k
-      where k.athlete_id = who and k.week_start between c.starts_on and c.ends_on)
+      select count(distinct date_trunc('week', k.week_start)) from checkins k
+      where k.athlete_id = who and k.week_start between c.starts_on and c.ends_on
+        and date_trunc('week', k.week_start) <= current_date)
     when 'distance_km' then (
       select coalesce(round(sum(w.actual_distance_km), 1), 0) from completed_workouts w
       where w.athlete_id = who and w.date between c.starts_on and c.ends_on)
@@ -134,11 +142,12 @@ begin
         when 'sessions' then (select count(*)::numeric from scheduled_workouts s
           where s.athlete_id = p.athlete_id and s.status = 'completed' and s.type <> 'rest'
             and s.date between c.starts_on and c.ends_on)
-        when 'club_runs' then (select count(*)::numeric from forge_score_events f
-          where f.athlete_id = p.athlete_id and f.kind = 'community_run' and f.date between c.starts_on and c.ends_on)
-        when 'checkins' then (select count(*)::numeric from checkins k
-          where k.athlete_id = p.athlete_id and k.week_start between c.starts_on and c.ends_on)
-        when 'distance_km' then (select coalesce(sum(w.actual_distance_km), 0) from completed_workouts w
+        when 'club_runs' then (select count(*)::numeric from forge_score_events f join scheduled_workouts s on s.id = f.source_id
+          where f.athlete_id = p.athlete_id and f.kind = 'community_run' and s.date between c.starts_on and c.ends_on)
+        when 'checkins' then (select count(distinct date_trunc('week', k.week_start))::numeric from checkins k
+          where k.athlete_id = p.athlete_id and k.week_start between c.starts_on and c.ends_on
+            and date_trunc('week', k.week_start) <= current_date)
+        when 'distance_km' then (select coalesce(round(sum(w.actual_distance_km), 1), 0) from completed_workouts w
           where w.athlete_id = p.athlete_id and w.date between c.starts_on and c.ends_on)
       end as done
     from challenge_participants p

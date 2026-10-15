@@ -125,7 +125,7 @@ export async function importActivity(
   // segments are timed now, from the full track — the only moment it exists
   const segments = await timeSegments(repo, effortWriter, activity, parsed.points, analysis.cumulative);
   // a first time at a distance is not announced; beating one is
-  const records: NewRecord[] = newRecords(activity, await repo.listActivities(profile.id, 1000))
+  const records: NewRecord[] = newRecords(activity, await repo.listActivities(profile.id, Infinity))
     .filter((r) => r.previousS != null)
     .map((r) => ({ label: r.distance.label, elapsedS: r.elapsedS, previousS: r.previousS as number }));
 

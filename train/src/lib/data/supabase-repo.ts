@@ -108,6 +108,9 @@ import { profileFieldsFromOnboarding } from '@/lib/domain/onboarding-map';
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Below Supabase's default max-rows, so a full page is never silently a short one. */
+const PAGE_ROWS = 500;
+
 /** Every activities column but series and splits: see listActivities. */
 const ACTIVITY_LIST_COLUMNS =
   'id, athlete_id, source, format, fingerprint, name, sport, started_at, local_date, distance_m, moving_s, elapsed_s, ' +
@@ -123,6 +126,25 @@ export class SupabaseRepo implements IronMilesRepo {
   // by node's type-stripping test runner, which does not support that syntax
   constructor(db: SupabaseClient) {
     this.db = db;
+  }
+
+  /**
+   * Every row, a page at a time. PostgREST stops a response at its max-rows
+   * (1000 on Supabase) without an error, so a read that must be complete —
+   * every record, every effort, every point — cannot be one request. `build`
+   * makes a fresh, totally ordered query for each page.
+   */
+  private async allPages<T>(build: () => any, map: (row: any) => T, max = Infinity): Promise<T[]> {
+    const out: T[] = [];
+    for (let from = 0; from < max; from += PAGE_ROWS) {
+      const to = Math.min(from + PAGE_ROWS, max) - 1;
+      const { data, error } = await build().range(from, to);
+      if (error) throw new Error(error.message);
+      const page = (data ?? []) as any[];
+      out.push(...page.map(map));
+      if (page.length < to - from + 1) break;
+    }
+    return out;
   }
 
   private async rows<T>(query: PromiseLike<{ data: any; error: any }>, map: (row: any) => T): Promise<T[]> {
@@ -679,14 +701,16 @@ export class SupabaseRepo implements IronMilesRepo {
   /* ---------- activities ---------- */
 
   listActivities(athleteId: UUID, limit = 50) {
-    return this.rows(
-      this.db
-        .from('activities')
-        .select(ACTIVITY_LIST_COLUMNS)
-        .eq('athlete_id', athleteId)
-        .order('started_at', { ascending: false })
-        .limit(limit),
+    return this.allPages(
+      () =>
+        this.db
+          .from('activities')
+          .select(ACTIVITY_LIST_COLUMNS)
+          .eq('athlete_id', athleteId)
+          .order('started_at', { ascending: false })
+          .order('id'),
       this.toActivity,
+      limit,
     );
   }
 
@@ -879,9 +903,12 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   listEfforts(athleteId: UUID, segmentId?: UUID) {
-    let q = this.db.from('segment_efforts').select('*').eq('athlete_id', athleteId).order('started_at', { ascending: false });
-    if (segmentId) q = q.eq('segment_id', segmentId);
-    return this.rows(q, this.toEffort);
+    // all of them: a personal best is a minimum, and a minimum over a page is wrong
+    return this.allPages(() => {
+      let q = this.db.from('segment_efforts').select('*').eq('athlete_id', athleteId);
+      if (segmentId) q = q.eq('segment_id', segmentId);
+      return q.order('started_at', { ascending: false }).order('id');
+    }, this.toEffort);
   }
 
   listEffortsForActivity(activityId: UUID) {
@@ -944,8 +971,16 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   async leaveChallenge(challengeId: UUID, athleteId: UUID) {
-    const { error } = await this.db.from('challenge_participants').delete().eq('challenge_id', challengeId).eq('athlete_id', athleteId);
+    const { data, error } = await this.db
+      .from('challenge_participants')
+      .delete()
+      .eq('challenge_id', challengeId)
+      .eq('athlete_id', athleteId)
+      .select('athlete_id');
     if (error) throw new Error(error.message);
+    // a closed challenge's row is out of the policy's reach: nothing was
+    // deleted, and saying "you have left" would be untrue
+    if (!data?.length) throw new Error('leave refused by policy');
   }
 
   async getChallengeSummary(_viewerId: UUID, challengeId: UUID): Promise<ChallengeSummary> {
@@ -1151,12 +1186,13 @@ export class SupabaseRepo implements IronMilesRepo {
     if (peopleError) throw new Error(peopleError.message);
     if (!people?.length) return [];
 
-    const { data: events, error: eventsError } = await this.db
-      .from('forge_score_events')
-      .select('athlete_id, kind, points, date')
-      .in('athlete_id', people.map((p: any) => p.id))
-      .gte('date', from);
-    if (eventsError) throw new Error(eventsError.message);
+    // every event in the window, a page at a time: an all-time board passes
+    // max-rows within weeks, and a capped read would rank on a random subset
+    const ids = people.map((p: any) => p.id);
+    const events = await this.allPages(
+      () => this.db.from('forge_score_events').select('id, athlete_id, kind, points, date').in('athlete_id', ids).gte('date', from).order('id'),
+      (e: any) => e as { athlete_id: string; kind: string; points: number; date: string },
+    );
 
     const byAthlete = new Map<string, { kind: string; points: number; date: string }[]>();
     for (const e of events ?? []) {

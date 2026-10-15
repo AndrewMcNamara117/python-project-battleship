@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Field, Input, Textarea } from '@/components/ui/Field';
 import { METRICS, type ChallengeMetric } from '@/lib/domain/challenges';
 
-export function JoinChallenge({ challengeId, joined }: { challengeId: string; joined: boolean }) {
+export function JoinChallenge({ challengeId, joined, name }: { challengeId: string; joined: boolean; name: string }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<ChallengeResult | null>(null);
   const router = useRouter();
@@ -17,6 +17,8 @@ export function JoinChallenge({ challengeId, joined }: { challengeId: string; jo
         variant={joined ? 'quiet' : 'solid'}
         size="sm"
         disabled={pending}
+        aria-label={`${joined ? 'Leave' : 'Join'} ${name}`}
+        aria-busy={pending}
         onClick={() =>
           start(async () => {
             const r = await joinChallenge(challengeId, !joined);
@@ -27,11 +29,10 @@ export function JoinChallenge({ challengeId, joined }: { challengeId: string; jo
       >
         {pending ? '…' : joined ? 'Leave' : 'Join'}
       </Button>
-      {result && !result.ok && (
-        <span role="status" className="text-[12px] font-bold text-status-missed">
-          {result.message}
-        </span>
-      )}
+      {/* mounted throughout, so the message is announced when it arrives */}
+      <span role="status" className={`text-[12px] font-bold ${result?.ok ? 'sr-only' : 'text-status-missed'}`}>
+        {result?.message ?? ''}
+      </span>
     </div>
   );
 }
@@ -56,11 +57,9 @@ export function ArchiveChallenge({ challengeId, archived }: { challengeId: strin
       >
         {pending ? '…' : archived ? 'Bring back' : 'Retire'}
       </Button>
-      {result && !result.ok && (
-        <span role="status" className="max-w-[12rem] text-right text-[11px] text-status-missed">
-          {result.message}
-        </span>
-      )}
+      <span role="status" className={`max-w-[12rem] text-right text-[11px] ${result?.ok ? 'sr-only' : 'text-status-missed'}`}>
+        {result?.message ?? ''}
+      </span>
     </div>
   );
 }
@@ -128,11 +127,9 @@ export function NewChallenge({ defaultStart, defaultEnd }: { defaultStart: strin
         <Button type="submit" disabled={pending}>
           {pending ? 'Setting…' : 'Set challenge'}
         </Button>
-        {result && (
-          <p role="status" className={`text-[13px] font-bold ${result.ok ? 'text-mint' : 'text-status-missed'}`}>
-            {result.message}
-          </p>
-        )}
+        <p role="status" className={`text-[13px] font-bold ${result?.ok ? 'text-mint' : 'text-status-missed'}`}>
+          {result?.message ?? ''}
+        </p>
       </div>
     </form>
   );

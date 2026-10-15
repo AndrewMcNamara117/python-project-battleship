@@ -40,7 +40,7 @@ export default async function CoachActivityPage({
     repo.listEffortsForActivity(activity.id),
     repo.listSegments(true),
     repo.listEfforts(athlete.id),
-    repo.listActivities(athlete.id, 1000),
+    repo.listActivities(athlete.id, Infinity),
   ]);
   const piece = longestPiece(activity.route);
 

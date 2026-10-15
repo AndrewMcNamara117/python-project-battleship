@@ -155,3 +155,48 @@ describe('progress and privacy', () => {
     assert.equal(rows.length, 0);
   });
 });
+
+describe('what a client writes cannot inflate progress', () => {
+  it('check-ins dated every day of a week, or a week ahead, count as one week that has begun', async () => {
+    const who = await t.signUp('checkins@example.com', 'Check In');
+    const { rows } = await t.asUser(
+      coach,
+      `insert into challenges (name, metric, target, starts_on, ends_on, created_by)
+       values ('Weekly', 'checkins', 4, current_date - 60, current_date + 60, $1) returning id`,
+      [coach],
+    );
+    const weekly = rows[0].id;
+    await t.asUser(who, 'insert into challenge_participants (challenge_id, athlete_id) values ($1, $2)', [weekly, who]);
+    const monday = `date_trunc('week', current_date)::date - 14`;
+    for (const day of [`${monday}`, `${monday} + 1`, `${monday} + 2`, `date_trunc('week', current_date)::date + 14`]) {
+      await t.asUser(
+        who,
+        `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty) values ($1, ${day}, 5,7,4,3,8,7,6)`,
+        [who],
+      );
+    }
+    assert.equal(Number((await t.asUser(who, 'select im_challenge_progress($1, $2) as p', [weekly, who])).rows[0].p), 1);
+    assert.equal(Number((await t.asUser(who, 'select viewer_progress from im_challenge_summary($1)', [weekly])).rows[0].viewer_progress), 1);
+  });
+
+  it('kilometres are rounded the same way for the athlete and for the finishers list', async () => {
+    const who = await t.signUp('rounding@example.com', 'Round Er');
+    const { rows } = await t.asUser(
+      coach,
+      `insert into challenges (name, metric, target, starts_on, ends_on, created_by) values ('Ten k', 'distance_km', 10, current_date - 30, current_date, $1) returning id`,
+      [coach],
+    );
+    await t.asUser(who, 'insert into challenge_participants (challenge_id, athlete_id) values ($1, $2)', [rows[0].id, who]);
+    await t.asService(`insert into completed_workouts (athlete_id, date, type, actual_distance_km, source) values ($1, current_date - 1, 'easy_run', 9.96, 'manual')`, [who]);
+    const summary = (await t.asUser(who, 'select * from im_challenge_summary($1)', [rows[0].id])).rows[0];
+    assert.equal(Number(summary.viewer_progress), 10);
+    assert.ok(summary.finishers.includes('Round Er'));
+  });
+
+  it('a completed session cannot be moved into a window afterwards', async () => {
+    const { rows } = await t.asService(`select id from scheduled_workouts where athlete_id = $1 and status = 'completed' and type <> 'rest' limit 1`, [runner]);
+    const refused = await t.expectRefused(runner, `update scheduled_workouts set date = date + 1 where id = $1`, [rows[0].id]);
+    assert.match(refused ?? '', /stays on the day/);
+  });
+});
+

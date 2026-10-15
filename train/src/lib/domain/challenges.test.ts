@@ -22,12 +22,19 @@ describe('challenge rules', () => {
 
   it('counts by the same rules as 0027', () => {
     const window = { startsOn: '2026-10-01', endsOn: '2026-10-31' };
-    const s = (date: string, type = 'easy_run', status = 'completed') => ({ date, type, status }) as never;
+    const s = (date: string, type = 'easy_run', status = 'completed', id = `s-${date}`) => ({ id, date, type, status }) as never;
     const data = {
-      scheduled: [s('2026-10-02'), s('2026-10-03', 'rest'), s('2026-10-04', 'tempo', 'missed'), s('2026-11-01')],
+      scheduled: [s('2026-10-02'), s('2026-10-03', 'rest'), s('2026-10-04', 'tempo', 'missed'), s('2026-11-01'), s('2026-10-05', 'easy_run', 'scheduled'), s('2026-09-27', 'easy_run', 'scheduled')],
       completed: [{ date: '2026-10-02', actualDistanceKm: 8.25 }, { date: '2026-10-09', actualDistanceKm: 12 }] as never,
-      forge: [{ kind: 'community_run', date: '2026-10-05' }, { kind: 'run_completed', date: '2026-10-06' }] as never,
-      checkins: [{ weekStart: '2026-10-05' }, { weekStart: '2026-09-28' }] as never,
+      // club runs count by the session's date: the second was logged in the
+      // window but run in September, so it does not count
+      forge: [
+        { kind: 'community_run', date: '2026-10-05', sourceId: 's-2026-10-05' },
+        { kind: 'community_run', date: '2026-10-06', sourceId: 's-2026-09-27' },
+        { kind: 'run_completed', date: '2026-10-06', sourceId: 's-2026-10-02' },
+      ] as never,
+      // two in one week are one week; the September week is outside
+      checkins: [{ weekStart: '2026-10-05' }, { weekStart: '2026-10-07' }, { weekStart: '2026-09-28' }] as never,
     };
     assert.equal(progressFor({ ...window, metric: 'sessions' }, data), 1);
     assert.equal(progressFor({ ...window, metric: 'club_runs' }, data), 1);

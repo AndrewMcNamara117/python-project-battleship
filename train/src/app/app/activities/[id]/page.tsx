@@ -43,7 +43,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     repo.listEffortsForActivity(activity.id),
     repo.listSegments(true),
     repo.listEfforts(session.userId),
-    repo.listActivities(session.userId, 1000),
+    repo.listActivities(session.userId, Infinity),
   ]);
   const createdLog = completed.some((c) => c.id === activity.completedWorkoutId && c.source === 'upload');
 

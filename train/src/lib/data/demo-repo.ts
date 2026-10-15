@@ -762,7 +762,8 @@ export class DemoRepo implements IronMilesRepo {
   async leaveChallenge(challengeId: UUID, athleteId: UUID): Promise<void> {
     const d = dataset();
     const c = d.challenges.find((x) => x.id === challengeId);
-    if (!c || !canJoin(c, toISODate(new Date()))) return; // closed: as the policy, nothing happens
+    // closed: the policy hides the row, and the Supabase adapter reports that
+    if (!c || !canJoin(c, toISODate(new Date()))) throw new Error('leave refused by policy');
     d.challengeParticipants = d.challengeParticipants.filter((p) => !(p.challengeId === challengeId && p.athleteId === athleteId));
   }
 
@@ -1225,6 +1226,8 @@ export class DemoRepo implements IronMilesRepo {
         createdAt: now,
       };
       const i = d.notifications.findIndex((x) => x.id === id);
+      // as 0026: nothing new to say (kudos taken back and given again) bumps nothing
+      if (i >= 0 && d.notifications[i].title === row.title) return;
       if (i >= 0) d.notifications[i] = row;
       else d.notifications.push(row);
       return;

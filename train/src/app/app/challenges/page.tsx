@@ -35,7 +35,7 @@ export default async function ChallengesPage() {
                 challenge={c}
                 summary={summaries[i]}
                 today={today}
-                action={canJoin(c, today) ? <JoinChallenge challengeId={c.id} joined={summaries[i].viewerJoined} /> : undefined}
+                action={canJoin(c, today) ? <JoinChallenge challengeId={c.id} joined={summaries[i].viewerJoined} name={c.name} /> : undefined}
               />
             </Rise>
           ))

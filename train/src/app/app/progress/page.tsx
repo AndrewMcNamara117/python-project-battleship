@@ -30,7 +30,7 @@ export const metadata: Metadata = { title: 'Progress' };
  */
 export default async function ProgressPage() {
   const ctx = await loadAthleteContext();
-  const activities = await (await getRepo()).listActivities(ctx.session.userId, 1000);
+  const activities = await (await getRepo()).listActivities(ctx.session.userId, Infinity);
   const repo = await getRepo();
   const achievements = await repo.listAchievements(ctx.session.userId);
 
