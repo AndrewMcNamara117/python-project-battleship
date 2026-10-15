@@ -5,7 +5,7 @@ import { buildActivity, decodeFile, fingerprint } from './import';
 import { matchSession, sportFits } from './match';
 import { findEfforts, type Effort } from './segments';
 import { newRecords } from './records';
-import type { Activity, TrackPoint } from './types';
+import type { Activity, ActivitySource, TrackPoint } from './types';
 
 /**
  * Importing an activity against the plan.
@@ -100,9 +100,12 @@ export async function importActivity(
   profile: Profile,
   bytes: Uint8Array,
   effortWriter: IronMilesRepo | null = repo,
+  /** Where the file came from: an upload, or a provider's push. */
+  source: ActivitySource = 'upload',
 ): Promise<ImportOutcome> {
   const parsed = decodeFile(bytes);
   const { draft, analysis } = buildActivity(parsed, fingerprint(bytes), {
+    source,
     athleteId: profile.id,
     timeZone: profile.timezone,
     privacyTrimM: profile.privacyTrimM,

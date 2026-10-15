@@ -54,6 +54,7 @@ import type {
   ForgeScoreEvent,
   Goal,
   Integration,
+  IntegrationProvider,
   ISODate,
   LeaderboardCategory,
   LeaderboardEntry,
@@ -285,6 +286,21 @@ export interface IronMilesRepo {
   /* billing + integrations */
   getSubscription(athleteId: UUID): Promise<Subscription | null>;
   listIntegrations(athleteId: UUID): Promise<Integration[]>;
+
+  /* watch sync — every method below is called with the service repo only,
+     after the route has authorised the request (migration 0028) */
+  saveConnection(c: { athleteId: UUID; provider: IntegrationProvider; externalUserId: string; sealedTokens: string; expiresAt: string | null }): Promise<void>;
+  getConnection(athleteId: UUID, provider: IntegrationProvider): Promise<{ externalUserId: string; sealedTokens: string } | null>;
+  findConnection(provider: IntegrationProvider, externalUserId: string): Promise<{ athleteId: UUID; sealedTokens: string } | null>;
+  removeConnection(athleteId: UUID, provider: IntegrationProvider): Promise<void>;
+  markSynced(athleteId: UUID, provider: IntegrationProvider): Promise<void>;
+  /**
+   * Claim a provider activity before fetching it. False when it was already
+   * claimed — unless that earlier attempt failed, so a provider's retry of a
+   * push that failed mid-fetch is not mistaken for a duplicate.
+   */
+  claimImport(provider: IntegrationProvider, externalId: string, athleteId: UUID): Promise<boolean>;
+  finishImport(provider: IntegrationProvider, externalId: string, outcome: 'imported' | 'duplicate' | 'failed', activityId: UUID | null, detail: string | null): Promise<void>;
 
   /* notifications */
   listNotifications(userId: UUID): Promise<Notification[]>;

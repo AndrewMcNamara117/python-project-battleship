@@ -26,6 +26,8 @@
     "_comment:email": "e2e/email.mjs needs the app started with a provider attached: CRON_SECRET=... RESEND_API_KEY=test-key RESEND_ENDPOINT=http://127.0.0.1:4599/emails RESEND_WEBHOOK_SECRET=whsec_... npm run dev. It stands up a local server that speaks Resend's protocol, so everything but the last hop across the internet is real.",
     "test:batch": "node e2e/batch.mjs",
     "test:record": "node e2e/record.mjs",
+    "test:sync": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs e2e/sync.mjs",
+    "_comment:sync": "e2e/sync.mjs needs the app started with SYNC_SECRET (32+ chars), SYNC_SIMULATOR_URL=http://127.0.0.1:4600 and SYNC_SIMULATOR_SECRET=push-secret. It runs the provider itself.",
     "test:activities": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs e2e/activities.mjs",
     "test:checkins": "node e2e/checkins.mjs",
     "test:triage": "node --experimental-strip-types --import ./scripts/alias-hooks-register.mjs --test supabase/test/checkin-triage-floor.test.mjs",

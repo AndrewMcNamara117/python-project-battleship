@@ -27,6 +27,7 @@ import type {
   ForgeScoreEvent,
   Goal,
   Integration,
+  IntegrationProvider,
   ISODate,
   LeaderboardCategory,
   LeaderboardEntry,
@@ -160,7 +161,20 @@ function dataset(): DemoDataset {
  * session leak into the next. Tests call this between cases; nothing in the
  * app does, because a coach mid-session would not thank us for it.
  */
+interface DemoSyncStore {
+  connections: Map<string, { athleteId: UUID; provider: IntegrationProvider; externalUserId: string; sealedTokens: string; expiresAt: string | null }>;
+  imports: Map<string, { athleteId: UUID; outcome: string; activityId: UUID | null; detail: string | null }>;
+}
+const syncKey = Symbol.for('ironmiles.demo.sync');
+function syncStore(): DemoSyncStore {
+  const g = globalThis as unknown as Record<symbol, DemoSyncStore | undefined>;
+  g[syncKey] ??= { connections: new Map(), imports: new Map() };
+  return g[syncKey] as DemoSyncStore;
+}
+
 export function resetDemoData(): void {
+  syncStore().connections.clear();
+  syncStore().imports.clear();
   state().cache = null;
   state().notes = null;
 }
@@ -1066,6 +1080,61 @@ export class DemoRepo implements IronMilesRepo {
 
   async listIntegrations(athleteId: UUID): Promise<Integration[]> {
     return clone(dataset().integrations.filter((i) => i.athleteId === athleteId));
+  }
+
+  /* ---------- watch sync ----------
+     In memory, as the service role would see 0028's tables. The tokens are
+     stored sealed here too: the demo holds the same ciphertext Postgres would. */
+
+  async saveConnection(c: { athleteId: UUID; provider: IntegrationProvider; externalUserId: string; sealedTokens: string; expiresAt: string | null }): Promise<void> {
+    const s = syncStore();
+    const clash = [...s.connections.values()].find((x) => x.provider === c.provider && x.externalUserId === c.externalUserId && x.athleteId !== c.athleteId);
+    // as unique (provider, external_user_id): one watch account, one athlete
+    if (clash) throw new Error('duplicate key value violates unique constraint');
+    s.connections.set(`${c.athleteId}:${c.provider}`, { ...c });
+    this.setIntegrationStatus(c.athleteId, c.provider, 'connected');
+  }
+
+  async getConnection(athleteId: UUID, provider: IntegrationProvider) {
+    const c = syncStore().connections.get(`${athleteId}:${provider}`);
+    return c ? { externalUserId: c.externalUserId, sealedTokens: c.sealedTokens } : null;
+  }
+
+  async findConnection(provider: IntegrationProvider, externalUserId: string) {
+    const c = [...syncStore().connections.values()].find((x) => x.provider === provider && x.externalUserId === externalUserId);
+    return c ? { athleteId: c.athleteId, sealedTokens: c.sealedTokens } : null;
+  }
+
+  async removeConnection(athleteId: UUID, provider: IntegrationProvider): Promise<void> {
+    syncStore().connections.delete(`${athleteId}:${provider}`);
+    this.setIntegrationStatus(athleteId, provider, 'available');
+  }
+
+  async markSynced(athleteId: UUID, provider: IntegrationProvider): Promise<void> {
+    const i = dataset().integrations.find((x) => x.athleteId === athleteId && x.provider === provider);
+    if (i) i.lastSyncAt = new Date().toISOString();
+  }
+
+  async claimImport(provider: IntegrationProvider, externalId: string, athleteId: UUID): Promise<boolean> {
+    const key = `${provider}:${externalId}`;
+    const s = syncStore();
+    const prior = s.imports.get(key);
+    if (prior && prior.outcome !== 'failed') return false;
+    s.imports.set(key, { athleteId, outcome: 'claimed', activityId: null, detail: null });
+    return true;
+  }
+
+  async finishImport(provider: IntegrationProvider, externalId: string, outcome: 'imported' | 'duplicate' | 'failed', activityId: UUID | null, detail: string | null): Promise<void> {
+    const row = syncStore().imports.get(`${provider}:${externalId}`);
+    if (row) Object.assign(row, { outcome, activityId, detail });
+  }
+
+  private setIntegrationStatus(athleteId: UUID, provider: IntegrationProvider, status: Integration['status']) {
+    const d = dataset();
+    const i = d.integrations.find((x) => x.athleteId === athleteId && x.provider === provider);
+    const connectedAt = status === 'connected' ? new Date().toISOString() : null;
+    if (i) Object.assign(i, { status, connectedAt });
+    else d.integrations.push({ id: uid('int'), athleteId, provider, status, connectedAt, lastSyncAt: null });
   }
 
   async listNotifications(userId: UUID): Promise<Notification[]> {

@@ -102,6 +102,7 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0025_best_efforts.sql # personal-record data on activities
    supabase/migrations/0026_social_notifications.sql # kudos and comment notices
    supabase/migrations/0027_challenges.sql   # club challenges
+   supabase/migrations/0028_sync.sql         # watch sync: sealed tokens, push ledger
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.
@@ -499,11 +500,9 @@ labelled in the interface, so nothing looks functional when it is not.
   Forge rules list marks them "coach records" and the milestones panel says so.
 - **Community reactions are read-only.** The counts are real; there is no way to
   add one, and the UI says that rather than showing a control that does nothing.
-- **Provider sync.** Watch *files* import today (see Activities). Automatic sync from Garmin,
-  COROS and Strava needs each provider's developer-programme approval and OAuth credentials; the
-  `activities.source` column and `integrations` table are ready for it, and an import arriving by
-  webhook would go through the same `importActivity` service. Apple Health needs a native app.
-  Google Fit is being shut down by Google — that provider should become Health Connect.
+- **Provider sync** is built and tested against a simulated provider; Garmin and COROS each
+  need their partner programme's approval before their adapter can be written. See SYNC.md.
+  Apple Health / Health Connect need the native app.
 - **Legal pages** are drafts and say so on the page. They need a solicitor's review — particularly
   on health-data handling under GDPR — before the first payment is taken.
 - **Exercise video** is a labelled empty state until real footage is filmed. The player renders the

@@ -143,7 +143,14 @@ console.log('\nFAILURE STATES ARE HANDLED, NOT CRASHED');
 }
 {
   const r = await req('/app/profile', { cookie: 'athlete' });
-  check('integrations are labelled rather than looking connectable', /coming soon/i.test(r.text));
+  // a provider that cannot connect says why, and offers no Connect link; only a
+  // configured one (the sync simulator, in e2e/sync.mjs) may offer one
+  check(
+    'integrations are labelled rather than looking connectable',
+    /Awaiting COROS API partner approval/i.test(r.text) &&
+      !/\/api\/sync\/coros\/connect/.test(r.text) &&
+      !/\/api\/sync\/strava\/connect/.test(r.text),
+  );
 }
 {
   const r = await req('/coach/applications', { cookie: 'coach' });

@@ -14,6 +14,7 @@ import type {
   ForgeScoreEvent,
   Goal,
   Integration,
+  IntegrationProvider,
   ISODate,
   LeaderboardCategory,
   LeaderboardEntry,
@@ -1379,6 +1380,98 @@ export class SupabaseRepo implements IronMilesRepo {
         lastSyncAt: r.last_sync_at,
       }),
     );
+  }
+
+
+  /* ---------- watch sync (service role only: 0028 gives clients nothing) ---------- */
+
+  async saveConnection(c: { athleteId: UUID; provider: IntegrationProvider; externalUserId: string; sealedTokens: string; expiresAt: string | null }) {
+    const { error } = await this.db.from('integration_secrets').upsert(
+      {
+        athlete_id: c.athleteId,
+        provider: c.provider,
+        external_user_id: c.externalUserId,
+        token_ciphertext: c.sealedTokens,
+        expires_at: c.expiresAt,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'athlete_id,provider' },
+    );
+    if (error) throw new Error(error.message);
+    const { error: e2 } = await this.db
+      .from('integrations')
+      .upsert({ athlete_id: c.athleteId, provider: c.provider, status: 'connected', connected_at: new Date().toISOString() }, { onConflict: 'athlete_id,provider' });
+    if (e2) throw new Error(e2.message);
+  }
+
+  async getConnection(athleteId: UUID, provider: IntegrationProvider) {
+    const { data, error } = await this.db
+      .from('integration_secrets')
+      .select('external_user_id, token_ciphertext')
+      .eq('athlete_id', athleteId)
+      .eq('provider', provider)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data ? { externalUserId: data.external_user_id as string, sealedTokens: data.token_ciphertext as string } : null;
+  }
+
+  async findConnection(provider: IntegrationProvider, externalUserId: string) {
+    const { data, error } = await this.db
+      .from('integration_secrets')
+      .select('athlete_id, token_ciphertext')
+      .eq('provider', provider)
+      .eq('external_user_id', externalUserId)
+      .maybeSingle();
+    if (error && error.code !== 'PGRST116') throw new Error(error.message);
+    return data ? { athleteId: data.athlete_id as UUID, sealedTokens: data.token_ciphertext as string } : null;
+  }
+
+  async removeConnection(athleteId: UUID, provider: IntegrationProvider) {
+    const { error } = await this.db.from('integration_secrets').delete().eq('athlete_id', athleteId).eq('provider', provider);
+    if (error) throw new Error(error.message);
+    const { error: e2 } = await this.db
+      .from('integrations')
+      .update({ status: 'available', connected_at: null })
+      .eq('athlete_id', athleteId)
+      .eq('provider', provider);
+    if (e2) throw new Error(e2.message);
+  }
+
+  async markSynced(athleteId: UUID, provider: IntegrationProvider) {
+    const { error } = await this.db
+      .from('integrations')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('athlete_id', athleteId)
+      .eq('provider', provider);
+    if (error) throw new Error(error.message);
+  }
+
+  async claimImport(provider: IntegrationProvider, externalId: string, athleteId: UUID): Promise<boolean> {
+    const { data, error } = await this.db
+      .from('activity_imports')
+      .upsert({ provider, external_id: externalId, athlete_id: athleteId, outcome: 'claimed' }, { onConflict: 'provider,external_id', ignoreDuplicates: true })
+      .select('id');
+    if (error) throw new Error(error.message);
+    if (Array.isArray(data) && data.length > 0) return true;
+    // already there: reclaim it only if the earlier attempt failed
+    const { data: retried, error: e2 } = await this.db
+      .from('activity_imports')
+      .update({ outcome: 'claimed', detail: null })
+      .eq('provider', provider)
+      .eq('external_id', externalId)
+      .eq('outcome', 'failed')
+      .select('id');
+    if (e2) throw new Error(e2.message);
+    return Array.isArray(retried) && retried.length > 0;
+  }
+
+  async finishImport(provider: IntegrationProvider, externalId: string, outcome: 'imported' | 'duplicate' | 'failed', activityId: UUID | null, detail: string | null) {
+    const { error } = await this.db
+      .from('activity_imports')
+      .update({ outcome, activity_id: activityId, detail })
+      .eq('provider', provider)
+      .eq('external_id', externalId);
+    if (error) throw new Error(error.message);
   }
 
   listNotifications(userId: UUID) {

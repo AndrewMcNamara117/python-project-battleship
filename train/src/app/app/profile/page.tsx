@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { AppPage, PageHeader } from '@/components/app/PageHeader';
 import { Rise } from '@/components/motion/Rise';
 import { Badge } from '@/components/ui/Badge';
@@ -10,6 +11,8 @@ import { getRepo } from '@/lib/data';
 import { formatDate, formatDayMonth } from '@/lib/domain/dates';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { DataControls, PrivacyControls, ProfileSettings } from './ProfileSettings';
+import { ConnectedApps, type ConnectedAppRow } from '@/components/app/ConnectedApps';
+import { syncProviders, syncSecret } from '@/lib/sync/providers';
 
 export const metadata: Metadata = { title: 'Profile' };
 
@@ -21,7 +24,8 @@ const PROVIDER_LABEL: Record<string, string> = {
   google_fit: 'Google Fit',
 };
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ sync?: string; reason?: string }> }) {
+  const { sync, reason } = await searchParams;
   const ctx = await loadAthleteContext();
   const repo = await getRepo();
   const [subscription, integrations] = await Promise.all([
@@ -30,6 +34,32 @@ export default async function ProfilePage() {
   ]);
 
   const pkg = subscription ? packageByCode(subscription.packageCode) : null;
+
+  const providers = syncProviders();
+  const ready = Boolean(syncSecret());
+  const appRows: ConnectedAppRow[] = [
+    ...providers.map((p) => {
+      const i = integrations.find((x) => x.provider === p.name);
+      return {
+        name: p.name,
+        label: p.label,
+        available: ready && p.configured(),
+        connected: i?.status === 'connected',
+        lastSyncAt: i?.lastSyncAt ?? null,
+        note: p.configured() ? (ready ? null : 'Sync is not switched on for this deployment yet.') : p.setupRequired,
+      };
+    }),
+    { name: 'apple_health', label: 'Apple Health', available: false, connected: false, lastSyncAt: null, note: 'Needs the phone app. Apps like HealthFit export files that import today.' },
+    { name: 'health_connect', label: 'Health Connect (Android)', available: false, connected: false, lastSyncAt: null, note: 'Needs the phone app. Google Fit, its predecessor, is being retired by Google.' },
+  ];
+  const syncNotice =
+    sync?.startsWith('connected:')
+      ? { ok: true, text: `${PROVIDER_LABEL[sync.slice(10)] ?? 'Your watch'} is connected. New activities will arrive by themselves.` }
+      : sync === 'failed'
+        ? { ok: false, text: reason ?? 'The connection did not complete.' }
+        : sync === 'unavailable'
+          ? { ok: false, text: 'That connection is not available yet.' }
+          : null;
 
   return (
     <AppPage>
@@ -117,24 +147,22 @@ export default async function ProfilePage() {
           <Rise delay={120}>
             <Panel className="p-6">
               <PanelHeader label="Connected apps" />
-              <ul className="mt-5 space-y-3.5">
-                {integrations.map((i) => (
-                  <li key={i.id} className="flex items-center justify-between gap-4">
-                    <span className="text-[14px]">{PROVIDER_LABEL[i.provider] ?? i.provider}</span>
-                    <Badge tone={i.status === 'connected' ? 'green' : 'neutral'}>
-                      {i.status === 'connected'
-                        ? 'Connected'
-                        : i.status === 'coming_soon'
-                          ? 'Coming soon'
-                          : 'Available'}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
+              {syncNotice && (
+                <p role="status" className={`mt-4 text-[13px] font-bold ${syncNotice.ok ? 'text-mint' : 'text-status-missed'}`}>
+                  {syncNotice.text}
+                </p>
+              )}
+              <ConnectedApps rows={appRows} />
               <p className="mt-6 border-t border-line pt-4 text-[11px] leading-relaxed text-muted-2">
-                Manual logging works properly today and takes about twenty seconds a session. Device
-                sync is architected for and will connect in a later release — we would rather ship
-                one thing that works than five that half do.
+                Until a watch connects, export a file from it and{' '}
+                <Link href="/app/activities" className="text-mint hover:underline">
+                  import it
+                </Link>
+                , or{' '}
+                <Link href="/app/record" className="text-mint hover:underline">
+                  record in the browser
+                </Link>
+                . Tokens for a connected account are stored encrypted, readable only by the server.
               </p>
             </Panel>
           </Rise>
