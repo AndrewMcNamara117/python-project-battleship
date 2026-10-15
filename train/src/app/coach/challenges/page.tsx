@@ -42,7 +42,15 @@ export default async function CoachChallengesPage() {
       <div className="mt-8 grid gap-5 md:grid-cols-2">
         {challenges.map((c, i) => (
           <div key={c.id} className={c.archived ? 'opacity-60' : ''}>
-            <ChallengeCard challenge={c} summary={summaries[i]} today={today} action={<ArchiveChallenge challengeId={c.id} archived={c.archived} />} />
+            <ChallengeCard challenge={c} summary={summaries[i]} today={today} action={
+                // as the policy: the coach who set it, or an admin
+                c.createdBy === session.userId || session.role === 'admin' ? (
+                  <ArchiveChallenge challengeId={c.id} archived={c.archived} />
+                ) : (
+                  <span className="im-micro text-ink-tertiary">Another coach’s</span>
+                )
+              }
+            />
           </div>
         ))}
       </div>

@@ -43,7 +43,8 @@ declare
 begin
   if new.scheduled_workout_id is null then return new; end if;
   select * into s from scheduled_workouts where id = new.scheduled_workout_id and athlete_id = new.athlete_id;
-  if not found then return new; end if;
+  -- a session logged before its day earns nothing (a day's grace for time zones)
+  if not found or s.date > current_date + 1 then return new; end if;
 
   -- the session that actually happened: a Saturday club run is community
   -- attendance, not just another prescribed run (the demo's forgeKindFor)
@@ -108,7 +109,11 @@ language plpgsql security definer set search_path = public as $$
 begin
   if new.status = 'completed' and (tg_op = 'INSERT' or old.status is distinct from 'completed')
      and new.scheduled_workout_id is not null
-     and exists (select 1 from scheduled_workouts s where s.id = new.scheduled_workout_id and s.athlete_id = new.athlete_id) then
+     and exists (
+       select 1 from scheduled_workouts s
+       where s.id = new.scheduled_workout_id and s.athlete_id = new.athlete_id
+         and s.type = 'strength' and s.date <= current_date + 1
+     ) then
     insert into forge_score_events (athlete_id, kind, points, date, label, source_id)
     values (new.athlete_id, 'strength_completed', 8, new.date, 'Strength session', new.scheduled_workout_id)
     on conflict (athlete_id, kind, source_id) do nothing;
@@ -123,12 +128,18 @@ create trigger strength_sessions_forge
 -- ---------- a weekly check-in ----------
 -- Keyed on the week, not the row: deleting and resubmitting a check-in is
 -- a new row id, and must not be a new five points.
+-- And keyed on the *week* the date falls in, never the raw value: a
+-- client chooses week_start, so a check-in "for" every day of the year
+-- would otherwise be 365 weeks. A future week earns nothing.
 create or replace function im_forge_on_checkin() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  wk date := date_trunc('week', new.week_start)::date;
 begin
+  if wk > current_date then return new; end if;
   insert into forge_score_events (athlete_id, kind, points, date, label, source_id)
-  values (new.athlete_id, 'checkin_completed', 5, new.week_start, 'Weekly check-in',
-          md5(new.athlete_id::text || ':checkin:' || new.week_start::text)::uuid)
+  values (new.athlete_id, 'checkin_completed', 5, wk, 'Weekly check-in',
+          md5(new.athlete_id::text || ':checkin:' || wk::text)::uuid)
   on conflict (athlete_id, kind, source_id) do nothing;
   return new;
 end $$;
@@ -148,34 +159,39 @@ create trigger checkins_forge
 -- reschedule action already enforces in the app).
 create or replace function im_guard_athlete_session_edit() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare
+  changed boolean;
 begin
-  -- the server, the athlete's coach and admins edit the plan as before
-  if auth.uid() is null or im_is_coach_of(old.athlete_id) or im_is_admin() then
+  -- The server, coaches and admins edit plans as before; RLS (sched_coach_write)
+  -- still limits a coach's own writes to their roster. Staff are exempt here,
+  -- not just the athlete's coach, because ON DELETE SET NULL (a coach deleting
+  -- a race or a shared template) updates other coaches' athletes' sessions
+  -- as the deleting coach, and refusing that would refuse the delete.
+  if auth.uid() is null or im_is_staff() then
     return new;
   end if;
-  if new.athlete_id is distinct from old.athlete_id
-     or new.program_id is distinct from old.program_id
-     or new.name is distinct from old.name
-     or new.type is distinct from old.type
-     or new.basis is distinct from old.basis
-     or new.intensity is distinct from old.intensity
-     or new.distance_km is distinct from old.distance_km
-     or new.duration_minutes is distinct from old.duration_minutes
-     or new.pace_min_sec_km is distinct from old.pace_min_sec_km
-     or new.pace_max_sec_km is distinct from old.pace_max_sec_km
-     or new.hr_zone is distinct from old.hr_zone
-     or new.rpe_target is distinct from old.rpe_target
-     or new.warm_up is distinct from old.warm_up
-     or new.main_set is distinct from old.main_set
-     or new.cool_down is distinct from old.cool_down
-     or new.notes is distinct from old.notes
-     or new.coach_note is distinct from old.coach_note
-     or new.strength_template_id is distinct from old.strength_template_id
-     or new.race_id is distinct from old.race_id then
+
+  -- An allow-list, so a column added later is protected by default. This
+  -- trigger sorts first among the BEFORE triggers, so it sees only what the
+  -- client sent, before updated_at or the revision are touched.
+  changed := (to_jsonb(new) - array['status', 'date', 'slot', 'updated_at']::text[])
+           <> (to_jsonb(old) - array['status', 'date', 'slot', 'updated_at']::text[]);
+  if changed then
     raise exception 'An athlete can change a session''s status, or move it within its week. The rest is the coach''s.';
   end if;
   if date_trunc('week', new.date) is distinct from date_trunc('week', old.date) then
     raise exception 'Sessions move within their own week. Ask your coach to change the week itself.';
+  end if;
+  -- completed means logged: a log or a finished strength session must exist,
+  -- and not for a day that has not come yet (a day's grace for time zones)
+  if new.status = 'completed' and old.status is distinct from 'completed' then
+    if new.date > current_date + 1 then
+      raise exception 'A session cannot be completed before its day.';
+    end if;
+    if not exists (select 1 from completed_workouts c where c.scheduled_workout_id = new.id)
+       and not exists (select 1 from strength_sessions x where x.scheduled_workout_id = new.id and x.status = 'completed') then
+      raise exception 'Log the session to complete it.';
+    end if;
   end if;
   return new;
 end $$;

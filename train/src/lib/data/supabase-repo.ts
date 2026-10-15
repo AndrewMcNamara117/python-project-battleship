@@ -584,6 +584,11 @@ export class SupabaseRepo implements IronMilesRepo {
     return this.toScheduled(data);
   }
 
+  async setScheduledStatus(id: UUID, status: 'missed' | 'skipped' | 'scheduled') {
+    const { error } = await this.db.from('scheduled_workouts').update({ status }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
   async moveScheduled(id: UUID, toDate: ISODate) {
     const { error } = await this.db
       .from('scheduled_workouts')

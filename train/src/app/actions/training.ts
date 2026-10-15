@@ -98,7 +98,9 @@ export async function markSessionStatus(
   if (!scheduled || scheduled.athleteId !== session.userId) {
     return { ok: false, message: 'That session is not on your plan.' };
   }
-  await repo.saveScheduled({ ...scheduled, status });
+  // status only: a full-row write would send back every field the coach set,
+  // and the database refuses an athlete's write that touches those
+  await repo.setScheduledStatus(scheduled.id, status);
   revalidatePath('/app');
   revalidatePath('/app/today');
   revalidatePath('/app/calendar');

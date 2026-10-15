@@ -51,12 +51,19 @@ after(async () => t?.close());
 
 describe('setting challenges', () => {
   it('only staff set them', async () => {
-    assert.ok(await t.expectRefused(runner, `insert into challenges (name, metric, target, starts_on, ends_on) values ('Mine', 'sessions', 1, current_date, current_date)`));
+    assert.match(
+      (await t.expectRefused(runner, `insert into challenges (name, metric, target, starts_on, ends_on, created_by) values ('Mine', 'sessions', 1, current_date, current_date, $1)`, [runner])) ?? '',
+      /row-level security/,
+    );
   });
 
   it('a window must end after it starts, and within a year', async () => {
-    assert.ok(await t.expectRefused(coach, `insert into challenges (name, metric, target, starts_on, ends_on) values ('Back', 'sessions', 1, '2026-02-01', '2026-01-01')`));
-    assert.ok(await t.expectRefused(coach, `insert into challenges (name, metric, target, starts_on, ends_on) values ('Long', 'sessions', 1, '2026-01-01', '2028-01-01')`));
+    // created_by set, so the policy passes and only the window can refuse
+    const insert = `insert into challenges (name, metric, target, starts_on, ends_on, created_by) values ($1, 'sessions', 1, $2, $3, $4)`;
+    for (const [name, from, to] of [['Back', '2026-02-01', '2026-01-01'], ['Long', '2026-01-01', '2028-01-01']]) {
+      assert.match((await t.expectRefused(coach, insert, [name, from, to, coach])) ?? '', /check constraint/, name);
+    }
+    await t.asUser(coach, insert, ['A month', '2026-01-01', '2026-01-31', coach]);
   });
 });
 

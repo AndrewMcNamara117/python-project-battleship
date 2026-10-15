@@ -258,6 +258,9 @@ function forgeKindFor(name: string, type: string): ForgeEventKind {
   return 'run_completed';
 }
 
+/** As 0024's "a day's grace for time zones": later than tomorrow has not happened. */
+const aheadOfToday = (date: ISODate) => date > addDays(toISODate(new Date()), 1);
+
 export class DemoRepo implements IronMilesRepo {
   readonly mode = 'demo' as const;
 
@@ -387,6 +390,11 @@ export class DemoRepo implements IronMilesRepo {
     return clone(dataset().scheduled.find((w) => w.id === id) ?? null);
   }
 
+  async setScheduledStatus(id: UUID, status: 'missed' | 'skipped' | 'scheduled'): Promise<void> {
+    const w = dataset().scheduled.find((x) => x.id === id);
+    if (w) w.status = status;
+  }
+
   async saveScheduled(workout: ScheduledWorkout): Promise<ScheduledWorkout> {
     const d = dataset();
     const i = d.scheduled.findIndex((w) => w.id === workout.id);
@@ -436,8 +444,10 @@ export class DemoRepo implements IronMilesRepo {
     else d.completed.push(row);
 
     if (entry.scheduledWorkoutId) {
-      const sched = d.scheduled.find((w) => w.id === entry.scheduledWorkoutId);
+      const sched = d.scheduled.find((w) => w.id === entry.scheduledWorkoutId && w.athleteId === entry.athleteId);
       if (sched) sched.status = 'completed';
+      // as 0024: a session logged before its day earns nothing
+      if (sched && aheadOfToday(sched.date)) return clone(row);
       // score the session that actually happened: a Saturday club run is
       // community attendance, not just another prescribed run
       const kind = forgeKindFor(sched?.name ?? '', entry.type);
@@ -789,14 +799,13 @@ export class DemoRepo implements IronMilesRepo {
     else d.strengthSessions.push(clone(session));
 
     if (session.status === 'completed') {
-      if (session.scheduledWorkoutId) {
-        const sched = d.scheduled.find((w) => w.id === session.scheduledWorkoutId);
-        if (sched) sched.status = 'completed';
-      }
-      // as 0024: keyed on the prescribed session, and only for one on the plan
-      const planned = session.scheduledWorkoutId
+      const sched = session.scheduledWorkoutId
         ? d.scheduled.find((w) => w.id === session.scheduledWorkoutId && w.athleteId === session.athleteId)
         : null;
+      if (sched) sched.status = 'completed';
+      // as 0024: keyed on the prescribed session, and only for a strength
+      // session on the plan whose day has come
+      const planned = sched && sched.type === 'strength' && !aheadOfToday(sched.date) ? sched : null;
       if (planned) {
         await this.awardForgePoints({
           athleteId: session.athleteId,
@@ -840,15 +849,19 @@ export class DemoRepo implements IronMilesRepo {
     if (i >= 0) d.checkins[i] = row;
     else d.checkins.push(row);
 
-    await this.awardForgePoints({
-      athleteId: checkIn.athleteId,
-      kind: 'checkin_completed',
-      points: 5,
-      date: checkIn.weekStart,
-      label: 'Weekly check-in',
-      // as 0024: once per week, however many times it is resubmitted
-      sourceId: `checkin-${checkIn.athleteId}-${checkIn.weekStart}`,
-    });
+    // as 0024: once per week — the week the date falls in, whatever day the
+    // client sent — however many times it is resubmitted; never a future week
+    const week = startOfWeek(checkIn.weekStart);
+    if (week <= toISODate(new Date())) {
+      await this.awardForgePoints({
+        athleteId: checkIn.athleteId,
+        kind: 'checkin_completed',
+        points: 5,
+        date: week,
+        label: 'Weekly check-in',
+        sourceId: `checkin-${checkIn.athleteId}-${week}`,
+      });
+    }
     return clone(row);
   }
 
