@@ -183,7 +183,7 @@ Everything lives in `src/lib/activity/` and has no dependencies.
 |---|---|
 | `fit.ts`, `xml.ts` | Decoders. FIT checks its CRC; GPX/TCX are scanned linearly and never expand entities |
 | `analyse.ts` | Distance (device channel first, GPS with teleports dropped), moving time, splits, elevation with a dead band, HR zones |
-| `route.ts` | Privacy trim, privacy zones (cut as gaps, never bridged), simplification, encoded polyline |
+| `route.ts` | Privacy trim — the ends hidden by distance *and* as a circle round the first and last fix, so laps from a front door never show it — cut as gaps, never bridged; simplification; encoded polyline. Named privacy zones are supported by the engine but have no setting yet |
 | `match.ts` | Which planned session the file was — automatic only when exactly one fits |
 | `service.ts` | Import → dedupe → match → log or enrich → link; attach; delete |
 | `fixtures.ts` | Writes real FIT/GPX/TCX bytes from a synthetic run, for tests and the demo |
@@ -524,6 +524,7 @@ labelled in the interface, so nothing looks functional when it is not.
   embed the moment a `videoUrl` exists.
 - **Rate limiting** is per-process memory. Multi-instance deployment needs Redis; only
   `src/lib/rate-limit.ts` changes.
+- **Privacy zones** beyond the start and finish (a workplace, a school) are supported by the route engine but have no setting yet; the trim round the start and finish is the athlete's control today.
 - **Push notifications.** Jobs write to the `notifications` table; wiring web push is separate work.
 - **Demo data** is fictional, including the coach persona. Demo writes live in
   the server process and are lost on restart; the intake queue states this

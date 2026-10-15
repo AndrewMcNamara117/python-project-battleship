@@ -411,3 +411,57 @@ describe('matching to the plan', () => {
     assert.equal(localDate('2026-10-10T12:00:00Z', 'Not/AZone'), '2026-10-10');
   });
 });
+
+describe('hostile files cost little', () => {
+  it('a FIT of field-less records — 57 KB gzipped, 59M "points" — is refused, not parsed', () => {
+    const n = 59_000_000;
+    const body = 6 + n;
+    const b = new Uint8Array(14 + body + 2);
+    b[0] = 14;
+    b[1] = 0x10;
+    new DataView(b.buffer).setUint32(4, body, true);
+    b.set([0x2e, 0x46, 0x49, 0x54], 8);
+    b.set([0x40, 0, 0, 20, 0, 0], 14); // definition: record (20), no fields; every byte after is a record
+    const gz = gzipSync(b, { level: 9 });
+    assert.ok(gz.length < 100_000);
+    const started = Date.now();
+    assert.throws(() => decodeFile(new Uint8Array(gz)), ActivityFileError);
+    assert.ok(Date.now() - started < 5000);
+  });
+
+  it('a track with more points than any real activity is refused', () => {
+    const pt = '<trkpt lat="52.66" lon="-8.63"/>';
+    const gpx = `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg>${pt.repeat(200_001)}</trkseg></trk></gpx>`;
+    assert.throws(() => decodeFile(new TextEncoder().encode(gpx)), /more track points/);
+  });
+
+  it('a TCX position off the globe is no position, so it cannot poison the stored route', () => {
+    const run = syntheticRun({ start: '2026-10-10T07:00:00Z', distanceKm: 3, paceSecPerKm: 300, intervalS: 2 });
+    const tcx = toTcx(run).replace(/<LatitudeDegrees>[^<]*</g, '<LatitudeDegrees>99999<');
+    const parsed = decodeFile(new TextEncoder().encode(tcx));
+    assert.ok(parsed.points.every((p) => p.lat == null && p.lon == null));
+  });
+
+  it('a damaged stored route renders as nothing rather than throwing', () => {
+    const good = encodePolyline([[52.66, -8.63], [52.67, -8.62]]);
+    assert.deepEqual(decodeRoute(`${good};_`).length, 1);
+  });
+});
+
+describe('privacy trim hides places, not only distances', () => {
+  it('three laps from the front door never show the door, even mid-route', () => {
+    // a 1.5 km out-and-back from the door, three times
+    const door: [number, number] = [52.66, -8.63];
+    const points: TrackPoint[] = [];
+    for (let lap = 0; lap < 3; lap++) {
+      for (let k = 0; k <= 150; k++) {
+        const f = k <= 75 ? k / 75 : (150 - k) / 75;
+        points.push({ t: Date.UTC(2026, 9, 10, 7) + (lap * 151 + k) * 3000, lat: door[0] + f * 0.00675, lon: door[1], ele: null, hr: null, cad: null, dist: null });
+      }
+    }
+    const cumulative = cumulativeDistance(points);
+    const shown = privateSegments(points, cumulative, 200).flat();
+    assert.ok(shown.length > 0);
+    assert.ok(shown.every(([lat, lon]) => haversine(door[0], door[1], lat, lon) > 200), 'nothing within 200 m of the door');
+  });
+});

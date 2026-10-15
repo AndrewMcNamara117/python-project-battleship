@@ -129,8 +129,19 @@ export async function importActivity(
     .filter((r) => r.previousS != null)
     .map((r) => ({ label: r.distance.label, elapsedS: r.elapsedS, previousS: r.previousS as number }));
 
+  // a file dated after tomorrow did not happen yet, whatever it says: kept,
+  // but it completes nothing on the plan
+  if (aheadOfToday(draft.localDate)) {
+    return { status: 'unmatched', activity, reason: 'It is dated after today, so it is not matched to your plan.', segments, records };
+  }
+
   const sessions = await repo.listScheduled(profile.id, draft.localDate, draft.localDate);
   const match = matchSession(sessions, draft.localDate, draft.sport);
+  // a second file on a day whose session another file already completed
+  // (a morning run, then an evening jog) does not take that session over
+  if (match.kind === 'logged' && (await linkedSessions(repo, activity)).has(match.scheduledId)) {
+    return { status: 'unmatched', activity, reason: 'That day’s session already has a run on it.', segments, records };
+  }
 
   if (match.kind === 'matched' || match.kind === 'logged') {
     const session = sessions.find((s) => s.id === match.scheduledId) as ScheduledWorkout;
@@ -175,20 +186,28 @@ async function timeSegments(
   });
 }
 
-/** Sessions an unattached activity could still be attached to: that day, the day either side. */
-export async function attachOptions(repo: IronMilesRepo, activity: Activity): Promise<ScheduledWorkout[]> {
-  const sessions = await repo.listScheduled(activity.athleteId, addDays(activity.localDate, -1), addDays(activity.localDate, 1));
-  const linkedElsewhere = new Set(
+const aheadOfToday = (date: string) => date > addDays(new Date().toISOString().slice(0, 10), 1);
+
+/** Sessions that other activities, near this one's date, are already attached to. */
+async function linkedSessions(repo: IronMilesRepo, activity: Activity): Promise<Set<string | null>> {
+  return new Set(
     (await repo.listActivitiesOn(activity.athleteId, addDays(activity.localDate, -1), addDays(activity.localDate, 1)))
       .filter((a) => a.id !== activity.id && a.scheduledWorkoutId)
       .map((a) => a.scheduledWorkoutId),
   );
+}
+
+/** Sessions an unattached activity could still be attached to: that day, the day either side — none whose day has not come. */
+export async function attachOptions(repo: IronMilesRepo, activity: Activity): Promise<ScheduledWorkout[]> {
+  const sessions = await repo.listScheduled(activity.athleteId, addDays(activity.localDate, -1), addDays(activity.localDate, 1));
+  const linkedElsewhere = await linkedSessions(repo, activity);
   return sessions.filter(
     (s) =>
       s.type !== 'rest' &&
       s.type !== 'strength' &&
       s.type !== 'mobility' &&
       sportFits(activity.sport, s.type) &&
+      !aheadOfToday(s.date) &&
       !linkedElsewhere.has(s.id),
   );
 }
@@ -233,7 +252,9 @@ export async function removeActivity(
     const log = (await repo.listCompleted(athleteId, addDays(activity.localDate, -1), addDays(activity.localDate, 1))).find(
       (c) => c.id === activity.completedWorkoutId,
     );
-    if (log && log.source === 'upload') {
+    // only a log this import created, untouched since, and no other file's
+    const shared = (await linkedSessions(repo, activity)).has(activity.scheduledWorkoutId);
+    if (log && log.source === 'upload' && !shared) {
       await repo.unlogWorkout(log.id);
       unlogged = true;
     }

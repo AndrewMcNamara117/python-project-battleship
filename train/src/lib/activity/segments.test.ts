@@ -106,3 +106,20 @@ describe('finding efforts', () => {
     assert.ok(Date.now() - t < 3000, `${Date.now() - t} ms`);
   });
 });
+
+describe('matching cost', () => {
+  it('is linear: a track hovering at the start with no distance gain does not take minutes', () => {
+    const line: LatLon[] = [[52.66, -8.63], [52.67, -8.63]];
+    const seg: SegmentGeometry = { id: 's', ...segmentFromLine(line, 0, lineLength(line)) };
+    const n = 200_000;
+    const pts: TrackPoint[] = [];
+    const cum: number[] = [];
+    for (let i = 0; i < n; i++) {
+      pts.push({ t: 1e12 + i * 1000, lat: 52.66 + (i % 2 ? 0.0005 : 0), lon: -8.63, ele: null, hr: null, cad: null, dist: 0 });
+      cum.push(0);
+    }
+    const started = Date.now();
+    assert.equal(findEffort(pts, cum, seg, 'run', 0), null);
+    assert.ok(Date.now() - started < 2000, `${Date.now() - started} ms`);
+  });
+});

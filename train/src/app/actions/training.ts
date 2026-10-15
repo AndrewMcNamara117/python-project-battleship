@@ -77,7 +77,9 @@ export async function logWorkout(formData: FormData): Promise<Result> {
     sessionRating: parsed.data.sessionRating ?? existing?.sessionRating ?? null,
     soreness: parsed.data.soreness ?? existing?.soreness ?? null,
     athleteNotes: parsed.data.athleteNotes ?? null,
-    source: existing?.source ?? 'manual',
+    // a log the athlete has saved is theirs, even one an import began: so
+    // deleting that file later leaves what they typed (removeActivity)
+    source: existing && existing.source !== 'upload' ? existing.source : 'manual',
   });
 
   revalidatePath('/app');

@@ -476,6 +476,16 @@ export class DemoRepo implements IronMilesRepo {
     if (row.scheduledWorkoutId) {
       const sched = d.scheduled.find((w) => w.id === row.scheduledWorkoutId);
       if (sched && sched.status === 'completed') sched.status = 'scheduled';
+      // as 0024's im_forge_on_unlog: the session's points go, and its week's bonus
+      const week = sched ? `week-${startOfWeek(sched.date)}` : null;
+      d.forgeEvents = d.forgeEvents.filter(
+        (e) =>
+          e.athleteId !== row.athleteId ||
+          !(
+            (e.sourceId === row.scheduledWorkoutId && ['run_completed', 'community_run', 'race_completed'].includes(e.kind)) ||
+            (week && e.kind === 'full_week_adherence' && e.sourceId === week)
+          ),
+      );
     }
     for (const a of d.activities) if (a.completedWorkoutId === completedId) a.completedWorkoutId = null;
   }

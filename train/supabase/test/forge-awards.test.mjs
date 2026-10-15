@@ -264,3 +264,20 @@ describe('points for what happened, not for what a client says happened', () => 
     assert.equal((await t.asService('select race_id from scheduled_workouts where id = $1', [s])).rows[0].race_id, null);
   });
 });
+
+describe('a deleted log gives its points back', () => {
+  it('the run’s points and its week’s bonus go, and logging again earns them once', async () => {
+    const who = await t.signUp('unlog@example.com', 'Unlog');
+    const wk = monday(3);
+    const only = await session(who, plus(wk, 2), 'Easy 5K');
+    const { rows } = await log(who, only, plus(wk, 2));
+    await markDone(who, only);
+    assert.deepEqual([await awardsOf(who, 'run_completed'), await awardsOf(who, 'full_week_adherence')], [1, 1]);
+
+    await t.asUser(who, 'delete from completed_workouts where id = $1', [rows[0].id]);
+    assert.deepEqual([await awardsOf(who, 'run_completed'), await awardsOf(who, 'full_week_adherence')], [0, 0]);
+
+    await log(who, only, plus(wk, 2));
+    assert.equal(await awardsOf(who, 'run_completed'), 1);
+  });
+});

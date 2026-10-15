@@ -63,6 +63,15 @@ export interface ParsedActivity {
 }
 
 /** Thrown for a file we can say something useful about. The message is shown to the athlete. */
+/**
+ * More track points than any real activity: two days at one per second.
+ * Checked as each parser goes, because a few kilobytes of compressed
+ * repetition can otherwise expand into tens of millions of points and
+ * gigabytes of memory before any later check runs.
+ */
+export const MAX_TRACK_POINTS = 200_000;
+export const TOO_MANY_POINTS = 'That file has more track points than any real activity — it cannot be imported.';
+
 export class ActivityFileError extends Error {
   constructor(message: string) {
     super(message);

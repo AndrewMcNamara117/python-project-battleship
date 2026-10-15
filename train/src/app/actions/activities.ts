@@ -129,7 +129,7 @@ export async function deleteActivity(activityId: string): Promise<ActivityResult
   revalidateTraining();
   return {
     ok: true,
-    message: out.unlogged ? 'Deleted, and its session is back on your plan.' : 'Deleted. Your log for that session is unchanged.',
+    message: out.unlogged ? 'Deleted, and its session is back on your plan.' : 'Deleted. Your own log for that session stays, with what the file added to it.',
   };
 }
 

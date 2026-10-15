@@ -1,4 +1,4 @@
-import { ActivityFileError, type ActivitySport, type ParsedActivity, type TrackPoint } from './types';
+import { ActivityFileError, MAX_TRACK_POINTS, TOO_MANY_POINTS, type ActivitySport, type ParsedActivity, type TrackPoint } from './types';
 
 /**
  * GPX and TCX, read as text.
@@ -84,6 +84,9 @@ export function looksLikeTcx(text: string): boolean {
   return /<TrainingCenterDatabase[\s>]/i.test(text.slice(0, 4000));
 }
 
+const onEarth = (lat: number | null, lon: number | null): boolean =>
+  lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+
 export function parseGpx(text: string): ParsedActivity {
   if (!looksLikeGpx(text)) throw new ActivityFileError('That is not a GPX file.');
 
@@ -99,7 +102,8 @@ export function parseGpx(text: string): ParsedActivity {
     const body = open.endsWith('/') ? '' : chunk.slice(close + 1);
     const lat = num(attr(open, 'lat'));
     const lon = num(attr(open, 'lon'));
-    const valid = lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+    const valid = onEarth(lat, lon);
+    if (points.length >= MAX_TRACK_POINTS) throw new ActivityFileError(TOO_MANY_POINTS);
     points.push({
       t: time(tag(body, 'time')),
       lat: valid ? lat : null,
@@ -140,10 +144,13 @@ export function parseTcx(text: string): ParsedActivity {
     const lat = position ? num(tag(position, 'LatitudeDegrees')) : null;
     const lon = position ? num(tag(position, 'LongitudeDegrees')) : null;
     const hrBlock = tag(body, 'HeartRateBpm');
+    // as GPX: a position off the globe is no position (and would overflow the route encoding)
+    const valid = onEarth(lat, lon);
+    if (points.length >= MAX_TRACK_POINTS) throw new ActivityFileError(TOO_MANY_POINTS);
     points.push({
       t: time(tag(body, 'Time')),
-      lat: lat != null && lon != null ? lat : null,
-      lon: lat != null && lon != null ? lon : null,
+      lat: valid ? lat : null,
+      lon: valid ? lon : null,
       ele: num(tag(body, 'AltitudeMeters')),
       hr: hrBlock ? num(tag(hrBlock, 'Value')) : null,
       cad: num(tag(body, 'Cadence')) ?? num(tag(body, 'RunCadence')),

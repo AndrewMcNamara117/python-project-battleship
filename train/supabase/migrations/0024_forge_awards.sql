@@ -76,6 +76,30 @@ create trigger completed_workouts_forge
   after insert or update of scheduled_workout_id on completed_workouts
   for each row execute function im_forge_on_log();
 
+-- a log deleted (the wrong file imported, then deleted) takes its points
+-- back, and the week's bonus with them: the week is no longer complete.
+-- Logging it again earns them again, once.
+create or replace function im_forge_on_unlog() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  wk date;
+begin
+  if old.scheduled_workout_id is null then return old; end if;
+  delete from forge_score_events
+   where athlete_id = old.athlete_id and source_id = old.scheduled_workout_id
+     and kind in ('run_completed', 'community_run', 'race_completed');
+  select date_trunc('week', s.date)::date into wk from scheduled_workouts s where s.id = old.scheduled_workout_id;
+  if wk is not null then
+    delete from forge_score_events
+     where athlete_id = old.athlete_id and kind = 'full_week_adherence' and source_id = im_week_source(old.athlete_id, wk);
+  end if;
+  return old;
+end $$;
+
+create trigger completed_workouts_forge_unlog
+  after delete on completed_workouts
+  for each row execute function im_forge_on_unlog();
+
 -- a session becoming complete any other way (strength player, coach) also
 -- completes the week
 create or replace function im_forge_on_session_complete() returns trigger

@@ -1,4 +1,4 @@
-import { ActivityFileError, type ActivitySport, type DeviceSummary, type ParsedActivity, type TrackPoint } from './types';
+import { ActivityFileError, MAX_TRACK_POINTS, TOO_MANY_POINTS, type ActivitySport, type DeviceSummary, type ParsedActivity, type TrackPoint } from './types';
 
 /**
  * A FIT decoder, reduced to what a training log needs.
@@ -154,6 +154,7 @@ export function parseFit(bytes: Uint8Array): ParsedActivity {
   const defs = new Map<number, Definition>();
   const points: TrackPoint[] = [];
   let lastTimestamp: number | null = null;
+  let messages = 0;
   let sport: number | null = null;
   let subSport: number | null = null;
   let startS: number | null = null;
@@ -202,6 +203,11 @@ export function parseFit(bytes: Uint8Array): ParsedActivity {
 
     const def = defs.get(local);
     if (!def) throw new ActivityFileError('The file is malformed: a record arrived before its definition.');
+    // a message with no fields is one header byte each, so a run of them is
+    // how a tiny file claims millions of points; no real file has a record
+    // without fields, nor anything like this many messages
+    if (def.length === 0 && def.global === MSG_RECORD) throw new ActivityFileError('The file is malformed: a record with no fields.');
+    if (++messages > MAX_TRACK_POINTS * 10) throw new ActivityFileError(TOO_MANY_POINTS);
     if (pos + def.length > dataEnd) throw new ActivityFileError('The file stops part-way through a record.');
 
     const values = new Map<number, number | null>();
@@ -223,6 +229,7 @@ export function parseFit(bytes: Uint8Array): ParsedActivity {
     }
 
     if (def.global === MSG_RECORD) {
+      if (points.length >= MAX_TRACK_POINTS) throw new ActivityFileError(TOO_MANY_POINTS);
       const lat = values.get(0) ?? null;
       const lon = values.get(1) ?? null;
       const enhancedAlt = values.get(78) ?? null;

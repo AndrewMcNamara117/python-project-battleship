@@ -1,5 +1,5 @@
 import { haversine } from './analyse';
-import { decodePolyline, decodeRoute, encodePolyline, simplify, type LatLon } from './route';
+import { decodePolyline, decodeRoute, encodePolyline, endZones, simplify, type LatLon } from './route';
 import type { ActivitySport, TrackPoint } from './types';
 
 /**
@@ -128,9 +128,24 @@ export function findEffort(
   const end = line[line.length - 1];
   const checkpoints = Array.from({ length: CHECKPOINTS }, (_, k) => pointAlong(line, (segment.distanceM * (k + 1)) / (CHECKPOINTS + 1)));
   const total = cumulative[cumulative.length - 1] ?? 0;
+  const hidden = trimM > 0 ? endZones(points, trimM) : [];
+
+  // Linear in the track, however it is shaped: nextNearEnd[k] is the first
+  // fix at or after k within reach of the finish, and the two band pointers
+  // only move forward because cumulative distance never decreases and each
+  // approach starts after the last. (Scanning forward per approach was
+  // quadratic — a track that stands still near the start took minutes.)
+  const nearEnd = (k: number) => {
+    const q = points[k];
+    return q.lat != null && q.lon != null && haversine(end[0], end[1], q.lat, q.lon) <= END_RADIUS_M;
+  };
+  const nextNearEnd = new Int32Array(points.length + 1).fill(points.length);
+  for (let k = points.length - 1; k >= 0; k--) nextNearEnd[k] = nearEnd(k) ? k : nextNearEnd[k + 1];
 
   let best: Effort | null = null;
   let i = 0;
+  let lo = 0; // first index far enough from s to finish
+  let limit = 0; // first index too far from s to finish
   while (i < points.length) {
     // walk to the next approach to the start, then take its closest fix
     const p = points[i];
@@ -143,26 +158,28 @@ export function findEffort(
     const s = closestWithin(points, start, END_RADIUS_M, i, j + 1) as number;
 
     // the finish must come within the plausible distance band
-    let limit = s;
+    lo = Math.max(lo, s + 1);
+    while (lo < points.length && cumulative[lo] - cumulative[s] < segment.distanceM * MIN_RATIO) lo++;
+    limit = Math.max(limit, s);
     while (limit < points.length && cumulative[limit] - cumulative[s] <= segment.distanceM * MAX_RATIO) limit++;
     let e: number | null = null;
-    for (let k = s + 1; k < limit; k++) {
-      if (cumulative[k] - cumulative[s] < segment.distanceM * MIN_RATIO) continue;
-      const q = points[k];
-      if (q.lat != null && q.lon != null && haversine(end[0], end[1], q.lat, q.lon) <= END_RADIUS_M) {
-        // the closest fix of this approach to the finish
-        let m = k;
-        while (m + 1 < limit && points[m + 1].lat != null && haversine(end[0], end[1], points[m + 1].lat as number, points[m + 1].lon as number) <= END_RADIUS_M) m++;
-        e = closestWithin(points, end, END_RADIUS_M, k, m + 1);
-        break;
-      }
+    const k = nextNearEnd[lo] ?? points.length;
+    if (k < limit) {
+      // the closest fix of this approach to the finish
+      let m = k;
+      while (m + 1 < limit && nearEnd(m + 1)) m++;
+      e = closestWithin(points, end, END_RADIUS_M, k, m + 1);
     }
 
     if (e != null) {
       const throughAll = checkpoints.every((c) => closestWithin(points, c, CHECKPOINT_RADIUS_M, s, e + 1) != null);
       const ta = interpolateTime(points, s);
       const tb = interpolateTime(points, e);
-      const private_ = cumulative[s] < trimM || cumulative[e] > total - trimM;
+      // hidden by distance from either end, or by being beside where it began or finished
+      const private_ =
+        cumulative[s] < trimM ||
+        cumulative[e] > total - trimM ||
+        [start, end].some((c) => hidden.some((z) => haversine(z.lat, z.lon, c[0], c[1]) <= z.radiusM));
       if (throughAll && ta != null && tb != null && tb > ta && !private_) {
         const elapsedS = Math.round((tb - ta) / 1000);
         const plausible = segment.distanceM / elapsedS <= MAX_SPEED[sport];

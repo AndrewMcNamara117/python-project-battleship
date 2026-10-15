@@ -40,6 +40,10 @@ export function privateSegments(
 ): LatLon[][] {
   const total = cumulative[cumulative.length - 1] ?? 0;
   if (total <= trimM * 2) return [];
+  // the ends are hidden as places too, not only as distance: a run of laps
+  // from the front door passes it again mid-route, far from either end in
+  // distance and right beside it in space
+  if (trimM > 0) zones = [...zones, ...endZones(points, trimM)];
 
   const segments: LatLon[][] = [];
   let current: LatLon[] = [];
@@ -61,6 +65,16 @@ export function privateSegments(
   }
   if (current.length) segments.push(current);
   return segments.filter((s) => s.length >= 2);
+}
+
+/** A circle of `radiusM` round the first and the last GPS fix. */
+export function endZones(points: TrackPoint[], radiusM: number): PrivacyZone[] {
+  const fixed = (p: TrackPoint) => p.lat != null && p.lon != null;
+  const first = points.find(fixed);
+  const last = points.findLast(fixed);
+  return [first, last]
+    .filter((p): p is TrackPoint => p != null)
+    .map((p) => ({ lat: p.lat as number, lon: p.lon as number, radiusM }));
 }
 
 /** Perpendicular distance in metres, on a local flat projection — accurate at route scale. */
@@ -162,7 +176,18 @@ export function encodeRoute(segments: LatLon[][]): string {
 
 export function decodeRoute(s: string | null): LatLon[][] {
   if (!s) return [];
-  return s.split(';').filter(Boolean).map(decodePolyline);
+  // a damaged piece is dropped rather than thrown: this runs while rendering
+  // shared pages, and one bad row must not take the club feed down
+  return s
+    .split(';')
+    .filter(Boolean)
+    .flatMap((piece) => {
+      try {
+        return [decodePolyline(piece)];
+      } catch {
+        return [];
+      }
+    });
 }
 
 /**

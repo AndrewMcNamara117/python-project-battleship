@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { beforeEach, describe, it } from 'node:test';
+import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 import { DEMO_ATHLETE_ID } from '@/data/demo-seed';
 import { DemoRepo, resetDemoData } from '@/lib/data/demo-repo';
 import { isRun } from '@/lib/domain/analytics';
@@ -14,6 +14,7 @@ import { attachActivity, attachOptions, importActivity, removeActivity } from '.
  */
 
 beforeEach(() => resetDemoData());
+afterEach(() => mock.timers.reset());
 
 const enc = (s: string) => new TextEncoder().encode(s);
 
@@ -27,6 +28,9 @@ async function setup() {
     (s) => isRun(s.type) && s.status === 'scheduled' && upcoming.filter((o) => o.date === s.date && o.type !== 'rest').length === 1,
   ) as ScheduledWorkout;
   assert.ok(session, 'the demo plan has an upcoming single-run day');
+  // a run on a day that has not come yet completes nothing, so the clock
+  // stands on the session's own day (the dataset was built for today already)
+  mock.timers.enable({ apis: ['Date'], now: Date.parse(`${session.date}T20:00:00Z`) });
   return { repo, profile, session };
 }
 
@@ -148,7 +152,7 @@ describe('import — when the match is not certain', () => {
     const far = addDays(toISODate(new Date()), 400);
     const out = await importActivity(repo, profile, toFit(runOn(far)));
     assert.equal(out.status, 'unmatched');
-    if (out.status === 'unmatched') assert.match(out.reason, /Nothing was prescribed/);
+    if (out.status === 'unmatched') assert.match(out.reason, /dated after today/);
     assert.ok(await repo.getActivity(out.activity.id), 'stored anyway');
   });
 
@@ -215,3 +219,26 @@ describe('demo seed', () => {
     assert.ok(full?.splits.length && full.series.length);
   });
 });
+
+describe('import — what a file cannot do', () => {
+  it('a file dated in the future completes nothing', async () => {
+    const { repo, profile, session } = await setup();
+    mock.timers.reset();
+    const out = await importActivity(repo, profile, toFit(runOn(addDays(toISODate(new Date()), 9))));
+    assert.equal(out.status, 'unmatched');
+    assert.notEqual((await repo.getScheduled(session.id))?.status, 'completed');
+  });
+
+  it('a second file on a day already completed by another does not take the session over', async () => {
+    const { repo, profile, session } = await setup();
+    const first = await importActivity(repo, profile, toFit(runOn(session.date)));
+    assert.equal(first.status, 'matched');
+    const evening = await importActivity(repo, profile, toFit(runOn(session.date, 3, '18:30:00Z')));
+    assert.equal(evening.status, 'unmatched');
+    // and deleting the evening file leaves the morning's log alone
+    const out = await removeActivity(repo, DEMO_ATHLETE_ID, evening.activity.id);
+    assert.equal(out.unlogged, false);
+    assert.equal((await repo.getScheduled(session.id))?.status, 'completed');
+  });
+});
+
