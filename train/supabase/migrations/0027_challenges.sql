@@ -46,7 +46,30 @@ alter table challenge_participants enable row level security;
 alter table challenge_participants force row level security;
 
 create policy challenges_read on challenges for select using (auth.uid() is not null);
-create policy challenges_staff_write on challenges for all using (im_is_staff()) with check (im_is_staff());
+-- any coach may set one, in their own name; only its creator or an admin may
+-- change or remove it. (One coach editing another's challenge was a way to
+-- read athletes who are not theirs — see the definition lock below.)
+create policy challenges_staff_insert on challenges for insert
+  with check (im_is_staff() and created_by = auth.uid());
+create policy challenges_owner_update on challenges for update
+  using (created_by = auth.uid() or im_is_admin())
+  with check (created_by = auth.uid() or im_is_admin());
+create policy challenges_owner_delete on challenges for delete
+  using (created_by = auth.uid() or im_is_admin());
+
+-- Once anyone has joined, what a challenge measures is fixed. Otherwise
+-- whoever may edit it could move the target up and down and watch the
+-- finishers list (im_challenge_summary) to read each participant's exact
+-- totals. Archiving, the name and the description stay editable.
+create or replace function im_lock_joined_challenge() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (new.metric, new.target, new.starts_on, new.ends_on) is distinct from (old.metric, old.target, old.starts_on, old.ends_on)
+     and exists (select 1 from challenge_participants p where p.challenge_id = old.id) then
+    raise exception 'People have joined this challenge, so what it measures is fixed. Set a new one instead.';
+  end if;
+  return new;
+end $$;
 
 -- join and leave for yourself, and only while the challenge is still open
 create or replace function im_challenge_open(p_challenge uuid)
@@ -128,6 +151,10 @@ begin
     exists (select 1 from progress where athlete_id = auth.uid()),
     (select done from progress where athlete_id = auth.uid());
 end $$;
+
+create trigger challenges_lock_definition
+  before update on challenges
+  for each row execute function im_lock_joined_challenge();
 
 -- ---------- GDPR export ----------
 create or replace function im_export_athlete_data(target uuid)

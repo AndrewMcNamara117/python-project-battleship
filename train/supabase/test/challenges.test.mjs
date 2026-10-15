@@ -73,6 +73,35 @@ describe('joining', () => {
   });
 });
 
+describe('nobody reads anyone else’s numbers by editing a challenge', () => {
+  it('another coach cannot edit a challenge they did not set', async () => {
+    const other = await t.signUp('other.coach@ironmiles.ie', 'Other Coach');
+    await t.setRole(other, 'coach');
+    await t.asUser(other, `update challenges set target = 1 where id = $1`, [sessions]);
+    assert.equal(Number((await t.asService('select target from challenges where id = $1', [sessions])).rows[0].target), 3);
+    assert.ok(await t.expectRefused(other, `insert into challenges (name, metric, target, starts_on, ends_on, created_by) values ('As you', 'sessions', 1, current_date, current_date, $1)`, [coach]),
+      'nor set one in someone else’s name');
+  });
+
+  it('once people have joined, even its creator cannot change what it measures', async () => {
+    for (const change of [`target = 1`, `metric = 'distance_km'`, `starts_on = starts_on - 1`, `ends_on = ends_on - 1`]) {
+      const refused = await t.expectRefused(coach, `update challenges set ${change} where id = $1`, [sessions]);
+      assert.match(refused ?? '', /fixed/, change);
+    }
+  });
+
+  it('but can still retire or rename it', async () => {
+    await t.asUser(coach, `update challenges set name = 'Three, as written', archived = false where id = $1`, [sessions]);
+    assert.equal((await t.asService('select name from challenges where id = $1', [sessions])).rows[0].name, 'Three, as written');
+  });
+
+  it('a challenge nobody has joined can still be corrected', async () => {
+    const fresh = await challenge('Draft', 'sessions', 5, `${new Date().getUTCFullYear()}-01-01`, `${new Date().getUTCFullYear()}-12-31`);
+    await t.asUser(coach, `update challenges set target = 6 where id = $1`, [fresh]);
+    assert.equal(Number((await t.asService('select target from challenges where id = $1', [fresh])).rows[0].target), 6);
+  });
+});
+
 describe('progress and privacy', () => {
   it('counts prescribed sessions completed, not rest days', async () => {
     const { rows } = await t.asUser(runner, 'select im_challenge_progress($1, $2) as p', [sessions, runner]);

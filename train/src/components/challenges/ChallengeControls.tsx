@@ -38,21 +38,30 @@ export function JoinChallenge({ challengeId, joined }: { challengeId: string; jo
 
 export function ArchiveChallenge({ challengeId, archived }: { challengeId: string; archived: boolean }) {
   const [pending, start] = useTransition();
+  const [result, setResult] = useState<ChallengeResult | null>(null);
   const router = useRouter();
   return (
-    <Button
-      variant="quiet"
-      size="sm"
-      disabled={pending}
-      onClick={() =>
-        start(async () => {
-          await archiveChallenge(challengeId, !archived);
-          router.refresh();
-        })
-      }
-    >
-      {pending ? '…' : archived ? 'Bring back' : 'Retire'}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        variant="quiet"
+        size="sm"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await archiveChallenge(challengeId, !archived);
+            setResult(r);
+            if (r.ok) router.refresh();
+          })
+        }
+      >
+        {pending ? '…' : archived ? 'Bring back' : 'Retire'}
+      </Button>
+      {result && !result.ok && (
+        <span role="status" className="max-w-[12rem] text-right text-[11px] text-status-missed">
+          {result.message}
+        </span>
+      )}
+    </div>
   );
 }
 

@@ -59,8 +59,13 @@ export async function createChallenge(formData: FormData): Promise<ChallengeResu
 }
 
 export async function archiveChallenge(challengeId: string, archived: boolean): Promise<ChallengeResult> {
-  await requireCoach();
+  const session = await requireCoach();
   const repo = await getRepo();
+  const challenge = await repo.getChallenge(challengeId);
+  // 0027: only the coach who set it (or an admin) changes it; say so rather than fail silently
+  if (!challenge || (challenge.createdBy !== session.userId && session.role !== 'admin')) {
+    return { ok: false, message: 'Only the coach who set this challenge can retire it.' };
+  }
   await repo.setChallengeArchived(challengeId, archived);
   revalidate();
   return { ok: true, message: archived ? 'Retired.' : 'Back in use.' };

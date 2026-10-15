@@ -705,6 +705,7 @@ export class DemoRepo implements IronMilesRepo {
 
   async createChallenge(draft: ChallengeDraft): Promise<Challenge> {
     const d = dataset();
+    // as 0027's insert policy: staff, in their own name (the action passes the session's id)
     const role = d.profiles.find((p) => p.id === draft.createdBy)?.role;
     // the same limits 0027 sets: staff only, a sane name and target, a window under a year
     if (role !== 'coach' && role !== 'admin') throw new Error('challenge refused by policy');
@@ -792,14 +793,20 @@ export class DemoRepo implements IronMilesRepo {
         const sched = d.scheduled.find((w) => w.id === session.scheduledWorkoutId);
         if (sched) sched.status = 'completed';
       }
-      await this.awardForgePoints({
-        athleteId: session.athleteId,
-        kind: 'strength_completed',
-        points: 8,
-        date: session.date,
-        label: 'Strength session',
-        sourceId: session.id,
-      });
+      // as 0024: keyed on the prescribed session, and only for one on the plan
+      const planned = session.scheduledWorkoutId
+        ? d.scheduled.find((w) => w.id === session.scheduledWorkoutId && w.athleteId === session.athleteId)
+        : null;
+      if (planned) {
+        await this.awardForgePoints({
+          athleteId: session.athleteId,
+          kind: 'strength_completed',
+          points: 8,
+          date: session.date,
+          label: 'Strength session',
+          sourceId: planned.id,
+        });
+      }
       await this.awardWeekIfComplete(session.athleteId, session.date);
     }
     return clone(session);
@@ -839,7 +846,8 @@ export class DemoRepo implements IronMilesRepo {
       points: 5,
       date: checkIn.weekStart,
       label: 'Weekly check-in',
-      sourceId: row.id,
+      // as 0024: once per week, however many times it is resubmitted
+      sourceId: `checkin-${checkIn.athleteId}-${checkIn.weekStart}`,
     });
     return clone(row);
   }

@@ -65,19 +65,23 @@ describe('forge points from the database', () => {
     assert.equal(bonus[0].points, 20);
   });
 
-  it('a strength session earns 8 when completed, not when saved in progress, and only once', async () => {
+  it('a prescribed strength session earns 8 when completed, once — an unplanned one earns nothing', async () => {
     const { rows: tpl } = await t.asService(`select id from strength_templates limit 1`);
     assert.ok(tpl.length, 'the seeded library supplies a strength template');
+    const planned = await session(athlete, '2026-10-06', 'Strength A', 'strength');
     const { rows } = await t.asUser(
       athlete,
-      `insert into strength_sessions (athlete_id, template_id, date, status) values ($1, $2, '2026-10-06', 'scheduled') returning id`,
-      [athlete, tpl[0].id],
+      `insert into strength_sessions (athlete_id, template_id, scheduled_workout_id, date, status) values ($1, $2, $3, '2026-10-06', 'scheduled') returning id`,
+      [athlete, tpl[0].id, planned],
     );
     assert.ok(!(await ledger(athlete)).some((r) => r.kind === 'strength_completed'));
     await t.asUser(athlete, `update strength_sessions set status = 'completed' where id = $1`, [rows[0].id]);
     await t.asUser(athlete, `update strength_sessions set status = 'scheduled' where id = $1`, [rows[0].id]);
     await t.asUser(athlete, `update strength_sessions set status = 'completed' where id = $1`, [rows[0].id]);
     assert.equal((await ledger(athlete)).filter((r) => r.kind === 'strength_completed').length, 1);
+
+    await t.asUser(athlete, `insert into strength_sessions (athlete_id, template_id, date, status) values ($1, $2, '2026-10-07', 'completed')`, [athlete, tpl[0].id]);
+    assert.equal((await ledger(athlete)).filter((r) => r.kind === 'strength_completed').length, 1, 'unplanned: nothing');
   });
 
   it('a check-in earns 5', async () => {
@@ -92,6 +96,57 @@ describe('forge points from the database', () => {
 });
 
 describe('nobody awards themselves', () => {
+  it('re-creating strength rows for the same planned session earns nothing more', async () => {
+    const { rows: tpl } = await t.asService(`select id from strength_templates limit 1`);
+    const planned = await session(athlete, '2026-10-20', 'Strength B', 'strength');
+    for (let i = 0; i < 5; i++) {
+      const { rows } = await t.asUser(
+        athlete,
+        `insert into strength_sessions (athlete_id, template_id, scheduled_workout_id, date, status) values ($1, $2, $3, '2026-10-20', 'completed') returning id`,
+        [athlete, tpl[0].id, planned],
+      );
+      await t.asUser(athlete, 'delete from strength_sessions where id = $1', [rows[0].id]);
+    }
+    const awards = (await ledger(athlete)).filter((r) => r.kind === 'strength_completed' && r.label === 'Strength session');
+    assert.equal(awards.length, 2, 'one per planned session: Strength A and Strength B');
+  });
+
+  it('deleting and resubmitting a check-in earns nothing more', async () => {
+    for (let i = 0; i < 3; i++) {
+      await t.asUser(athlete, 'delete from checkins where athlete_id = $1 and week_start = $2', [athlete, '2026-10-19']);
+      await t.asUser(
+        athlete,
+        `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty) values ($1, '2026-10-19', 5,7,4,3,8,7,6)`,
+        [athlete],
+      );
+    }
+    const week = (await t.asService(`select count(*)::int as n from forge_score_events where athlete_id = $1 and kind = 'checkin_completed' and date = '2026-10-19'`, [athlete])).rows[0].n;
+    assert.equal(week, 1);
+  });
+
+  it('an athlete cannot move a session out of its week, so cannot farm the week bonus', async () => {
+    const s = await session(athlete, '2026-11-02', 'Easy');
+    const refused = await t.expectRefused(athlete, `update scheduled_workouts set date = '2026-11-09' where id = $1`, [s]);
+    assert.match(refused ?? '', /within their own week/);
+    await t.asUser(athlete, `update scheduled_workouts set date = '2026-11-04' where id = $1`, [s]);
+    assert.equal((await t.asService('select date::text as d from scheduled_workouts where id = $1', [s])).rows[0].d, '2026-11-04', 'within the week is fine');
+  });
+
+  it('nor rewrite the prescription — renaming a session "club run" is refused', async () => {
+    const s = await session(athlete, '2026-11-03', 'Easy');
+    const refused = await t.expectRefused(athlete, `update scheduled_workouts set name = 'Iron Miles club run' where id = $1`, [s]);
+    assert.match(refused ?? '', /coach/);
+  });
+
+  it('their coach still edits the plan freely', async () => {
+    const coach = await t.signUp('coach.forge@ironmiles.ie', 'Coach');
+    await t.setRole(coach, 'coach');
+    await t.asService(`insert into coach_athlete_links (coach_id, athlete_id, status) values ($1, $2, 'active')`, [coach, athlete]);
+    const s = await session(athlete, '2026-11-05', 'Easy');
+    await t.asUser(coach, `update scheduled_workouts set name = 'Tempo', date = '2026-11-12' where id = $1`, [s]);
+    assert.equal((await t.asService('select name from scheduled_workouts where id = $1', [s])).rows[0].name, 'Tempo');
+  });
+
   it('an athlete cannot write the ledger', async () => {
     const refused = await t.expectRefused(
       athlete,
