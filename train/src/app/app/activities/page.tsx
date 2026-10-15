@@ -100,6 +100,7 @@ export default async function ActivitiesPage() {
                 maxHeartRate={profile.maxHeartRate}
                 privacyTrimM={profile.privacyTrimM}
                 shareDefault={profile.shareActivitiesDefault}
+                notifySocial={profile.notifySocial}
               />
             </div>
           </Panel>

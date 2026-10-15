@@ -37,7 +37,7 @@ export function TopBar({
           {isDemo && <Badge tone="warn">Demo data</Badge>}
           {notifications > 0 && (
             <Link
-              href="/coach/notifications"
+              href={home === '/app' ? '/app/notifications' : '/coach/notifications'}
               aria-label={`${notifications} unread ${notifications === 1 ? 'notification' : 'notifications'}`}
             >
               <Badge tone="alert">

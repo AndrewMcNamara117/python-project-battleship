@@ -22,12 +22,15 @@ async function athlete(repo: DemoRepo) {
 describe('segments through the import', () => {
   it('a run over the canal is timed on the canal segment', async () => {
     const repo = new DemoRepo();
+    // the seeded runs differ by day, and some days one of them covers the canal
+    const prior = await repo.listEfforts(DEMO_ATHLETE_ID, 'seg-canal-drag');
     const out = await importActivity(repo, await athlete(repo), canalRun(400, 300));
     assert.notEqual(out.status, 'duplicate');
     const timed = out.segments?.find((s) => s.segmentId === 'seg-canal-drag');
     assert.ok(timed, 'timed');
     assert.ok(Math.abs(timed.elapsedS - 600) <= 12, `got ${timed.elapsedS}`);
-    assert.equal(timed.personalBest, false, 'a first effort is not announced as a best');
+    const expected = prior.length > 0 && prior.every((p) => timed.elapsedS < p.elapsedS);
+    assert.equal(timed.personalBest, expected, 'a best only when it beats every earlier time; a first is not announced');
     assert.equal((await repo.listEffortsForActivity(out.activity.id)).length, 1);
   });
 

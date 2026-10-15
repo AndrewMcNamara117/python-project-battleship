@@ -11,9 +11,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (session.role === 'coach' || session.role === 'admin') redirect('/coach');
 
   const repo = await getRepo();
-  const [profile, messages] = await Promise.all([
+  const [profile, messages, notifications] = await Promise.all([
     repo.getProfile(session.userId),
     repo.listMessages(session.userId),
+    repo.listNotifications(session.userId),
   ]);
 
   // an athlete who has not onboarded has no programme to look at
@@ -32,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           role="Athlete"
           isDemo={session.isDemo}
           unread={unread}
+          notifications={notifications.filter((n) => !n.readAt).length}
         />
       }
     >

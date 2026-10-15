@@ -96,6 +96,12 @@ describe('the alert job', () => {
 
   it('says nothing at all on a quiet morning', async () => {
     await quietPrefs();
+    // The demo club is generated per day, and some days a check-in is flagged —
+    // which is news, not quiet. Settle anything flagged so the morning is quiet.
+    const { repo } = await getServiceRepo();
+    for (const c of await repo.listCheckInQueue(DEMO_COACH_ID)) {
+      if (c.attentionLevel !== 'none') await repo.respondToCheckIn(c.id, DEMO_COACH_ID, 'Noted — talk Thursday.');
+    }
     const report = await runCoachAlerts(morning());
     assert.equal(report.created, 0);
     assert.equal(report.items.length, 0, 'a run that sends nothing is the normal case');

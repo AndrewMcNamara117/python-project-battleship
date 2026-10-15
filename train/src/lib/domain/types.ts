@@ -131,6 +131,8 @@ export interface Profile {
   privacyTrimM: number;
   /** New imports start shared with the club. Off unless the athlete turns it on. */
   shareActivitiesDefault: boolean;
+  /** Tell me about kudos and comments on my activities. In-app only. */
+  notifySocial: boolean;
 }
 
 export interface CoachAthleteLink {

@@ -159,6 +159,7 @@ export class SupabaseRepo implements IronMilesRepo {
     maxHeartRate: r.max_heart_rate ?? null,
     privacyTrimM: r.privacy_trim_m ?? 200,
     shareActivitiesDefault: r.share_activities_default ?? false,
+    notifySocial: r.notify_social ?? true,
   });
 
   private toActivity = (r: any): Activity => ({
@@ -409,6 +410,7 @@ export class SupabaseRepo implements IronMilesRepo {
     if (patch.maxHeartRate !== undefined) row.max_heart_rate = patch.maxHeartRate;
     if (patch.privacyTrimM !== undefined) row.privacy_trim_m = patch.privacyTrimM;
     if (patch.shareActivitiesDefault !== undefined) row.share_activities_default = patch.shareActivitiesDefault;
+    if (patch.notifySocial !== undefined) row.notify_social = patch.notifySocial;
 
     const { data, error } = await this.db.from('profiles').update(row).eq('id', userId).select('*').single();
     if (error) throw new Error(error.message);
@@ -1320,6 +1322,13 @@ export class SupabaseRepo implements IronMilesRepo {
         createdAt: r.created_at,
       }),
     );
+  }
+
+  async markNotificationsRead(userId: UUID, ids?: UUID[]) {
+    let q = this.db.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', userId).is('read_at', null);
+    if (ids?.length) q = q.in('id', ids);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
   }
 
   /* ---------- public ---------- */

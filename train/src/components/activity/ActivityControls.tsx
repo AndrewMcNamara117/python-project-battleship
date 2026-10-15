@@ -167,10 +167,12 @@ export function ActivitySettings({
   maxHeartRate,
   privacyTrimM,
   shareDefault,
+  notifySocial,
 }: {
   maxHeartRate: number | null;
   privacyTrimM: number;
   shareDefault: boolean;
+  notifySocial: boolean;
 }) {
   const [trim, setTrim] = useState(String(privacyTrimM) as (typeof TRIMS)[number]['value']);
   const [result, setResult] = useState<ActivityResult | null>(null);
@@ -216,6 +218,13 @@ export function ActivitySettings({
           <span className="mt-1 block text-[12px] leading-relaxed text-ink-tertiary">
             Off by default. You can change any single activity either way afterwards.
           </span>
+        </span>
+      </label>
+      <label className="flex cursor-pointer items-start gap-3">
+        <input type="checkbox" name="notifySocial" defaultChecked={notifySocial} className="mt-0.5 h-4 w-4 accent-[var(--color-mint)]" />
+        <span>
+          <span className="block text-[14px] font-bold text-ink">Tell me about kudos and comments</span>
+          <span className="mt-1 block text-[12px] leading-relaxed text-ink-tertiary">In the app only — never by email.</span>
         </span>
       </label>
       <div className="flex flex-wrap items-center gap-4">

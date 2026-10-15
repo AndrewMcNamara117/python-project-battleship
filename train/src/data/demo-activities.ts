@@ -5,7 +5,7 @@ import { findEfforts, segmentFromLine, type Segment, type SegmentEffort } from '
 import type { TrackPoint } from '@/lib/activity/types';
 import type { Activity } from '@/lib/activity/types';
 import { isRun } from '@/lib/domain/analytics';
-import type { CompletedWorkout, Profile } from '@/lib/domain/types';
+import type { CompletedWorkout, Notification, Profile } from '@/lib/domain/types';
 
 /**
  * Watch files for the demo athlete's recent runs.
@@ -172,6 +172,7 @@ export function demoClub(
   comments: { id: string; activityId: string; authorId: string; body: string; createdAt: string }[];
   segments: Segment[];
   efforts: SegmentEffort[];
+  notifications: Notification[];
 } {
   const own = ownBuilt.activities;
   const efforts: SegmentEffort[] = [...ownBuilt.efforts];
@@ -226,5 +227,37 @@ export function demoClub(
     });
   }
 
-  return { activities: [...ownShared, ...club], kudos, comments, segments: DEMO_SEGMENTS, efforts };
+  // the lead athlete's inbox, as migration 0026's triggers would have written it
+  const notifications: Notification[] = [];
+  if (latestOwn) {
+    const mine = kudos.filter((k) => k.activityId === latestOwn.id);
+    const name = (id: string) => profiles.find((p) => p.id === id)?.fullName ?? 'A club-mate';
+    if (mine.length) {
+      const last = mine[mine.length - 1];
+      notifications.push({
+        id: `ntf-kudos-${latestOwn.id}`,
+        userId: latestOwn.athleteId,
+        kind: 'kudos',
+        title: mine.length > 1 ? `${mine.length} kudos on ${latestOwn.name}` : `${name(last.athleteId)} gave kudos`,
+        body: mine.length > 1 ? `Latest from ${name(last.athleteId)}` : `On ${latestOwn.name}`,
+        href: `/app/activities/${latestOwn.id}`,
+        readAt: null,
+        createdAt: last.createdAt,
+      });
+    }
+    for (const c of comments.filter((x) => x.activityId === latestOwn.id)) {
+      notifications.push({
+        id: `ntf-${c.id}`,
+        userId: latestOwn.athleteId,
+        kind: 'comment',
+        title: `${name(c.authorId)} commented on ${latestOwn.name}`,
+        body: c.body,
+        href: `/app/activities/${latestOwn.id}#comments`,
+        readAt: null,
+        createdAt: c.createdAt,
+      });
+    }
+  }
+
+  return { activities: [...ownShared, ...club], kudos, comments, segments: DEMO_SEGMENTS, efforts, notifications };
 }

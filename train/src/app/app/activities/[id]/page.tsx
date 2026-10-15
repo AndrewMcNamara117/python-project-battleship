@@ -83,7 +83,8 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
             />
           }
           social={
-            <Panel className="space-y-6 p-5 sm:p-6">
+            <Panel as="section" className="scroll-mt-24 space-y-6 p-5 sm:p-6">
+              <span id="comments" className="sr-only">Comments</span>
               <ShareToggle activityId={activity.id} shared={activity.visibility === 'club'} />
               {(activity.visibility === 'club' || social.comments.length > 0) && (
                 <div className="border-t border-hairline pt-5">

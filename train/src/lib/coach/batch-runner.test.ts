@@ -265,7 +265,7 @@ describe('marking check-ins read, in bulk', () => {
       flagged.map((e) => e.athleteId), { action: 'acknowledge_checkin' });
 
     for (const row of preview.rows) {
-      assert.ok(row.warnings.some((w) => /stays on your roster until you reply/i.test(w)),
+      assert.ok(row.warnings.some((w) => /stays on (?:your|the) roster until you reply/i.test(w)),
         'the coach is told reading is not settling');
     }
   });

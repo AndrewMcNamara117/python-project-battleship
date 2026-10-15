@@ -276,6 +276,8 @@ export interface IronMilesRepo {
 
   /* notifications */
   listNotifications(userId: UUID): Promise<Notification[]>;
+  /** Mark these read, or every unread one when no ids are given. Only ever the caller's own. */
+  markNotificationsRead(userId: UUID, ids?: UUID[]): Promise<void>;
 
   /* public */
   createApplication(

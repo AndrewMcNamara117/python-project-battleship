@@ -117,3 +117,44 @@ describe('club feed — demo parity', () => {
     assert.deepEqual(await repo.getActivitySocial(DEMO_ATHLETE_ID, id), { comments: [], kudos: [] });
   });
 });
+
+describe('social notifications — demo parity with 0026', () => {
+  const inbox = async (repo: DemoRepo) =>
+    (await repo.listNotifications(DEMO_ATHLETE_ID)).filter((n) => n.kind === 'kudos' || n.kind === 'comment');
+
+  it('kudos fold into one notification per run; each comment is its own', async () => {
+    const repo = new DemoRepo();
+    const id = await mine(repo, 'club');
+    await repo.giveKudos(id, OTHER);
+    await repo.giveKudos(id, STRANGER);
+    await repo.addComment(id, OTHER, 'Flying');
+    const mineNow = (await inbox(repo)).filter((n) => n.href?.includes(id));
+    assert.deepEqual(mineNow.map((n) => n.kind).sort(), ['comment', 'kudos']);
+    assert.match(mineNow.find((n) => n.kind === 'kudos')!.title, /^2 kudos on /);
+  });
+
+  it('nobody is told about their own comment, and opting out silences it all', async () => {
+    const repo = new DemoRepo();
+    const id = await mine(repo, 'club');
+    await repo.addComment(id, DEMO_ATHLETE_ID, 'Thanks all');
+    assert.equal((await inbox(repo)).filter((n) => n.href?.includes(id)).length, 0);
+    await repo.updateProfile(DEMO_ATHLETE_ID, { notifySocial: false });
+    await repo.giveKudos(id, OTHER);
+    assert.equal((await inbox(repo)).filter((n) => n.href?.includes(id)).length, 0);
+  });
+
+  it('marking read touches only your own', async () => {
+    const repo = new DemoRepo();
+    const id = await mine(repo, 'club');
+    await repo.giveKudos(id, OTHER);
+    await repo.markNotificationsRead(OTHER);
+    assert.ok((await inbox(repo)).some((n) => n.href?.includes(id) && !n.readAt), 'still unread for its owner');
+    await repo.markNotificationsRead(DEMO_ATHLETE_ID);
+    assert.ok((await repo.listNotifications(DEMO_ATHLETE_ID)).every((n) => n.readAt));
+  });
+
+  it('the seeded demo inbox has the club’s kudos and comment on the latest run', async () => {
+    const items = await inbox(new DemoRepo());
+    assert.ok(items.some((n) => n.kind === 'kudos') && items.some((n) => n.kind === 'comment'));
+  });
+});

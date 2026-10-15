@@ -580,6 +580,7 @@ export class DemoRepo implements IronMilesRepo {
     if (!a || a.visibility !== 'club' || a.athleteId === athleteId) throw new Error('kudos refused by policy');
     if (d.kudos.some((k) => k.activityId === activityId && k.athleteId === athleteId)) return;
     d.kudos.push({ activityId, athleteId, createdAt: new Date().toISOString() });
+    this.notifySocial(activityId, athleteId, 'kudos');
   }
 
   async takeBackKudos(activityId: UUID, athleteId: UUID): Promise<void> {
@@ -595,6 +596,7 @@ export class DemoRepo implements IronMilesRepo {
     if (text.length < 1 || text.length > 500) throw new Error('comment violates check constraint');
     const row = { id: uid('cmt'), activityId, authorId, body: text, createdAt: new Date().toISOString() };
     d.comments.push(row);
+    this.notifySocial(activityId, authorId, 'comment', text);
     return { id: row.id, authorId, authorName: d.profiles.find((p) => p.id === authorId)?.fullName ?? 'Member', body: text, createdAt: row.createdAt };
   }
 
@@ -1002,6 +1004,52 @@ export class DemoRepo implements IronMilesRepo {
     );
   }
 
+  async markNotificationsRead(userId: UUID, ids?: UUID[]): Promise<void> {
+    const now = new Date().toISOString();
+    for (const n of dataset().notifications) {
+      if (n.userId === userId && !n.readAt && (!ids?.length || ids.includes(n.id))) n.readAt = now;
+    }
+  }
+
+  /** As migration 0026's triggers: tell the activity's athlete, never the actor, unless they opted out. */
+  private notifySocial(activityId: UUID, actorId: UUID, kind: 'kudos' | 'comment', body?: string): void {
+    const d = dataset();
+    const a = d.activities.find((x) => x.id === activityId);
+    if (!a || a.athleteId === actorId) return;
+    if (d.profiles.find((p) => p.id === a.athleteId)?.notifySocial === false) return;
+    const actor = d.profiles.find((p) => p.id === actorId)?.fullName ?? 'A club-mate';
+    const now = new Date().toISOString();
+    if (kind === 'kudos') {
+      const n = d.kudos.filter((k) => k.activityId === activityId).length;
+      const id = `ntf-kudos-${activityId}`;
+      const row = {
+        id,
+        userId: a.athleteId,
+        kind: 'kudos',
+        title: n > 1 ? `${n} kudos on ${a.name}` : `${actor} gave kudos`,
+        body: n > 1 ? `Latest from ${actor}` : `On ${a.name}`,
+        href: `/app/activities/${a.id}`,
+        readAt: null,
+        createdAt: now,
+      };
+      const i = d.notifications.findIndex((x) => x.id === id);
+      if (i >= 0) d.notifications[i] = row;
+      else d.notifications.push(row);
+      return;
+    }
+    const text = (body ?? '').trim();
+    d.notifications.push({
+      id: uid('ntf'),
+      userId: a.athleteId,
+      kind: 'comment',
+      title: `${actor} commented on ${a.name}`,
+      body: text.length > 100 ? `${text.slice(0, 99)}…` : text,
+      href: `/app/activities/${a.id}#comments`,
+      readAt: null,
+      createdAt: now,
+    });
+  }
+
   /* ---------- public ---------- */
   private applications: CoachingApplication[] = [];
 
@@ -1100,6 +1148,7 @@ export class DemoRepo implements IronMilesRepo {
         maxHeartRate: null,
         privacyTrimM: 200,
         shareActivitiesDefault: false,
+        notifySocial: true,
       });
     }
 

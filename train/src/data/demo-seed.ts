@@ -324,6 +324,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     maxHeartRate: null,
     privacyTrimM: 200,
     shareActivitiesDefault: false,
+    notifySocial: true,
   };
 
   const profiles: Profile[] = [
@@ -360,6 +361,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       privacyTrimM: 200,
       // the rest of the club shares by default, so the demo feed has a club in it
       shareActivitiesDefault: i !== 0,
+      notifySocial: true,
     })),
   ];
 
@@ -946,6 +948,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     },
   ];
 
+  const club = demoClub(demoActivities(completed, profiles), profiles, today);
+
   return {
     profiles,
     links,
@@ -966,8 +970,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
     communityPosts,
     subscriptions,
     integrations,
-    notifications,
-    ...demoClub(demoActivities(completed, profiles), profiles, today),
+    ...club,
+    notifications: [...notifications, ...club.notifications],
   };
 }
 

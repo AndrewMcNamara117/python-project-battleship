@@ -162,7 +162,13 @@ export async function saveActivitySettings(formData: FormData): Promise<Activity
   }
 
   const shareDefault = formData.get('shareActivitiesDefault') === 'on';
-  await repo.updateProfile(session.userId, { maxHeartRate: max, privacyTrimM: trim, shareActivitiesDefault: shareDefault });
+  const notifySocial = formData.get('notifySocial') === 'on';
+  await repo.updateProfile(session.userId, {
+    maxHeartRate: max,
+    privacyTrimM: trim,
+    shareActivitiesDefault: shareDefault,
+    notifySocial,
+  });
   revalidatePath('/app/activities');
   revalidatePath('/app/profile');
   return {
