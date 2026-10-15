@@ -138,6 +138,8 @@ language sql stable security definer set search_path = public as $$
   where auth.uid() is not null
     and a.visibility = 'club'
     and (p_before is null or a.started_at < p_before)
+    -- a file dated in the future would otherwise sit at the top for ever
+    and a.started_at <= now() + interval '1 day'
   order by a.started_at desc
   limit least(greatest(coalesce(p_limit, 30), 1), 100);
 $$;

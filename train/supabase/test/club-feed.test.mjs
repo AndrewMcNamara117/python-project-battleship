@@ -188,3 +188,15 @@ describe('signed out', () => {
     assert.equal(rows.length, 0);
   });
 });
+
+describe('the feed cannot be pinned', () => {
+  it('a shared run dated years ahead does not sit at the top of the feed', async () => {
+    const { rows } = await t.asService(`select id from activities where id = $1`, [shared]);
+    const future = await activity(runner, 'club', 'f');
+    await t.asService(`update activities set started_at = now() + interval '3 years', local_date = current_date + 1095 where id = $1`, [future]);
+    const feed = (await t.asUser(friend, 'select id from im_club_feed()')).rows.map((r) => r.id);
+    assert.ok(!feed.includes(future));
+    assert.ok(feed.includes(rows[0].id));
+    await t.asService('delete from activities where id = $1', [future]);
+  });
+});

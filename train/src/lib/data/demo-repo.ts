@@ -587,7 +587,8 @@ export class DemoRepo implements IronMilesRepo {
 
   async listClubFeed(viewerId: UUID, limit = 30, before?: string): Promise<FeedItem[]> {
     return dataset()
-      .activities.filter((a) => a.visibility === 'club' && (!before || a.startedAt < before))
+      // as im_club_feed: nothing dated after tomorrow
+      .activities.filter((a) => a.visibility === 'club' && (!before || a.startedAt < before) && Date.parse(a.startedAt) <= Date.now() + 86_400_000)
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
       .slice(0, Math.min(Math.max(limit, 1), 100))
       .map((a) => this.feedItem(viewerId, a));
