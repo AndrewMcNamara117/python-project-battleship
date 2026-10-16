@@ -15,14 +15,15 @@ export function WeekStrip({
   week,
   weekStart,
   today,
-  adherencePct,
+  soFar,
   actualLabel,
   targetLabel,
 }: {
   week: ScheduledWorkout[];
   weekStart: string;
   today: string;
-  adherencePct: number;
+  /** Sessions due up to today, and done. Beside a week's distance, a bare "80%" read as the week's. */
+  soFar: { completed: number; prescribed: number };
   actualLabel: string;
   targetLabel: string;
 }) {
@@ -32,7 +33,11 @@ export function WeekStrip({
     <Panel className="flex h-full flex-col p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
         <p className="im-micro">This week</p>
-        <p className="im-mono text-[12px] font-bold text-mint">{adherencePct}%</p>
+        {soFar.prescribed > 0 && (
+          <p className="im-mono text-[12px] font-bold text-mint">
+            {soFar.completed} of {soFar.prescribed} so far
+          </p>
+        )}
       </div>
 
       <ol className="mt-5 grid grid-cols-7 gap-1.5">

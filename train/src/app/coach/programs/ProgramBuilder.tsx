@@ -24,7 +24,10 @@ export function WeekCloner({
   weeksByAthlete: Record<string, { id: string; label: string }[]>;
   defaultStart: string;
 }) {
-  const [athleteId, setAthleteId] = useState(athletes[0]?.id ?? '');
+  // open on someone who has weeks to copy, not on whoever sorts first
+  const [athleteId, setAthleteId] = useState(
+    (athletes.find((a) => (weeksByAthlete[a.id] ?? []).length > 0) ?? athletes[0])?.id ?? '',
+  );
   const weeks = weeksByAthlete[athleteId] ?? [];
   const [source, setSource] = useState(weeks[0]?.id ?? '');
   const [target, setTarget] = useState(defaultStart);
@@ -35,8 +38,8 @@ export function WeekCloner({
     <Panel className="p-6 sm:p-8">
       <PanelHeader label="Clone a week" />
       <p className="mt-3 max-w-[62ch] text-[13px] leading-relaxed text-muted">
-        Copies a week&apos;s prescription — every session and every component — onto another week, in
-        one call. Copied sessions come across as scheduled again, whatever happened in the original.
+        Copies a week&apos;s prescription — every session and every component — onto another week.
+        Copied sessions come across as scheduled again, whatever happened in the original.
       </p>
 
       <div className="mt-7 grid gap-6 sm:grid-cols-3">

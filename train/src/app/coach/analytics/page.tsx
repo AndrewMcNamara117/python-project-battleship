@@ -122,7 +122,7 @@ export default async function CoachAnalyticsPage() {
           />
           <p className="mt-5 max-w-[64ch] text-[14px] leading-relaxed text-muted">
             {PACKAGES[0].foundingSpots
-              ? `${PACKAGES[0].foundingSpots.remaining} of ${PACKAGES[0].foundingSpots.total} founding places remain. Individual coaching does not scale by adding seats — the number here is the number a person can actually coach well.`
+              ? `${Math.max(0, PACKAGES[0].foundingSpots.total - ctx.totals.athletes)} of ${PACKAGES[0].foundingSpots.total} founding places remain, counting the athletes you coach now. Individual coaching does not scale by adding seats — the number here is the number a person can actually coach well.`
               : 'Individual coaching does not scale by adding seats.'}
           </p>
         </Panel>

@@ -877,7 +877,9 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       code: 'longest_run',
       title: 'Longest Run',
       description: 'First time past 30K in a single session',
-      earnedAt: `${addDays(today, -66)}T11:02:00.000Z`,
+      // in the previous block: inside the 12 weeks Progress shows, a 30K
+      // milestone sat beside "longest run 21.4km" and contradicted it
+      earnedAt: `${addDays(today, -120)}T11:02:00.000Z`,
     },
     {
       id: 'ach-3',

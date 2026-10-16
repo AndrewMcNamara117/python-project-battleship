@@ -39,7 +39,7 @@ export default async function ActivitiesPage() {
         eyebrow="Activities"
         title="From the watch"
         lead="Import a file and it lands on the session it belongs to. Your coach sees the route, the splits and the heart rate beside what they wrote."
-        figure={thisWeek.length ? { value: distanceLabel(weekM, units), label: 'recorded this week' } : undefined}
+        figure={thisWeek.length ? { value: distanceLabel(weekM, units), label: 'from files this week' } : undefined}
       />
 
       <Rise>

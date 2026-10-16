@@ -31,6 +31,9 @@ export function SessionEditor({
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  // the first ten — last week's tail and the next few days — then the rest on request
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? sessions : sessions.slice(0, 10);
 
   return (
     <Panel className="p-6 sm:p-8">
@@ -49,7 +52,7 @@ export function SessionEditor({
       )}
 
       <ul className="mt-6 divide-y divide-line">
-        {sessions.map((w) => (
+        {shown.map((w) => (
           <li key={w.id} className="py-4">
             {editing === w.id ? (
               <EditForm
@@ -66,26 +69,37 @@ export function SessionEditor({
                 <span className="im-mono w-16 shrink-0 text-[11px] text-muted-2">
                   {formatDayMonth(w.date)}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-bold">{w.name}</span>
-                  <span className="im-micro mt-1 block">
-                    {WORKOUT_TYPE_LABELS[w.type]}
-                    {w.distanceKm != null ? ` · ${w.distanceKm}km` : ''}
-                    {w.durationMinutes != null ? ` · ${w.durationMinutes}min` : ''}
+                {/* on a phone the name takes the row and the status drops below it,
+                    rather than all four sharing a line and the name losing */}
+                <span className="min-w-0 flex-1 basis-[calc(100%-6rem)] sm:basis-auto">
+                  <span className="block text-[14px] font-bold sm:truncate">{w.name}</span>
+                  <span className="im-micro mt-1 block whitespace-nowrap">
+                    {[WORKOUT_TYPE_LABELS[w.type], w.distanceKm != null ? `${w.distanceKm} km` : null, w.durationMinutes != null ? `${w.durationMinutes} min` : null]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                 </span>
-                <Badge tone={w.status === 'completed' ? 'green' : 'neutral'}>{w.status}</Badge>
-                {w.status === 'completed' ? (
-                  <span className="text-[10px] uppercase tracking-[0.16em] text-muted-2">Locked</span>
-                ) : (
-                  <Button variant="ghost" size="sm" onClick={() => setEditing(w.id)}>
-                    Edit
-                  </Button>
-                )}
+                <span className="ml-[5.25rem] flex items-center gap-4 sm:ml-0">
+                  <Badge tone={w.status === 'completed' ? 'green' : 'neutral'}>{w.status}</Badge>
+                  {w.status === 'completed' ? (
+                    <span className="text-[10px] uppercase tracking-[0.16em] text-muted-2">Locked</span>
+                  ) : (
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(w.id)}>
+                      Edit
+                    </Button>
+                  )}
+                </span>
               </div>
             )}
           </li>
         ))}
+        {sessions.length > shown.length && (
+          <li className="pt-4">
+            <Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>
+              Show all {sessions.length}
+            </Button>
+          </li>
+        )}
         {!sessions.length && (
           <li className="py-6">
             <p className="text-[14px] text-muted">

@@ -123,8 +123,27 @@ export function LongRunChart({ data, height = 200 }: { data: WeekBucket[]; heigh
    Pace and heart rate are two different measures on two different scales,
    so they get two charts. Never one plot with two y-axes.
    ------------------------------------------------------------------ */
+/**
+ * Axis ticks on round values — every 15 s of pace, every 5 bpm — widening the
+ * step until there are few enough to read. Recharts' own ticks on a padded
+ * domain landed on 5:20, 5:35, 5:50, 6:11.
+ */
+function roundTicks(values: number[], step: number, maxTicks = 5): { ticks: number[]; domain: [number, number] } | null {
+  if (!values.length) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  for (let s = step; ; s *= 2) {
+    const lo = Math.floor(min / s) * s;
+    const hi = Math.max(Math.ceil(max / s) * s, lo + s);
+    const ticks: number[] = [];
+    for (let t = lo; t <= hi; t += s) ticks.push(t);
+    if (ticks.length <= maxTicks) return { ticks, domain: [lo, hi] };
+  }
+}
+
 export function PaceChart({ data, height = 200 }: { data: WeekBucket[]; height?: number }) {
   const points = data.filter((d) => d.avgPaceSecPerKm != null);
+  const axis = roundTicks(points.map((d) => d.avgPaceSecPerKm as number), 15);
 
   return (
     <ChartFrame
@@ -140,7 +159,9 @@ export function PaceChart({ data, height = 200 }: { data: WeekBucket[]; height?:
             {...AXIS_PROPS}
             width={56}
             reversed
-            domain={['dataMin - 12', 'dataMax + 12']}
+            domain={axis?.domain ?? ['dataMin - 12', 'dataMax + 12']}
+            ticks={axis?.ticks}
+            interval={0}
             tickFormatter={(v: number) => formatPace(v ?? null).replace(' /km', '')}
           />
           <Tooltip
@@ -169,6 +190,7 @@ export function PaceChart({ data, height = 200 }: { data: WeekBucket[]; height?:
 
 export function HeartRateChart({ data, height = 200 }: { data: WeekBucket[]; height?: number }) {
   const points = data.filter((d) => d.avgHr != null);
+  const axis = roundTicks(points.map((d) => d.avgHr as number), 5);
 
   return (
     <ChartFrame title="Average heart rate" note="Mean heart rate across the week's runs, in bpm." height={height}>
@@ -176,7 +198,7 @@ export function HeartRateChart({ data, height = 200 }: { data: WeekBucket[]; hei
         <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
           <CartesianGrid {...GRID_PROPS} />
           <XAxis dataKey="label" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={18} />
-          <YAxis {...AXIS_PROPS} width={44} domain={['dataMin - 6', 'dataMax + 6']} />
+          <YAxis {...AXIS_PROPS} width={44} domain={axis?.domain ?? ['dataMin - 6', 'dataMax + 6']} ticks={axis?.ticks} interval={0} />
           <Tooltip
             cursor={{ stroke: CHART.grid, strokeWidth: 1 }}
             content={<ChartTooltip formatter={(v) => `${v} bpm`} labelFormatter={(l) => `Week of ${l}`} />}

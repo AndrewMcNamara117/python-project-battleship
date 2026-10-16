@@ -22,7 +22,7 @@ const PRICING_FAQ = [
   },
   {
     q: 'Can I pause instead of cancelling?',
-    a: 'Yes. Injury, a work stretch, a new baby — pause from your billing settings and your programme and history stay exactly where you left them.',
+    a: 'Yes. Injury, a work stretch, a new baby — tell your coach and they pause your coaching; your programme and history stay exactly where you left them.',
   },
   {
     q: 'Will there be other tiers?',

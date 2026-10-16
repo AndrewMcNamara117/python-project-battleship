@@ -22,7 +22,7 @@ import {
   wellbeingSeries,
 } from '@/lib/domain/analytics';
 import { attentionLabel } from '@/lib/domain/checkin-rules';
-import { addDays, daysBetween, endOfWeek, formatDayMonth, startOfWeek, toISODate, WEEKDAY_LABELS, weekDates } from '@/lib/domain/dates';
+import { addDays, daysBetween, endOfWeek, formatDate, formatDayMonth, startOfWeek, toISODate, WEEKDAY_LABELS, weekDates } from '@/lib/domain/dates';
 import { totalScore } from '@/lib/domain/forge-score';
 import { EVENT_TYPE_LABELS } from '@/lib/domain/types';
 import { CoachNoteForm, CheckInResponder } from './CoachControls';
@@ -122,7 +122,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
         title={profile.fullName}
         lead={
           program
-            ? `${program.name} · ${formatDayMonth(program.startDate)} → ${formatDayMonth(program.endDate)}`
+            ? `${program.name} · ${formatDate(program.startDate, { day: 'numeric', month: 'short', year: 'numeric' })} → ${formatDate(program.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}`
             : 'No active programme.'
         }
         action={
@@ -144,6 +144,31 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
           </div>
         }
       />
+
+      {/* Below lg the two columns stack into one long page: the athlete's
+          check-in, notes and messages sat ten thousand pixels down, under the
+          charts. A row of jumps keeps every part one tap away. */}
+      <nav
+        aria-label="On this page"
+        className="sticky top-[52px] z-20 -mx-5 mt-6 flex gap-1 overflow-x-auto border-b border-line bg-onyx/95 px-5 py-2 backdrop-blur lg:hidden"
+      >
+        {[
+          ['#week', 'Week'],
+          ['#sessions', 'Sessions'],
+          ['#data', 'Data'],
+          ...(latestCheckIn ? [['#checkins', 'Check-in']] : []),
+          ['#notes', 'Notes'],
+          ['#messages', 'Messages'],
+        ].map(([href, label]) => (
+          <a
+            key={href}
+            href={href}
+            className="im-micro shrink-0 rounded-xs px-3 py-2 text-muted transition-colors hover:text-white focus-visible:text-white"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
 
       <RevealGroup className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <RevealItem>
@@ -174,36 +199,40 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
       <div className="mt-6 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-5">
           <Reveal>
+            <span id="week" className="block scroll-mt-28" />
             <Panel className="p-6 sm:p-8">
               <PanelHeader label="This week" />
-              <div className="im-scroll mt-6 overflow-x-auto">
-                <div className="grid min-w-[700px] grid-cols-7 gap-px bg-line">
-                  {days.map((d, i) => {
-                    const sessions = week.filter((w) => w.date === d);
-                    return (
-                      <div key={d} className="min-h-[150px] bg-surface p-3">
-                        <div className="flex items-baseline justify-between">
-                          <span className={`im-micro ${d === today ? 'text-green' : ''}`}>
-                            {WEEKDAY_LABELS[i]}
-                          </span>
-                          <span className="im-mono text-[10px] text-muted-2">{d.slice(8)}</span>
-                        </div>
-                        <ul className="mt-3 space-y-2.5">
+              {/* a day per row: a seven-column grid needed 700px in a column
+                  half that wide, so it scrolled sideways and cut every name */}
+              <ul className="mt-5 divide-y divide-line">
+                {days.map((d, i) => {
+                  const sessions = week.filter((w) => w.date === d);
+                  return (
+                    <li key={d} className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-4 py-3">
+                      <span className="flex items-baseline gap-2 pt-0.5">
+                        <span className={`im-micro ${d === today ? 'text-green' : ''}`}>{WEEKDAY_LABELS[i]}</span>
+                        <span className="im-mono text-[10px] text-muted-2">{d.slice(8)}</span>
+                      </span>
+                      {sessions.length ? (
+                        <ul className="space-y-2.5">
                           {sessions.map((w) => (
                             <li key={w.id}>
                               <WorkoutRow workout={w} units={profile.units} />
                             </li>
                           ))}
                         </ul>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      ) : (
+                        <span className="pt-0.5 text-[12px] text-muted-2">Nothing scheduled</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </Panel>
           </Reveal>
 
           <Reveal delay={0.05}>
+            <span id="sessions" className="block scroll-mt-28" />
             <SessionEditor
               athleteId={id}
               sessions={scheduled
@@ -227,6 +256,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
           )}
 
           <Reveal delay={0.06}>
+            <span id="data" className="block scroll-mt-28" />
             <Panel className="p-6 sm:p-8">
               <MileageChart data={buckets} />
             </Panel>
@@ -345,6 +375,8 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
 
           {latestCheckIn && (
             <Reveal delay={0.08}>
+              {/* the roster and the check-in emails link here */}
+              <span id="checkins" className="block scroll-mt-28" />
               <Panel className="p-6" edge={latestCheckIn.attentionLevel !== 'none'}>
                 <PanelHeader
                   label={`Check-in · ${formatDayMonth(latestCheckIn.weekStart)}`}
@@ -412,6 +444,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
           )}
 
           <Reveal delay={0.12}>
+            <span id="notes" className="block scroll-mt-28" />
             <Panel className="p-6">
               <PanelHeader label="Coach notes" />
               <ul className="mt-5 space-y-4">

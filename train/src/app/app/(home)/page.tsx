@@ -54,7 +54,8 @@ export default async function DashboardPage() {
   });
 
   const primary = ctx.todaySessions.find((s) => s.type !== 'rest') ?? ctx.todaySessions[0] ?? null;
-  const nextStrength = ctx.week.find((w) => w.type === 'strength' && w.status === 'scheduled');
+  // the next one after today: today's is already the session card above
+  const nextStrength = ctx.week.find((w) => w.type === 'strength' && w.status === 'scheduled' && w.date > ctx.today);
   const lastCoachMessage = [...ctx.messages].reverse().find((m) => m.senderId !== ctx.session.userId);
   const myRank = leaderboard.find((r) => r.athleteId === ctx.session.userId);
 
@@ -126,7 +127,7 @@ export default async function DashboardPage() {
               week={ctx.week}
               weekStart={ctx.weekStart}
               today={ctx.today}
-              adherencePct={ctx.stats.weekAdherencePct}
+              soFar={ctx.stats.weekSoFar}
               actualLabel={formatDistance(ctx.stats.weeklyActualKm, units)}
               targetLabel={formatDistance(ctx.stats.weeklyTargetKm, units)}
             />

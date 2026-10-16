@@ -20,8 +20,8 @@ export interface CoachingPackage {
   includes: string[];
   notIncluded?: string[];
   available: boolean;
-  /** Founding-athlete framing: a real cap, shown honestly. */
-  foundingSpots?: { total: number; remaining: number };
+  /** Founding-athlete framing: a real cap. What remains is counted from the roster, never stored. */
+  foundingSpots?: { total: number };
 }
 
 export const PACKAGES: CoachingPackage[] = [
@@ -48,7 +48,7 @@ export const PACKAGES: CoachingPackage[] = [
       'FORGE, the daily training assistant',
     ],
     available: true,
-    foundingSpots: { total: 20, remaining: 7 },
+    foundingSpots: { total: 20 },
   },
 ];
 

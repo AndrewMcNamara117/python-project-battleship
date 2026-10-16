@@ -148,7 +148,8 @@ export function CalendarView({
     <div>
       {/* ---- controls ---- */}
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
+        {/* the full row on a phone, so the date between the arrows keeps its width */}
+        <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-none">
           <NavButton label="Previous period" onClick={() => shift(-1)}>
             ‹
           </NavButton>
@@ -212,8 +213,9 @@ export function CalendarView({
 
       {/* ---- week ---- */}
       {view === 'week' && (
-        <div className="im-scroll mt-7 overflow-x-auto">
-          <div className="grid min-w-[880px] grid-cols-7 gap-px bg-hairline">
+        // days stack on a phone; seven columns from sm, scrolling only if they must
+        <div className="im-scroll mt-7 sm:overflow-x-auto">
+          <div className="grid grid-cols-1 gap-px bg-hairline sm:min-w-[880px] sm:grid-cols-7">
             {dates.map((date, i) => {
               const sessions = byDate.get(date) ?? [];
               const isToday = date === today;
@@ -226,7 +228,7 @@ export function CalendarView({
                   }}
                   onDragLeave={() => setDropTarget((d) => (d === date ? null : d))}
                   onDrop={() => onDrop(date)}
-                  className={`min-h-[300px] p-3.5 transition-colors ${
+                  className={`p-3.5 transition-colors sm:min-h-[300px] ${
                     dropTarget === date ? 'bg-mint/8' : isToday ? 'bg-slate' : 'bg-charcoal'
                   }`}
                 >
@@ -508,7 +510,7 @@ function NavButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-9 items-center justify-center border border-hairline-strong text-[16px] text-ink-secondary transition-colors hover:border-mint hover:text-mint"
+      className="flex size-9 shrink-0 items-center justify-center border border-hairline-strong text-[16px] text-ink-secondary transition-colors hover:border-mint hover:text-mint"
     >
       {children}
     </button>

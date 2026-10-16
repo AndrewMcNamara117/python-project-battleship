@@ -89,10 +89,14 @@ export function AthleteContext({
       </div>
 
       <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-5 border-t border-hairline pt-5 sm:grid-cols-3">
-        <Field
-          label="Experience"
-          value={profile.experienceLevel ? EXPERIENCE_LABELS[profile.experienceLevel] : null}
-        />
+        {/* phase and experience are the coach's controls above when present;
+            listing them again here said the same thing twice */}
+        {!control && (
+          <Field
+            label="Experience"
+            value={profile.experienceLevel ? EXPERIENCE_LABELS[profile.experienceLevel] : null}
+          />
+        )}
         <Field
           label="Current volume"
           value={profile.currentWeeklyKm != null ? `${formatDistance(profile.currentWeeklyKm, units)}/wk` : null}
@@ -102,11 +106,12 @@ export function AthleteContext({
           value={profile.typicalSessionMinutes != null ? `${profile.typicalSessionMinutes} min` : null}
         />
         <Field label="Gym access" value={profile.gymAccess ? GYM_LABELS[profile.gymAccess] : null} />
-        <Field
-          label="Phase"
-          value={profile.trainingPhase ? PHASE_LABELS[profile.trainingPhase] : null}
-        />
-        <Field label="Equipment" value={profile.equipment.length ? `${profile.equipment.length} items` : null} />
+        {!control && (
+          <Field
+            label="Phase"
+            value={profile.trainingPhase ? PHASE_LABELS[profile.trainingPhase] : null}
+          />
+        )}
       </dl>
 
       {profile.trainingPhase && (

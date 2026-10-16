@@ -37,7 +37,7 @@ export function ApplyForm() {
       className="space-y-8"
     >
       <fieldset className="space-y-6" disabled={pending}>
-        <legend className="im-micro mb-6">You</legend>
+        <legend className="im-micro mb-6 w-full border-b border-line pb-3">You</legend>
         <div className="grid gap-6 sm:grid-cols-2">
           <Field label="Full name" required error={err('fullName')}>
             {(p) => <Input name="fullName" autoComplete="name" {...p} />}
@@ -51,8 +51,8 @@ export function ApplyForm() {
         </Field>
       </fieldset>
 
-      <fieldset className="space-y-6 border-t border-line pt-8" disabled={pending}>
-        <legend className="im-micro mb-6">The goal</legend>
+      <fieldset className="space-y-6 pt-4" disabled={pending}>
+        <legend className="im-micro mb-6 w-full border-b border-line pb-3">The goal</legend>
         <Field
           label="What are you training for, and why that?"
           required
@@ -71,8 +71,8 @@ export function ApplyForm() {
         </div>
       </fieldset>
 
-      <fieldset className="space-y-6 border-t border-line pt-8" disabled={pending}>
-        <legend className="im-micro mb-6">Where you are now</legend>
+      <fieldset className="space-y-6 pt-4" disabled={pending}>
+        <legend className="im-micro mb-6 w-full border-b border-line pb-3">Where you are now</legend>
         <Field
           label="Current weekly volume"
           hint="Kilometres per week, roughly. Zero is a perfectly good answer."

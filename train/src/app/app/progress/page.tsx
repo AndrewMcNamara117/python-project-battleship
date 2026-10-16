@@ -172,8 +172,9 @@ export default async function ProgressPage() {
 
       {/* ---- race preparation and strength ---- */}
       <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Rise>
-          <Panel className="p-5 sm:p-7">
+        {/* both columns the same height, so no hole under the shorter one */}
+        <Rise className="h-full">
+          <Panel className="flex h-full flex-col p-5 sm:p-7">
             <SectionHeading
               label="Long-run progression"
               action={

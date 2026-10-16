@@ -92,13 +92,15 @@ export default async function ForgePage() {
             <ForgeMessageCard message={weekly} />
           </Rise>
 
-          {ctx.todaySessions.filter((s) => s.type !== 'rest').length > 0 && (
+          {/* only what the daily card has not already said: the explanation
+              repeated it word for word on a strength day */}
+          {ctx.todaySessions.filter((s) => s.type !== 'rest' && !daily?.body.includes(explainSession(s))).length > 0 && (
             <Rise delay={120}>
               <Panel className="p-6">
                 <PanelHeader label="Today's session, explained" />
                 <ul className="mt-5 space-y-5">
                   {ctx.todaySessions
-                    .filter((s) => s.type !== 'rest')
+                    .filter((s) => s.type !== 'rest' && !daily?.body.includes(explainSession(s)))
                     .map((s) => (
                       <li key={s.id}>
                         <p className="text-[14px] font-bold">{s.name}</p>

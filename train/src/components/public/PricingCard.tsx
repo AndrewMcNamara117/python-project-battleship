@@ -25,8 +25,10 @@ export function PricingCard({ pkg, cta = '/apply' }: { pkg: CoachingPackage; cta
 
       {pkg.foundingSpots && (
         <p className="mt-3 text-[12px] text-muted">
-          {pkg.foundingSpots.remaining} of {pkg.foundingSpots.total} founding places left. The rate
-          holds for as long as you stay coached.
+          {/* no "places left" count: a fixed number on a public page would be a claim
+              nobody keeps true */}
+          The founding rate is for the first {pkg.foundingSpots.total} athletes, and holds for as long as you
+          stay coached.
         </p>
       )}
 

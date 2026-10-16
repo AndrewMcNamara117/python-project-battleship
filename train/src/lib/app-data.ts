@@ -41,6 +41,7 @@ export interface AthleteContext {
     weeklyTargetKm: number;
     weeklyActualKm: number;
     weekAdherencePct: number;
+    weekSoFar: { completed: number; prescribed: number };
     blockAdherencePct: number;
     consistencyPct: number;
     loadRatio: number | null;
@@ -119,6 +120,8 @@ export async function loadAthleteContext(): Promise<AthleteContext> {
       weeklyTargetKm: thisWeekBucket?.plannedKm ?? 0,
       weeklyActualKm: thisWeekBucket?.actualKm ?? 0,
       weekAdherencePct: weekAdherence.pct,
+      /** Sessions due so far this week, and how many are done — the strip says it in words. */
+      weekSoFar: { completed: weekAdherence.completed, prescribed: weekAdherence.prescribed },
       blockAdherencePct: blockAdherence.pct,
       consistencyPct: consistency(buckets),
       loadRatio: load.ratio,

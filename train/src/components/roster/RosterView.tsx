@@ -421,7 +421,9 @@ function AthleteRow({ entry, today, now, active, selected, onToggle, open, onOpe
           />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {entry.topSignal && (
+            {/* a mark only when it says something: an "information" dot was
+                near-invisible and only pushed the name out of line */}
+            {entry.topSignal && entry.topSignal.severity !== 'information' && (
               <span
                 aria-hidden
                 className={`size-2 shrink-0 rounded-full ${SEVERITY_DOT[entry.topSignal.severity]}`}
@@ -444,10 +446,15 @@ function AthleteRow({ entry, today, now, active, selected, onToggle, open, onOpe
             )}
           </div>
 
-          <p className="mt-1.5 text-[12.5px] text-ink-secondary">
-            {position}
-            {entry.adherencePct != null && ` · ${entry.adherencePct}% of the last four weeks`}
-          </p>
+          {/* with no programme the signal below already says so; saying it
+              here as well made three lines of the same news */}
+          {(entry.programmeName || entry.adherencePct != null) && (
+            <p className="mt-1.5 text-[12.5px] text-ink-secondary">
+              {entry.programmeName ? position : null}
+              {entry.programmeName && entry.adherencePct != null ? ' · ' : ''}
+              {entry.adherencePct != null && `${entry.adherencePct}% of the last four weeks`}
+            </p>
+          )}
 
           {/* the signals, each a sentence and a way to act on it */}
           {lead.length > 0 && (

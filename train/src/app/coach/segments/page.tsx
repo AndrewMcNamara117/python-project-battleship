@@ -38,11 +38,18 @@ export default async function CoachSegmentsPage() {
                 {distanceLabel(s.distanceM, 'metric')}
                 {s.description && ` · ${s.description}`}
               </p>
-              <p className="mt-2 text-[12px] text-ink-secondary">
-                {boards[i].length
-                  ? boards[i].map((b, r) => `${r + 1}. ${b.athleteName} ${formatDuration(b.elapsedS)}`).join('   ')
-                  : 'No shared times yet.'}
-              </p>
+              {boards[i].length ? (
+                <ol className="mt-2.5 flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-ink-secondary">
+                  {boards[i].map((b, r) => (
+                    <li key={b.activityId} className="whitespace-nowrap">
+                      <span className="im-mono text-ink-tertiary">{r + 1}</span> {b.athleteName}{' '}
+                      <span className="font-bold tabular-nums text-ink-body">{formatDuration(b.elapsedS)}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-2 text-[12px] text-ink-secondary">No shared times yet.</p>
+              )}
             </div>
             <ArchiveSegment segmentId={s.id} archived={s.archived} />
           </Panel>
