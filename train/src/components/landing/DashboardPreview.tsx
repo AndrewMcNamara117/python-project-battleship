@@ -3,7 +3,17 @@
 import { CountUp } from '@/components/motion/CountUp';
 import { Panel } from '@/components/ui/Panel';
 import { Badge } from '@/components/ui/Badge';
-import { MileageChart } from '@/components/charts/TrainingCharts';
+import dynamic from 'next/dynamic';
+
+/**
+ * The chart library is the heaviest thing on the landing page after the hero
+ * scene, and this preview sits below the fold: it loads after the page, into
+ * a space of the same height, rather than with it.
+ */
+const MileageChart = dynamic(() => import('@/components/charts/TrainingCharts').then((m) => m.MileageChart), {
+  ssr: false,
+  loading: () => <div style={{ height: 230 }} aria-hidden />,
+});
 import type { WeekBucket } from '@/lib/domain/analytics';
 
 /**

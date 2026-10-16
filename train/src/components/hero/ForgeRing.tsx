@@ -77,10 +77,36 @@ function detectWebGL(): boolean {
 // snapshot (the static fallback) stable through hydration.
 const subscribeToNothing = () => () => {};
 
+/**
+ * The scene is ~200 KB of three.js after compression. The static ring is the
+ * same object, so nothing is lost by drawing it first: the scene is fetched
+ * once the browser is idle — after the page is usable, not competing with it —
+ * and not at all for a visitor who has asked their browser to save data.
+ */
+let idle = false;
+let idleRequested = false;
+const idleListeners = new Set<() => void>();
+function subscribeToIdle(listener: () => void) {
+  idleListeners.add(listener);
+  if (!idleRequested) {
+    idleRequested = true;
+    const done = () => {
+      idle = true;
+      idleListeners.forEach((l) => l());
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(done, { timeout: 2500 });
+    else setTimeout(done, 1200);
+  }
+  return () => idleListeners.delete(listener);
+}
+const saveData = () => Boolean((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData);
+
 export function ForgeRing() {
   const reduced = useReducedMotion();
   const webgl = useSyncExternalStore(subscribeToNothing, detectWebGL, () => false);
+  const ready = useSyncExternalStore(subscribeToIdle, () => idle, () => false);
+  const frugal = useSyncExternalStore(subscribeToNothing, saveData, () => true);
 
-  if (reduced || !webgl) return <ForgeRingStatic />;
+  if (reduced || !webgl || frugal || !ready) return <ForgeRingStatic />;
   return <ForgeRingScene />;
 }
