@@ -666,7 +666,11 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
   for (let offset = -HISTORY_WEEKS; offset < 0; offset++) {
     const weekStart = addDays(currentWeek, offset * 7);
     const weekEnd = addDays(weekStart, 6);
-    if (r() < 0.12) continue; // the occasional missed check-in
+    // the occasional missed check-in — but never last week's: that is the one
+    // the coach is meant to find waiting, and a demo (or a test) that some
+    // days has nothing to read is not showing the product
+    const missed = r() < 0.12;
+    if (missed && offset !== -1) continue;
 
     const stress = Math.round(4 + jitter(r, 2.4));
     const scores: CheckInScores = {
