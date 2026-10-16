@@ -125,7 +125,7 @@ export default async function ProgressPage() {
             value={ctx.stats.consistencyPct}
             suffix="%"
             meter={ctx.stats.consistencyPct / 100}
-            note="Weeks in which you trained at all"
+            note="Weeks with training logged"
           >
             <ForgeLine
               variant="performance"
@@ -241,7 +241,7 @@ export default async function ProgressPage() {
                         <p className="mt-0.5 text-[12px] text-ink-secondary">{a.description}</p>
                       </div>
                       <span className="im-mono shrink-0 text-[10px] text-ink-tertiary">
-                        {formatDate(a.earnedAt.slice(0, 10), { month: 'short', year: '2-digit' })}
+                        {formatDate(a.earnedAt.slice(0, 10), { month: 'short', year: 'numeric' })}
                       </span>
                     </li>
                   ))}
@@ -295,7 +295,7 @@ export default async function ProgressPage() {
               <tbody className="im-mono text-[13px]">
                 {[...buckets].reverse().map((b) => (
                   <tr key={b.weekStart} className="border-b border-hairline">
-                    <td className="py-3 pr-6 text-ink-secondary">{b.weekStart}</td>
+                    <td className="py-3 pr-6 text-ink-secondary">{b.label}</td>
                     <td className="py-3 pr-6 text-ink-body">{b.plannedSessions}</td>
                     <td className="py-3 pr-6 font-bold text-mint">{b.completedSessions}</td>
                     <td className="py-3 pr-6 text-ink-body">{formatDistance(b.actualKm, units)}</td>

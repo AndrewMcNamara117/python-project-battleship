@@ -40,7 +40,16 @@ export default async function LeaderboardPage() {
 
       <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Rise>
-          <StatCard label="Forge Score" value={ctx.stats.forgeTotal} note={`Tier: ${ctx.stats.tier.name}`} meter={ctx.stats.tier.progress} />
+          <StatCard
+            label="Forge Score"
+            value={ctx.stats.forgeTotal}
+            note={
+              ctx.stats.tier.next
+                ? `${ctx.stats.tier.name} · ${ctx.stats.tier.pointsToNext} points to ${ctx.stats.tier.next}`
+                : `${ctx.stats.tier.name} · top tier`
+            }
+            meter={ctx.stats.tier.progress}
+          />
         </Rise>
         <Rise>
           <StatCard label="This week" value={ctx.stats.forgeWeek} suffix=" pts" />
@@ -49,15 +58,7 @@ export default async function LeaderboardPage() {
           <StatCard label="This month" value={ctx.stats.forgeMonth} suffix=" pts" />
         </Rise>
         <Rise>
-          <StatCard
-            label="Week streak"
-            value={ctx.stats.streakWeeks}
-            note={
-              ctx.stats.tier.next
-                ? `${ctx.stats.tier.pointsToNext} points to ${ctx.stats.tier.next}`
-                : 'Top tier reached'
-            }
-          />
+          <StatCard label="Week streak" value={ctx.stats.streakWeeks} note="Weeks in a row that earned points." />
         </Rise>
       </div>
 
@@ -86,10 +87,13 @@ export default async function LeaderboardPage() {
                   {rule.points > 0 ? `+${rule.points}` : '—'}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14px] font-bold">{rule.label}</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[14px] font-bold">
+                    {rule.label}
+                    {/* beside the title, wrapping under it on a phone, rather than squeezing it */}
+                    {!rule.automatic && <Badge tone="neutral">Coach records</Badge>}
+                  </span>
                   <span className="mt-1 block text-[12px] text-muted">{rule.note}</span>
                 </span>
-                {!rule.automatic && <Badge tone="neutral">Coach records</Badge>}
               </li>
             ))}
           </ul>

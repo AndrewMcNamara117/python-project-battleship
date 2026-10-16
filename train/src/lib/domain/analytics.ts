@@ -1,5 +1,5 @@
 import type { CheckIn, CompletedWorkout, ISODate, ScheduledWorkout, StrengthSession } from './types';
-import { addDays, startOfWeek, toISODate } from './dates';
+import { addDays, formatDayMonth, startOfWeek, toISODate } from './dates';
 
 export interface WeekBucket {
   weekStart: ISODate;
@@ -67,7 +67,8 @@ export function buildWeekBuckets(
 
     buckets.push({
       weekStart,
-      label: weekStart.slice(5).replace('-', '/'),
+      // "12 Oct", as every other date in the app: 10/12 reads as December here
+      label: formatDayMonth(weekStart),
       plannedKm: round1(s.filter((w) => isRun(w.type)).reduce((a, w) => a + (w.distanceKm ?? 0), 0)),
       actualKm: round1(runs.reduce((a, w) => a + (w.actualDistanceKm ?? 0), 0)),
       plannedSessions: s.filter(countsForAdherence).length,
@@ -131,7 +132,7 @@ export function wellbeingSeries(checkins: CheckIn[]): WellbeingPoint[] {
     .sort((a, b) => a.weekStart.localeCompare(b.weekStart))
     .map((c) => ({
       weekStart: c.weekStart,
-      label: c.weekStart.slice(5).replace('-', '/'),
+      label: formatDayMonth(c.weekStart),
       fatigue: c.scores.fatigue,
       sleep: c.scores.sleep,
       soreness: c.scores.soreness,

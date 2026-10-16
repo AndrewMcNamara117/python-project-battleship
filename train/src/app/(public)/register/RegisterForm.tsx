@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { signUp, type AuthResult } from '@/app/actions/auth';
 import { Button } from '@/components/ui/Button';
@@ -42,7 +43,19 @@ export function RegisterForm() {
       <div>
         <Checkbox
           name="acceptTerms"
-          label="I accept the terms and privacy policy."
+          label={
+            <>
+              I accept the{' '}
+              <Link href="/terms" target="_blank" className="text-mint underline-offset-2 hover:underline">
+                terms
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" target="_blank" className="text-mint underline-offset-2 hover:underline">
+                privacy policy
+              </Link>
+              .
+            </>
+          }
           description="Including that training and wellbeing data is stored and visible to my coach."
         />
         {result?.fieldErrors?.acceptTerms && (

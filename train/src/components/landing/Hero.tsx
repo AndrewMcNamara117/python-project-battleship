@@ -89,8 +89,9 @@ export function Hero() {
           <ButtonLink href="/apply" size="lg">
             Apply for coaching
           </ButtonLink>
-          <ButtonLink href="/app" variant="ghost" size="lg">
-            Explore the platform
+          {/* a visitor is shown the platform here, not sent to a login wall */}
+          <ButtonLink href="/#your-plan" variant="ghost" size="lg">
+            See how it works
           </ButtonLink>
         </motion.div>
 

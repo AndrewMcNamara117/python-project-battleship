@@ -76,7 +76,7 @@ export default async function CommunityPage() {
                             {e.description}
                           </p>
                         </div>
-                        <div className="flex shrink-0 flex-col items-end gap-3">
+                        <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
                           <span className="im-mono text-[12px] text-muted">
                             {e.attendingCount}
                             {e.capacity ? ` / ${e.capacity}` : ''} going
@@ -94,7 +94,7 @@ export default async function CommunityPage() {
           <section className="pt-6">
             <h2 className="im-micro">From the club</h2>
             <div className="mt-4 space-y-4">
-              {posts.map((p) => (
+              {posts.map((p, postIndex) => (
                 <Rise key={p.id}>
                   <Panel className="p-6">
                     <div className="flex flex-wrap items-center gap-2.5">
@@ -114,9 +114,12 @@ export default async function CommunityPage() {
                             {key} · {count}
                           </span>
                         ))}
-                        <span className="text-[10px] uppercase tracking-[0.16em] text-muted-2">
-                          Reactions are read-only for now
-                        </span>
+                        {/* said once, on the first post, not on every one */}
+                        {postIndex === 0 && (
+                          <span className="text-[10px] uppercase tracking-[0.16em] text-muted-2">
+                            Reactions are read-only for now
+                          </span>
+                        )}
                       </div>
                     )}
                   </Panel>

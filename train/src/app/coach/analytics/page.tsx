@@ -101,7 +101,7 @@ export default async function CoachAnalyticsPage() {
                 ['Check-ins waiting', ctx.totals.checkInsWaiting],
                 ['Athletes needing attention', ctx.totals.needingAttention],
                 ['Missed sessions, last 2 weeks', ctx.totals.missedSessions],
-                ['Races within 60 days', ctx.totals.upcomingRaces],
+                ['Races within 60 days', ctx.upcomingRaces.filter((r) => r.daysAway <= 60).length],
                 ['Average weekly adherence', `${ctx.totals.averageAdherence}%`],
               ].map(([label, value]) => (
                 <div key={String(label)} className="flex items-baseline justify-between gap-4 border-b border-line pb-4 last:border-b-0">

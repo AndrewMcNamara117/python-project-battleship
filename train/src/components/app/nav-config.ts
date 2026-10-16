@@ -53,7 +53,7 @@ export const NAV_GROUPS: { key: NavItem['group']; label: string }[] = [
 const COACH_NAV_ITEMS: NavItem[] = [
   { href: '/coach', label: 'Overview', short: 'Home', icon: 'home', group: 'train' },
   { href: '/coach/athletes', label: 'Athletes', short: 'Athletes', icon: 'athletes', group: 'train' },
-  { href: '/coach/applications', label: 'Applications', short: 'Intake', icon: 'checkin', group: 'train' },
+  { href: '/coach/applications', label: 'Applications', short: 'Intake', icon: 'intake', group: 'train' },
   { href: '/coach/checkins', label: 'Check-ins', short: 'Check-ins', icon: 'checkin', group: 'train' },
   { href: '/coach/messages', label: 'Messages', short: 'Messages', icon: 'coach', group: 'train' },
   { href: '/coach/programs', label: 'Programmes', short: 'Programmes', icon: 'calendar', group: 'progress' },
@@ -63,7 +63,7 @@ const COACH_NAV_ITEMS: NavItem[] = [
   { href: '/coach/analytics', label: 'Analytics', short: 'Analytics', icon: 'chart', group: 'club' },
   { href: '/coach/segments', label: 'Segments', short: 'Segments', icon: 'segment', group: 'club' },
   { href: '/coach/challenges', label: 'Challenges', short: 'Challenges', icon: 'flag', group: 'club' },
-  { href: '/coach/notifications', label: 'Notifications', short: 'Alerts', icon: 'checkin', group: 'account' },
+  { href: '/coach/notifications', label: 'Notifications', short: 'Alerts', icon: 'bell', group: 'account' },
 ];
 
 export const COACH_NAV = COACH_NAV_ITEMS;

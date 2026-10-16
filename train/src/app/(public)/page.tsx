@@ -163,7 +163,8 @@ export default function LandingPage() {
       {/* ---------------- D ---------------- */}
       <Section id="community" tone="raised">
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center lg:gap-20">
-          <Reveal>
+          {/* on a phone the heading comes first, as in every other section */}
+          <Reveal className="order-last lg:order-none">
             <Panel className="overflow-hidden p-0">
               <div className="flex items-center justify-between border-b border-line px-6 py-4">
                 <span className="im-micro">Forge Score · this month</span>
@@ -335,8 +336,8 @@ export default function LandingPage() {
             <ButtonLink href="/apply" size="lg">
               Apply for coaching
             </ButtonLink>
-            <ButtonLink href="/app" variant="ghost" size="lg">
-              Explore the platform
+            <ButtonLink href="/coaching" variant="ghost" size="lg">
+              How coaching works
             </ButtonLink>
           </div>
           <p className="mt-8 text-[12px] text-muted-2">

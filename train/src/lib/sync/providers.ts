@@ -35,9 +35,10 @@ function pending(name: SyncProviderName, setupRequired: string): SyncProvider {
 }
 
 const PENDING: Record<SyncProviderName, string> = {
-  garmin: 'Awaiting Garmin Connect Developer Program approval. Once granted, the adapter is one file against their Activity API.',
-  coros: 'Awaiting COROS API partner approval. Once granted, the adapter is one file against their API.',
-  strava: 'Not planned: Strava’s API terms restrict showing an athlete’s data to their coach. Export files from Strava and import them instead.',
+  // shown to athletes: what it means for them, not how it will be built (SYNC.md has that)
+  garmin: 'Coming — waiting on Garmin to approve the connection. Until then, export a file from Garmin Connect and import it.',
+  coros: 'Coming — waiting on COROS to approve the connection. Until then, export a file from the COROS app and import it.',
+  strava: 'Strava’s terms don’t allow sharing your data with a coach, so there’s no direct link. Export files from Strava and import them instead.',
 };
 
 export function syncProviders(): SyncProvider[] {

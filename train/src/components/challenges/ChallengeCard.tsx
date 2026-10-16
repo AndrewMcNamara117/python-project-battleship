@@ -30,6 +30,7 @@ export function ChallengeCard({
         <div className="min-w-0">
           <p className="im-micro">
             {METRICS[c.metric].label} ·{' '}
+            <span className="whitespace-nowrap">
             {state === 'closed'
               ? 'Closed'
               : state === 'upcoming'
@@ -37,6 +38,7 @@ export function ChallengeCard({
                 : left === 0
                   ? 'Last day'
                   : `${left} days left`}
+            </span>
           </p>
           <h2 className="mt-2 text-[17px] font-bold text-ink">{c.name}</h2>
         </div>

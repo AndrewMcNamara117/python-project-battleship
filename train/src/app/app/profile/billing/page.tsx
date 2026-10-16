@@ -82,12 +82,11 @@ export default async function BillingPage() {
                 <BillingActions hasSubscription={Boolean(subscription?.stripeCustomerId)} />
               ) : (
                 <div>
-                  <p className="im-micro text-warn">Billing not configured</p>
+                  {/* an athlete is told what they can do; the keys are the operator's business (README › Stripe) */}
+                  <p className="im-micro text-warn">Online billing is not open yet</p>
                   <p className="mt-2.5 max-w-[56ch] text-[13px] leading-relaxed text-muted">
-                    This deployment has no Stripe keys attached, so checkout and the billing portal
-                    are unavailable. Set <code className="text-white">STRIPE_SECRET_KEY</code>,{' '}
-                    <code className="text-white">STRIPE_WEBHOOK_SECRET</code> and{' '}
-                    <code className="text-white">STRIPE_PRICE_EVENT_READY</code> to enable them.
+                    Card payments and invoices will be managed here. Until then, your coach handles billing
+                    directly — nothing is charged through this page.
                   </p>
                 </div>
               )}

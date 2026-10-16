@@ -5,7 +5,8 @@ const COLUMNS = [
   {
     title: 'Platform',
     links: [
-      { href: '/app', label: 'Athlete hub' },
+      { href: '/#your-plan', label: 'The platform' },
+      { href: '/login', label: 'Athlete log in' },
       { href: '/coaching', label: 'Coaching' },
       { href: '/pricing', label: 'Pricing' },
       { href: '/apply', label: 'Apply' },

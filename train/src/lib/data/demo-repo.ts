@@ -1503,11 +1503,41 @@ export class DemoRepo implements IronMilesRepo {
   }
 
   async listComponents(scheduledWorkoutId: UUID): Promise<SessionComponent[]> {
-    return clone(
-      this.components
-        .filter((c) => c.scheduledWorkoutId === scheduledWorkoutId)
-        .sort((a, b) => a.position - b.position),
-    );
+    const stored = this.components
+      .filter((c) => c.scheduledWorkoutId === scheduledWorkoutId)
+      .sort((a, b) => a.position - b.position);
+    if (stored.length) return clone(stored);
+    // The seeded plan names a strength template on each strength session but,
+    // unlike an assignment in Postgres, never wrote that template's exercises
+    // onto the session — so the strength player opened empty on a prescribed
+    // day. Read them from the template, as an assignment would have copied them.
+    const session = dataset().scheduled.find((w) => w.id === scheduledWorkoutId);
+    const template = session?.strengthTemplateId ? this.strengthTemplates.find((t) => t.id === session.strengthTemplateId) : null;
+    if (!session || !template?.components?.length) return [];
+    return template.components.map((c, i) => ({
+      id: `${scheduledWorkoutId}-c${i}`,
+      scheduledWorkoutId,
+      athleteId: session.athleteId,
+      position: c.position ?? i,
+      kind: c.kind,
+      label: c.label ?? null,
+      notes: c.notes ?? null,
+      repeats: c.repeats ?? null,
+      rpeTarget: c.rpeTarget ?? null,
+      distanceKm: c.distanceKm ?? null,
+      durationSeconds: c.durationSeconds ?? null,
+      paceMinSecPerKm: c.paceMinSecPerKm ?? null,
+      paceMaxSecPerKm: c.paceMaxSecPerKm ?? null,
+      hrZone: c.hrZone ?? null,
+      recoverySeconds: c.recoverySeconds ?? null,
+      recoveryDescription: c.recoveryDescription ?? null,
+      strengthExerciseId: c.strengthExerciseId ?? null,
+      sets: c.sets ?? null,
+      reps: c.reps ?? null,
+      loadPrescription: c.loadPrescription ?? null,
+      tempo: c.tempo ?? null,
+      restSeconds: c.restSeconds ?? null,
+    }));
   }
 
   async saveComponents(

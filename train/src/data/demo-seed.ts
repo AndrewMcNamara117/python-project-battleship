@@ -407,7 +407,8 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       name: 'Ballyhoura Trail 30K',
       date: addDays(today, 131),
       location: 'Ballyhoura Mountains',
-      eventType: 'ultra',
+      // 30K is not an ultra; a trail race under the marathon
+      eventType: 'general_endurance',
       distanceKm: 30,
       elevationM: 950,
       url: null,
@@ -766,7 +767,7 @@ export function buildDemoDataset(today: ISODate = toISODate(new Date())): DemoDa
       threadId: 'thread-andrew',
       senderId: DEMO_COACH_ID,
       recipientId: DEMO_ATHLETE_ID,
-      body: 'Saw the 22K on Sunday. Pace held from start to finish — that is the first time this block. Keep Monday genuinely easy.',
+      body: 'Saw your long run at the weekend. Pace held from start to finish — that is the first time this block. Keep the next day genuinely easy.',
       authorKind: 'human',
       readAt: `${addDays(today, -6)}T20:00:00.000Z`,
       createdAt: `${addDays(today, -6)}T18:12:00.000Z`,

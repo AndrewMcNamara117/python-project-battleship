@@ -37,10 +37,10 @@ const PILLARS = [
 
 const WEEK = [
   { d: 'Mon', s: 'Easy 8K', k: 'Zone 2' },
-  { d: 'Tue', s: 'Strength — Foundation A', k: '45 min' },
+  { d: 'Tue', s: 'Strength · Foundation A', k: '45 min' },
   { d: 'Wed', s: 'Threshold 6 x 5 min', k: 'Zone 4' },
   { d: 'Thu', s: 'Recovery 6K', k: 'Zone 1' },
-  { d: 'Fri', s: 'Strength — Foundation B', k: '45 min' },
+  { d: 'Fri', s: 'Strength · Foundation B', k: '45 min' },
   { d: 'Sat', s: 'Iron Miles club run', k: 'Social' },
   { d: 'Sun', s: 'Long run 22K', k: 'Fuel from 40 min' },
 ];
@@ -127,7 +127,7 @@ export default function CoachingPage() {
                 'The Iron Miles club, Saturday mornings included',
               ].map((f) => (
                 <li key={f} className="flex gap-4 border-b border-line pb-4 text-[15px]">
-                  <span aria-hidden className="mt-3 block h-px w-5 shrink-0 bg-green" />
+                  <span aria-hidden className="mt-3 block h-0.5 w-5 shrink-0 bg-green" />
                   <span>{f}</span>
                 </li>
               ))}

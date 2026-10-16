@@ -41,7 +41,7 @@ export function AppHeader({
         </div>
 
         {figure && (
-          <div className="text-right">
+          <div className="sm:text-right">
             <p className="im-figure text-[clamp(1.9rem,5vw,3rem)] text-mint">{figure.value}</p>
             <p className="im-micro mt-1.5">{figure.label}</p>
           </div>

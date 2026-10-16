@@ -27,7 +27,7 @@ export function CoachNoteForm({ athleteId }: { athleteId: string }) {
 
       <Checkbox
         label="Share this note with the athlete"
-        description="Unshared notes are yours alone — the database will not return them to the athlete."
+        description="Unshared notes are yours alone; the athlete never sees them."
         checked={shared}
         onChange={(e) => setShared(e.target.checked)}
       />

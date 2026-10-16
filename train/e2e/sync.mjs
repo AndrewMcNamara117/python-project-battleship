@@ -85,7 +85,7 @@ step(1, 'a push for an account nobody has connected does nothing', before.status
 
 await page.goto(`${BASE}/app/profile`, { waitUntil: 'networkidle' });
 step(2, 'profile offers to connect the (simulated) watch', Boolean(await page.$('a[href="/api/sync/garmin/connect"]')));
-step(3, 'COROS says honestly that it is waiting on approval', /Awaiting COROS API partner approval/.test((await page.textContent('main')) ?? ''));
+step(3, 'COROS says honestly that it is waiting on approval', /waiting on COROS to approve/.test((await page.textContent('main')) ?? ''));
 
 await page.click('a[href="/api/sync/garmin/connect"]');
 await page.waitForURL(/\/app\/profile\?sync=/, { timeout: 20000 });

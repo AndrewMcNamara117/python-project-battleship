@@ -35,7 +35,7 @@ export function ConnectedApps({ rows }: { rows: ConnectedAppRow[] }) {
                   Connect
                 </a>
               ) : (
-                <Badge tone="neutral">Not yet</Badge>
+                <Badge tone="neutral">{r.name === 'strava' ? 'Not offered' : 'Coming'}</Badge>
               )}
             </div>
             {r.connected && (

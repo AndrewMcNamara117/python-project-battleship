@@ -54,8 +54,8 @@ export default async function CheckInQueuePage() {
           rows.length === 0
             ? 'No check-ins yet this week.'
             : owed
-              ? `${owed} flagged and still unanswered. ${unread} nobody has read.`
-              : `Nothing flagged is outstanding. ${unread} nobody has read.`
+              ? `${owed} flagged and still unanswered · ${unread} unread.`
+              : `Nothing flagged is waiting · ${unread} unread.`
         }
         // the count that moves when a coach marks something read, so the
         // badge and the act agree

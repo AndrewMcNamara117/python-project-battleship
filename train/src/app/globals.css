@@ -134,6 +134,16 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* headings break evenly, and paragraphs never end on a lone word */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
+
 ::selection {
   background: var(--color-mint);
   color: var(--color-mint-deep);

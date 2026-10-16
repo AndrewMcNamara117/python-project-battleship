@@ -35,7 +35,7 @@ export function PricingCard({ pkg, cta = '/apply' }: { pkg: CoachingPackage; cta
       <ul className="mt-8 space-y-3">
         {pkg.includes.map((item) => (
           <li key={item} className="flex gap-3 text-[14px] leading-relaxed text-white">
-            <span aria-hidden className="mt-2 block h-px w-4 shrink-0 bg-green" />
+            <span aria-hidden className="mt-2 block h-0.5 w-4 shrink-0 bg-green" />
             <span>{item}</span>
           </li>
         ))}

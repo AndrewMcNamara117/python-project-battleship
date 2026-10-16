@@ -9,7 +9,7 @@ import { ButtonLink } from '@/components/ui/Button';
 const LINKS = [
   { href: '/coaching', label: 'Coaching' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/app', label: 'The Platform' },
+  { href: '/#your-plan', label: 'The Platform' },
 ];
 
 export function PublicHeader() {

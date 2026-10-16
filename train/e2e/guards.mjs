@@ -139,7 +139,8 @@ console.log('\nFAILURE STATES ARE HANDLED, NOT CRASHED');
 }
 {
   const r = await req('/app/profile/billing', { cookie: 'athlete' });
-  check('billing states plainly that it is unconfigured', /not configured/i.test(r.text), 'expected an explicit notice');
+  // plain to an athlete, and nothing about keys (the operator's business)
+  check('billing states plainly that it is not open yet', /Online billing is not open yet/i.test(r.text) && !/STRIPE_/.test(r.text), 'expected an explicit notice');
 }
 {
   const r = await req('/app/profile', { cookie: 'athlete' });
@@ -147,7 +148,7 @@ console.log('\nFAILURE STATES ARE HANDLED, NOT CRASHED');
   // configured one (the sync simulator, in e2e/sync.mjs) may offer one
   check(
     'integrations are labelled rather than looking connectable',
-    /Awaiting COROS API partner approval/i.test(r.text) &&
+    /waiting on COROS to approve/i.test(r.text) &&
       !/\/api\/sync\/coros\/connect/.test(r.text) &&
       !/\/api\/sync\/strava\/connect/.test(r.text),
   );

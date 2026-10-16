@@ -111,8 +111,9 @@ export default async function StrengthPage() {
       ) : (
         <Panel className="mt-8 p-8">
           <p className="text-[14px] leading-relaxed text-ink-secondary">
-            No strength session prescribed yet. Your coach adds these to your calendar — when one is
-            scheduled, it opens here.
+            {target
+              ? `${target.name} is on your plan, but its exercises haven’t been added yet. Ask your coach — it opens here once they are.`
+              : 'No strength session prescribed yet. Your coach adds these to your calendar — when one is scheduled, it opens here.'}
           </p>
         </Panel>
       )}

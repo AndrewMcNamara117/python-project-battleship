@@ -61,7 +61,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             ? i?.status === 'error'
               ? 'Lost the connection — connect again to keep runs arriving.'
               : null
-            : 'Sync is not switched on for this deployment yet.'
+            : 'Coming soon. Until then, import files from your watch’s app.'
           : p.setupRequired,
       };
     }),

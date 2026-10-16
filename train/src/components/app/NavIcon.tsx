@@ -20,6 +20,9 @@ const PATHS: Record<string, string> = {
   coach: 'M4 5h16v11H9l-5 4z',
   forge: 'M12 3 5 9v7l7 5 7-5V9zM12 8v8M9 12h6',
   profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
+  // an inbox tray: applications arriving
+  intake: 'M4 13l2.5-8h11l2.5 8M4 13v6h16v-6M4 13h4.5l1 2.5h5l1-2.5H20',
+  bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0',
   athletes: 'M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M16 4.5a3 3 0 0 1 0 5.9M22 20v-1a5 5 0 0 0-4-4.9',
 };
 

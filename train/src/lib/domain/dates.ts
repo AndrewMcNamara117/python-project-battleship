@@ -94,7 +94,8 @@ export function formatDuration(totalSeconds: number): string {
 export function formatMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  // "1h", not "1h 0m"
+  return h > 0 ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 }
 
 /** Seconds per km -> "5:12 /km" */

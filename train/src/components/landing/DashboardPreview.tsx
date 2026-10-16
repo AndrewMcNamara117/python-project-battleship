@@ -34,16 +34,16 @@ export function DashboardPreview({
         <Badge tone="green">Live preview</Badge>
       </div>
 
-      <div className="grid gap-px bg-line sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-4">
         {[
           { label: 'Adherence', value: stats.adherence, suffix: '%' },
           { label: 'This week', value: stats.weeklyKm, suffix: 'km', decimals: 1 },
           { label: 'Forge Score', value: stats.forgeScore, suffix: '' },
           { label: 'Week streak', value: stats.streak, suffix: '' },
         ].map((s) => (
-          <div key={s.label} className="bg-surface px-6 py-6">
+          <div key={s.label} className="min-w-0 bg-surface px-5 py-6">
             <p className="im-micro">{s.label}</p>
-            <p className="mt-3 text-[clamp(1.6rem,3vw,2.1rem)] font-extrabold leading-none">
+            <p className="mt-3 text-[clamp(1.4rem,2.2vw,1.8rem)] font-extrabold leading-none tabular-nums">
               <CountUp to={s.value} decimals={s.decimals ?? 0} suffix={s.suffix} />
             </p>
           </div>

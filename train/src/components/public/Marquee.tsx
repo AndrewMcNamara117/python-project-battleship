@@ -14,7 +14,13 @@ export function Marquee({ words, className }: { words: string[]; className?: str
     return (
       <div className={`overflow-hidden border-y border-line py-5 ${className ?? ''}`}>
         <p className="im-display px-5 text-center text-[clamp(1.4rem,3vw,2.2rem)] text-muted-2">
-          {line}
+          {/* each phrase keeps its separator, so a line never starts with a dot */}
+          {words.map((w, i) => (
+            <span key={w} className="whitespace-nowrap">
+              {w}
+              {i < words.length - 1 ? '  ·  ' : ''}
+            </span>
+          ))}
         </p>
       </div>
     );

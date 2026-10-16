@@ -1,7 +1,7 @@
 import { requireCoach, type Session } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
 import { startOfWeek, toISODate } from '@/lib/domain/dates';
-import type { RosterEntry } from '@/lib/domain/roster';
+import type { RosterEntry, SignalKind } from '@/lib/domain/roster';
 import type { ISODate, ISOTimestamp, Profile, UUID } from '@/lib/domain/types';
 
 /**
@@ -135,12 +135,25 @@ export async function loadCoachContext(): Promise<CoachContext> {
   };
 }
 
+const FLAG_LABEL: Record<SignalKind, string> = {
+  no_programme: 'No programme',
+  no_future_sessions: 'Nothing scheduled',
+  programme_ending: 'Programme ending',
+  checkin_flagged: 'Check-in flagged',
+  checkin_unreviewed: 'Check-in unread',
+  soreness_reported: 'Soreness',
+  training_adherence: 'Missing sessions',
+  race_approaching: 'Race soon',
+  awaiting_reply: 'Awaiting reply',
+};
+
+/**
+ * One line for the athlete table and the analytics count, from the roster's
+ * own signals — the same definition the overview uses, so "on track" here
+ * and "needs something" there can never disagree about the same athlete.
+ */
 export function attentionFlag(a: AthleteRow): { tone: 'alert' | 'warn' | 'green'; label: string } {
-  if (a.lastCheckIn?.attentionLevel === 'attention') return { tone: 'alert', label: 'Attention' };
-  if (a.missedLastTwoWeeks >= 3) return { tone: 'alert', label: 'Missing sessions' };
-  if (a.lastCheckIn?.attentionLevel === 'watch') return { tone: 'warn', label: 'Watch' };
-  if (a.weekAdherencePct != null && a.weekAdherencePct < 60) {
-    return { tone: 'warn', label: 'Low adherence' };
-  }
-  return { tone: 'green', label: 'On track' };
+  const loudest = a.entry.signals.find((s) => s.severity === 'urgent') ?? a.entry.signals.find((s) => s.severity === 'attention');
+  if (!loudest) return { tone: 'green', label: 'On track' };
+  return { tone: loudest.severity === 'urgent' ? 'alert' : 'warn', label: FLAG_LABEL[loudest.kind] };
 }
