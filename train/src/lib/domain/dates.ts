@@ -119,8 +119,9 @@ export function formatPaceRange(
 export function formatDistance(km: number | null, units: 'metric' | 'imperial' = 'metric'): string {
   if (km == null) return '—';
   const v = units === 'imperial' ? km / 1.609344 : km;
-  const unit = units === 'imperial' ? 'MI' : 'KM';
-  return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)}${unit}`;
+  // "21.4 km", as the activity pages write it; uppercase labels uppercase it themselves
+  const unit = units === 'imperial' ? 'mi' : 'km';
+  return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)} ${unit}`;
 }
 
 /** "3:45:00" or "45:00" -> seconds. Returns null on anything else. */
