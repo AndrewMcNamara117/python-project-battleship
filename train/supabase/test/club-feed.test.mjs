@@ -200,3 +200,27 @@ describe('the feed cannot be pinned', () => {
     await t.asService('delete from activities where id = $1', [future]);
   });
 });
+
+describe('paging the feed', () => {
+  it('two runs started the same second, either side of a page boundary, both appear', async () => {
+    const at = `now() - interval '2 hours'`;
+    const ids = [];
+    for (const fp of ['c', 'd', 'e']) {
+      const id = await activity(runner, 'club', fp);
+      await t.asService(`update activities set started_at = date_trunc('second', ${at}) where id = $1`, [id]);
+      ids.push(id);
+    }
+    const first = (await t.asUser(friend, `select id, started_at from im_club_feed(1, date_trunc('second', ${at}) + interval '1 second')`)).rows;
+    assert.equal(first.length, 1);
+    const seen = [first[0].id];
+    let cursor = first[0];
+    for (let i = 0; i < 2; i++) {
+      const next = (await t.asUser(friend, 'select id, started_at from im_club_feed(1, $1, $2)', [cursor.started_at, cursor.id])).rows;
+      seen.push(next[0].id);
+      cursor = next[0];
+    }
+    assert.deepEqual([...seen].sort(), [...ids].sort());
+    for (const id of ids) await t.asService('delete from activities where id = $1', [id]);
+  });
+});
+

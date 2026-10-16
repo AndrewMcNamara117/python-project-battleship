@@ -87,7 +87,7 @@ import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
   ChannelName, DeliveryStatus, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import type { BatchHistoryRow, DeliveryAttempt, FeedCursor, NotificationItem, PendingDelivery } from './repo';
 import { CLAIM_LEASE_MS } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
@@ -585,11 +585,13 @@ export class DemoRepo implements IronMilesRepo {
     );
   }
 
-  async listClubFeed(viewerId: UUID, limit = 30, before?: string): Promise<FeedItem[]> {
+  async listClubFeed(viewerId: UUID, limit = 30, before?: FeedCursor): Promise<FeedItem[]> {
+    // as im_club_feed: newest first by (start, id), nothing dated after tomorrow
+    const order = (a: Activity, b: Activity) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id);
+    const after = (a: Activity) => !before || order(a, { startedAt: before.startedAt, id: before.id } as Activity) > 0;
     return dataset()
-      // as im_club_feed: nothing dated after tomorrow
-      .activities.filter((a) => a.visibility === 'club' && (!before || a.startedAt < before) && Date.parse(a.startedAt) <= Date.now() + 86_400_000)
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+      .activities.filter((a) => a.visibility === 'club' && after(a) && Date.parse(a.startedAt) <= Date.now() + 86_400_000)
+      .sort(order)
       .slice(0, Math.min(Math.max(limit, 1), 100))
       .map((a) => this.feedItem(viewerId, a));
   }
@@ -638,7 +640,7 @@ export class DemoRepo implements IronMilesRepo {
     if (text.length < 1 || text.length > 500) throw new Error('comment violates check constraint');
     const row = { id: uid('cmt'), activityId, authorId, body: text, createdAt: new Date().toISOString() };
     d.comments.push(row);
-    this.notifySocial(activityId, authorId, 'comment', text);
+    this.notifySocial(activityId, authorId, 'comment', text, row.id);
     return { id: row.id, authorId, authorName: d.profiles.find((p) => p.id === authorId)?.fullName ?? 'Member', body: text, createdAt: row.createdAt };
   }
 
@@ -798,6 +800,8 @@ export class DemoRepo implements IronMilesRepo {
     // as the policy: silently nothing, rather than an error, when not permitted
     if (c.authorId !== byUserId && owner !== byUserId && role !== 'coach' && role !== 'admin') return;
     d.comments = d.comments.filter((x) => x.id !== commentId);
+    // as 0026's cascade: the notification quoting it goes with it
+    d.notifications = d.notifications.filter((n) => n.id !== `ntf-comment-${commentId}`);
   }
 
   async listStrengthSessions(athleteId: UUID, from: ISODate, to: ISODate): Promise<StrengthSession[]> {
@@ -1205,7 +1209,7 @@ export class DemoRepo implements IronMilesRepo {
   }
 
   /** As migration 0026's triggers: tell the activity's athlete, never the actor, unless they opted out. */
-  private notifySocial(activityId: UUID, actorId: UUID, kind: 'kudos' | 'comment', body?: string): void {
+  private notifySocial(activityId: UUID, actorId: UUID, kind: 'kudos' | 'comment', body?: string, commentId?: UUID): void {
     const d = dataset();
     const a = d.activities.find((x) => x.id === activityId);
     if (!a || a.athleteId === actorId) return;
@@ -1234,7 +1238,7 @@ export class DemoRepo implements IronMilesRepo {
     }
     const text = (body ?? '').trim();
     d.notifications.push({
-      id: uid('ntf'),
+      id: commentId ? `ntf-comment-${commentId}` : uid('ntf'),
       userId: a.athleteId,
       kind: 'comment',
       title: `${actor} commented on ${a.name}`,

@@ -242,3 +242,30 @@ describe('import — what a file cannot do', () => {
   });
 });
 
+describe('import — an interrupted import finishes on retry', () => {
+  it('the same file again links the session the first attempt never reached', async () => {
+    const { repo, profile, session } = await setup();
+    const bytes = toFit(runOn(session.date));
+    // as if the first attempt stopped right after saving the activity
+    const realList = repo.listScheduled.bind(repo);
+    repo.listScheduled = async () => {
+      throw new Error('timed out');
+    };
+    await assert.rejects(importActivity(repo, profile, bytes));
+    repo.listScheduled = realList;
+    assert.notEqual((await repo.getScheduled(session.id))?.status, 'completed');
+
+    const retry = await importActivity(repo, profile, bytes);
+    assert.equal(retry.status, 'matched');
+    assert.equal((await repo.getScheduled(session.id))?.status, 'completed');
+    assert.equal((await repo.listActivitiesOn(DEMO_ATHLETE_ID, session.date, session.date)).length, 1, 'still one activity');
+  });
+
+  it('a finished duplicate is still only a duplicate', async () => {
+    const { repo, profile, session } = await setup();
+    const bytes = toFit(runOn(session.date));
+    await importActivity(repo, profile, bytes);
+    assert.equal((await importActivity(repo, profile, bytes)).status, 'duplicate');
+  });
+});
+

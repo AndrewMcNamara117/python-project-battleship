@@ -73,7 +73,7 @@ import type { BatchAction, BatchOutcome } from '@/lib/domain/batch';
 import type {
   ChannelName, NotificationDraft, NotificationPayload, NotificationPreferences,
 } from '@/lib/domain/notifications';
-import type { BatchHistoryRow, DeliveryAttempt, NotificationItem, PendingDelivery } from './repo';
+import type { BatchHistoryRow, DeliveryAttempt, FeedCursor, NotificationItem, PendingDelivery } from './repo';
 import { CLAIM_LEASE_MS } from './repo';
 import type { RosterEntry } from '@/lib/domain/roster';
 import type {
@@ -808,8 +808,11 @@ export class SupabaseRepo implements IronMilesRepo {
      Read through 0022's definer functions, which return only the shareable
      columns; the viewer is the session's own auth.uid(), never a parameter. */
 
-  listClubFeed(_viewerId: UUID, limit = 30, before?: string) {
-    return this.rows(this.db.rpc('im_club_feed', { p_limit: limit, p_before: before ?? null }), this.toFeedItem);
+  listClubFeed(_viewerId: UUID, limit = 30, before?: FeedCursor) {
+    return this.rows(
+      this.db.rpc('im_club_feed', { p_limit: limit, p_before: before?.startedAt ?? null, p_before_id: before?.id ?? null }),
+      this.toFeedItem,
+    );
   }
 
   async getFeedItem(_viewerId: UUID, activityId: UUID): Promise<FeedItem | null> {
@@ -1188,11 +1191,17 @@ export class SupabaseRepo implements IronMilesRepo {
 
     // every event in the window, a page at a time: an all-time board passes
     // max-rows within weeks, and a capped read would rank on a random subset
-    const ids = people.map((p: any) => p.id);
-    const events = await this.allPages(
-      () => this.db.from('forge_score_events').select('id, athlete_id, kind, points, date').in('athlete_id', ids).gte('date', from).order('id'),
-      (e: any) => e as { athlete_id: string; kind: string; points: number; date: string },
-    );
+    // No id list in the request: forge_read (0022) already limits the rows to
+    // board members and the viewer's own athletes, and a list of every member
+    // in the URL outgrows the gateway at a few hundred. Anyone not on the
+    // board is dropped below.
+    const onBoard = new Set(people.map((p: any) => p.id as string));
+    const events = (
+      await this.allPages(
+        () => this.db.from('forge_score_events').select('id, athlete_id, kind, points, date').gte('date', from).order('id'),
+        (e: any) => e as { athlete_id: string; kind: string; points: number; date: string },
+      )
+    ).filter((e) => onBoard.has(e.athlete_id));
 
     const byAthlete = new Map<string, { kind: string; points: number; date: string }[]>();
     for (const e of events ?? []) {

@@ -161,6 +161,11 @@ export interface DeliveryAttempt {
 /** How long a claimed import may sit unfinished before a retry may take it over. */
 export const CLAIM_LEASE_MS = 15 * 60 * 1000;
 
+export interface FeedCursor {
+  startedAt: ISOTimestamp;
+  id: UUID;
+}
+
 export interface IronMilesRepo {
   readonly mode: 'supabase' | 'demo';
 
@@ -219,7 +224,8 @@ export interface IronMilesRepo {
   deleteActivity(id: UUID): Promise<void>;
 
   /* the club feed — shared activities, as the club may see them */
-  listClubFeed(viewerId: UUID, limit?: number, before?: ISOTimestamp): Promise<FeedItem[]>;
+  /** Newest first. `before` is the last item of the previous page: its start and its id, so items sharing a start are not skipped. */
+  listClubFeed(viewerId: UUID, limit?: number, before?: FeedCursor): Promise<FeedItem[]>;
   /** One shared activity, or the viewer's own. Null when the viewer may not see it. */
   getFeedItem(viewerId: UUID, activityId: UUID): Promise<FeedItem | null>;
   /** Comments and kudos with names. Empty when the viewer may not see the activity. */

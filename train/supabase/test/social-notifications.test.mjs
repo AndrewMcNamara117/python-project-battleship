@@ -84,6 +84,15 @@ describe('comment notifications', () => {
   });
 });
 
+describe('a deleted comment', () => {
+  it('takes its words out of the owner’s inbox', async () => {
+    const { rows } = await t.asUser(friend, `insert into activity_comments (activity_id, author_id, body) values ($1, $2, 'Said in haste') returning id`, [run, friend]);
+    assert.ok((await inbox(runner)).some((n) => n.body === 'Said in haste'));
+    await t.asUser(friend, 'delete from activity_comments where id = $1', [rows[0].id]);
+    assert.ok(!(await inbox(runner)).some((n) => n.body === 'Said in haste'));
+  });
+});
+
 describe('opting out, and who can write', () => {
   it('an athlete who turned them off is not told', async () => {
     await t.asUser(friend, 'insert into activity_kudos (activity_id, athlete_id) values ($1, $2)', [quietRun, friend]);

@@ -19,6 +19,11 @@
 alter table profiles
   add column if not exists notify_social boolean not null default true;
 
+-- a comment's notification quotes it, so it goes when the comment does:
+-- deleting what you wrote must take your words out of their inbox too
+alter table notifications
+  add column if not exists source_comment_id uuid references activity_comments(id) on delete cascade;
+
 create or replace function im_notify_on_kudos() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -69,13 +74,13 @@ begin
   excerpt := btrim(new.body);
   if char_length(excerpt) > 100 then excerpt := left(excerpt, 99) || '…'; end if;
 
-  insert into notifications (user_id, kind, title, body, href, notification_kind, priority, state)
+  insert into notifications (user_id, kind, title, body, href, notification_kind, priority, state, source_comment_id)
   values (
     a.athlete_id, 'comment',
     coalesce(author, 'A club-mate') || ' commented on ' || a.name,
     excerpt,
     '/app/activities/' || a.id || '#comments',
-    'alert', 'information', 'pending'
+    'alert', 'information', 'pending', new.id
   );
   return new;
 end $$;

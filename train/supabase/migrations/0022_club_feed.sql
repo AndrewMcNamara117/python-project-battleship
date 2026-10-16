@@ -117,7 +117,7 @@ create policy comments_delete on activity_comments for delete using (
 
 -- ---------- the feed, as a member is allowed to see it ----------
 
-create or replace function im_club_feed(p_limit integer default 30, p_before timestamptz default null)
+create or replace function im_club_feed(p_limit integer default 30, p_before timestamptz default null, p_before_id uuid default null)
 returns table (
   id uuid, athlete_id uuid, athlete_name text, training_group text,
   name text, sport im_activity_sport, started_at timestamptz, local_date date,
@@ -137,10 +137,14 @@ language sql stable security definer set search_path = public as $$
   join profiles p on p.id = a.athlete_id
   where auth.uid() is not null
     and a.visibility = 'club'
-    and (p_before is null or a.started_at < p_before)
+    -- a keyset on (start, id): two runs started the same second — a group
+    -- run, both watches at 09:00:00 — either side of a page boundary must
+    -- not lose one of them
+    and (p_before is null
+         or (a.started_at, a.id) < (p_before, coalesce(p_before_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
     -- a file dated in the future would otherwise sit at the top for ever
     and a.started_at <= now() + interval '1 day'
-  order by a.started_at desc
+  order by a.started_at desc, a.id desc
   limit least(greatest(coalesce(p_limit, 30), 1), 100);
 $$;
 

@@ -117,10 +117,15 @@ export async function importActivity(
   // the same run exported twice in different formats has different bytes
   const nearby = await repo.listActivitiesOn(profile.id, addDays(draft.localDate, -1), addDays(draft.localDate, 1));
   const sameRun = nearby.find((a) => Math.abs(Date.parse(a.startedAt) - Date.parse(draft.startedAt)) < SAME_RUN_WINDOW_MS);
-  if (sameRun) return { status: 'duplicate', activity: sameRun };
+  // A duplicate the plan never heard about is an import that stopped after
+  // saving (a timeout, a provider retrying): finish it now, from this copy of
+  // the track. One already on a session is simply a duplicate.
+  if (sameRun && sameRun.scheduledWorkoutId) return { status: 'duplicate', activity: sameRun };
 
-  const { activity, duplicate } = await repo.saveActivity(draft);
-  if (duplicate) return { status: 'duplicate', activity };
+  const saved = sameRun ? { activity: sameRun, duplicate: true } : await repo.saveActivity(draft);
+  const { activity, duplicate } = saved;
+  if (duplicate && activity.scheduledWorkoutId) return { status: 'duplicate', activity };
+  if (duplicate && !(await unfinished(repo, activity))) return { status: 'duplicate', activity };
 
   // segments are timed now, from the full track — the only moment it exists
   const segments = await timeSegments(repo, effortWriter, activity, parsed.points, analysis.cumulative);
@@ -155,6 +160,18 @@ export async function importActivity(
     return { status: 'ambiguous', activity, options: sessions.filter((s) => match.candidateIds.includes(s.id)), segments, records };
   }
   return { status: 'unmatched', activity, reason: match.reason, segments, records };
+}
+
+/**
+ * Whether a stored activity's import stopped short: no session, and nothing
+ * on its day it could still go to. An activity the athlete was asked about
+ * (two sessions fitted) is finished — the choice is theirs, not a retry's.
+ */
+async function unfinished(repo: IronMilesRepo, activity: Activity): Promise<boolean> {
+  if (activity.scheduledWorkoutId) return false;
+  const sessions = await repo.listScheduled(activity.athleteId, activity.localDate, activity.localDate);
+  const kind = matchSession(sessions, activity.localDate, activity.sport).kind;
+  return kind === 'matched' || kind === 'logged';
 }
 
 async function timeSegments(

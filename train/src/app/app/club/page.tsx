@@ -1,3 +1,4 @@
+import type { FeedCursor } from '@/lib/data/repo';
 import type { Metadata } from 'next';
 import { FeedCard } from '@/components/activity/FeedCard';
 import { AppPage } from '@/components/app/PageHeader';
@@ -17,16 +18,24 @@ export const metadata: Metadata = { title: 'Club feed' };
  * already exists and rewards doing the plan, and a feed that sorted by
  * distance would reward exactly the overtraining the Forge Score avoids.
  */
+/** "start~id", as the Older link writes it; anything else starts from the top. */
+function readCursor(raw: string | undefined): FeedCursor | undefined {
+  const [startedAt, id] = (raw ?? '').split('~');
+  if (!startedAt || !id || Number.isNaN(Date.parse(startedAt)) || id.length > 64) return undefined;
+  return { startedAt, id };
+}
+
 export default async function ClubFeedPage({ searchParams }: { searchParams: Promise<{ before?: string }> }) {
   const { before } = await searchParams;
   const session = await requireSession();
   const repo = await getRepo();
   const [profile, items] = await Promise.all([
     repo.getProfile(session.userId),
-    repo.listClubFeed(session.userId, 20, before && !Number.isNaN(Date.parse(before)) ? before : undefined),
+    repo.listClubFeed(session.userId, 20, readCursor(before)),
   ]);
   const units = profile?.units ?? 'metric';
-  const older = items.length === 20 ? items[items.length - 1].startedAt : null;
+  const last = items[items.length - 1];
+  const older = items.length === 20 && last ? `${last.startedAt}~${last.id}` : null;
 
   return (
     <AppPage>
