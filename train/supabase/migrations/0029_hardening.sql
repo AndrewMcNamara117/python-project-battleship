@@ -323,3 +323,123 @@ begin
 
   return v_week;
 end $$;
+
+
+-- ---------- 8. shifting never lands a session in the past ----------
+-- im_shift_sessions (0011) kept sessions already in the past where they were
+-- but would move today's back a week — into days that have gone, where they
+-- read as missed. The comments in 0016 and batch-runner.ts said it refused
+-- that; now it does, in the preview as well as the apply.
+create or replace function im_shift_sessions(
+  p_athlete uuid,
+  p_from    date,
+  p_to      date,
+  p_days    integer,
+  p_apply   boolean default false
+)
+returns table (
+  session_id uuid,
+  action     text,
+  name       text,
+  from_date  date,
+  to_date    date,
+  status     im_session_status,
+  detail     text
+)
+language plpgsql security definer set search_path = public as $$
+declare
+  r       record;
+  v_today date := current_date;
+  v_moved integer;
+  v_week  uuid;
+begin
+  if not (im_is_coach_of(p_athlete) or im_is_admin()) then
+    raise exception 'That athlete is not on your roster.';
+  end if;
+  if p_days = 0 then
+    raise exception 'Shifting by zero days would change nothing.';
+  end if;
+  if p_from > p_to then
+    raise exception 'That date range runs backwards.';
+  end if;
+
+  create temporary table if not exists im_shift_plan (
+    id uuid primary key, act text, nm text, from_d date, to_d date,
+    st im_session_status, why text, slot smallint, program uuid
+  ) on commit drop;
+  delete from im_shift_plan;
+
+  -- First pass: what each session is, ignoring where anything else lands.
+  insert into im_shift_plan (id, act, nm, from_d, to_d, st, why, slot, program)
+  select
+    s.id,
+    case
+      when im_adaptation_blocker(s.*) is not null then 'blocked'
+      when s.date < v_today then 'keep'
+      when (s.date + p_days) < v_today then 'blocked'
+      when p.id is not null and ((s.date + p_days) < p.start_date or (s.date + p_days) > p.end_date)
+        then 'blocked'
+      else 'move'
+    end,
+    s.name, s.date, (s.date + p_days)::date, s.status,
+    case
+      when im_adaptation_blocker(s.*) is not null then im_adaptation_blocker(s.*)
+      when s.date < v_today then 'In the past. Sessions before today are left where they are.'
+      when (s.date + p_days) < v_today then 'That would land in the past. A session moves to today or later.'
+      when p.id is not null and ((s.date + p_days) < p.start_date or (s.date + p_days) > p.end_date)
+        then format('That would land outside the programme, which ends %s.',
+                    to_char(p.end_date, 'FMDD Mon'))
+      when p_days > 0 then format('Moves forward %s day(s).', p_days)
+      else format('Moves back %s day(s).', abs(p_days))
+    end,
+    s.slot, s.program_id
+  from scheduled_workouts s
+  left join programs p on p.id = s.program_id
+  where s.athlete_id = p_athlete and s.date between p_from and p_to;
+
+  -- Second pass: a session cannot move onto a slot something else is keeping.
+  -- Blocking one session can strand another that was going to take its place,
+  -- so this settles rather than assuming a single sweep is enough.
+  loop
+    update im_shift_plan m
+       set act = 'blocked',
+           why = 'Something is already in that slot on the day it would move to.'
+     where m.act = 'move'
+       and exists (
+         select 1 from scheduled_workouts o
+          where o.athlete_id = p_athlete
+            and o.date = m.to_d
+            and o.slot = m.slot
+            and o.id <> m.id
+            and not exists (select 1 from im_shift_plan p2 where p2.id = o.id and p2.act = 'move')
+       );
+    get diagnostics v_moved = row_count;
+    exit when v_moved = 0;
+  end loop;
+
+  if p_apply then
+    -- moving forward, the latest goes first; backwards, the earliest. Either
+    -- way no update passes through an occupied slot.
+    for r in
+      select * from im_shift_plan where act = 'move'
+       order by case when p_days > 0 then from_d end desc nulls last,
+                case when p_days < 0 then from_d end asc nulls last,
+                slot
+    loop
+      select id into v_week from program_weeks
+       where program_id = r.program
+         and r.to_d >= start_date and r.to_d < start_date + 7
+       limit 1;
+
+      update scheduled_workouts
+         set date = r.to_d,
+             program_week_id = coalesce(v_week, program_week_id)
+       where id = r.id;
+    end loop;
+  end if;
+
+  return query
+    select m.id, m.act, m.nm, m.from_d, m.to_d, m.st, m.why
+      from im_shift_plan m
+     order by m.from_d, m.slot;
+end $$;

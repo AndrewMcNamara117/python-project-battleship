@@ -409,3 +409,19 @@ describe('template independence', () => {
     assert.notEqual(Number(rows[0].distance_km), 42);
   });
 });
+
+describe('shifting into the past (0029)', () => {
+  it('a session today cannot be moved back into days that have gone', async () => {
+    const { rows: [s] } = await t.asService(
+      `insert into scheduled_workouts (athlete_id, date, slot, name, type, status) values ($1, current_date, 7, 'Today run', 'easy_run', 'scheduled') returning id`,
+      [athlete]);
+    const preview = (await t.asUser(coachA,
+      `select * from im_shift_sessions($1, current_date, current_date, -7, false)`, [athlete])).rows;
+    const row = preview.find((r) => r.session_id === s.id);
+    assert.equal(row?.action, 'blocked');
+    assert.match(row?.detail ?? '', /in the past/);
+    await t.asUser(coachA, `select * from im_shift_sessions($1, current_date, current_date, -7, true)`, [athlete]);
+    const { rows: [after] } = await t.asService(`select date = current_date as stayed from scheduled_workouts where id = $1`, [s.id]);
+    assert.equal(after.stayed, true);
+  });
+});

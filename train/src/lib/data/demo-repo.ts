@@ -2842,6 +2842,13 @@ export class DemoRepo implements IronMilesRepo {
           detail: 'In the past. Sessions before today are left where they are.',
         };
       }
+      // as 0029: a session moves to today or later, never into days gone
+      if (toDate < today) {
+        return {
+          w, action: 'blocked' as const, toDate,
+          detail: 'That would land in the past. A session moves to today or later.',
+        };
+      }
       if (program && (toDate < program.startDate || toDate > program.endDate)) {
         return {
           w, action: 'blocked' as const, toDate,
