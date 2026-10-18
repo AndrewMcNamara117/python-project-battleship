@@ -103,6 +103,7 @@ is covered by `e2e/loop.mjs`.
    supabase/migrations/0026_social_notifications.sql # kudos and comment notices
    supabase/migrations/0027_challenges.sql   # club challenges
    supabase/migrations/0028_sync.sql         # watch sync: sealed tokens, push ledger
+   supabase/migrations/0029_hardening.sql    # intake, threads and messages locked down
    ```
 
 2. Put the project URL, anon key and service-role key in `.env.local`.

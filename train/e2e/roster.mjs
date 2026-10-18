@@ -251,17 +251,23 @@ try {
     const openBtn = adherenceCard.getByRole('button', { name: /\d+ more/i });
     if (await openBtn.count()) {
       const id = await openBtn.getAttribute('aria-controls');
-      await p.locator(`button[aria-controls="${id}"]`).click();
-      await p.waitForTimeout(350);
-      const full = await p.getByRole('list', { name: 'Athletes' }).locator('> li')
-        .filter({ has: p.locator(`#${id}`) }).innerText();
-      const facts = [
+      const FACTS = [
         /Nothing logged (yet, with sessions prescribed|in \d+ days)\./,
         /\d+ sessions missed in the last two weeks\./,
         /Missed [^\n]+\./,
-      ].filter((re) => re.test(full)).length;
+      ];
+      const card = () => p.getByRole('list', { name: 'Athletes' }).locator('> li').filter({ has: p.locator(`#${id}`) });
+      const closed = await card().innerText();
+      await p.locator(`button[aria-controls="${id}"]`).click();
+      await p.waitForTimeout(350);
+      const full = await card().innerText();
+      // How many of the three apply depends on the athlete's week — one is a
+      // true story (a single missed key session). What must hold is that the
+      // headline's facts are all there once open, and none was lost.
+      const before = FACTS.filter((re) => re.test(closed)).length;
+      const after = FACTS.filter((re) => re.test(full)).length;
       check('the facts behind a consolidated concern survive it, word for word',
-        facts >= 2, `only ${facts} of the three sentences found`);
+        after >= 1 && after >= before, `${before} before opening, ${after} after`);
       await p.locator(`button[aria-controls="${id}"]`).click();
       await p.waitForTimeout(250);
     } else {

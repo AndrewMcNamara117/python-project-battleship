@@ -1,5 +1,5 @@
 import 'server-only';
-import { getRepo } from '@/lib/data';
+import { getRepo, getServiceRepo } from '@/lib/data';
 import { hasSupabase } from '@/lib/env';
 import { createAdminSupabase } from '@/lib/supabase/server';
 import { countsForAdherence } from '@/lib/domain/analytics';
@@ -46,7 +46,7 @@ async function deliver(report: JobReport): Promise<JobReport> {
   if (!hasSupabase || !report.notifications.length) return report;
 
   const db = createAdminSupabase();
-  await db.from('notifications').insert(
+  const { error } = await db.from('notifications').insert(
     report.notifications.map((n) => ({
       user_id: n.userId,
       kind: n.kind,
@@ -55,6 +55,8 @@ async function deliver(report: JobReport): Promise<JobReport> {
       href: n.href,
     })),
   );
+  // a failed write is a failed job — reported, not counted as sent
+  if (error) throw new Error(`Could not write notifications: ${error.message}`);
   return { ...report, dryRun: false };
 }
 
@@ -84,7 +86,10 @@ export async function runJob(job: JobName): Promise<JobReport | NotificationJobR
   if (job === 'coach-digest') return runCoachDigest();
   if (job === 'notification-delivery') return runDeliveries();
 
-  const repo = await getRepo();
+  // A cron request has no session, so the request-scoped repo ran as anon:
+  // RLS hid every profile, each athlete was skipped, and the job reported
+  // success having sent nothing. The service repo reads as the server.
+  const { repo } = await getServiceRepo();
   const today = toISODate(new Date());
   const weekStart = startOfWeek(today);
   const weekEnd = endOfWeek(today);

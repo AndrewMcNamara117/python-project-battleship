@@ -1323,12 +1323,25 @@ export class SupabaseRepo implements IronMilesRepo {
 
   /* ---------- coaching comms ---------- */
 
-  async listMessages(athleteId: UUID): Promise<Message[]> {
-    const { data: thread } = await this.db
+  /**
+   * The athlete's thread as this viewer can see it: RLS shows a coach only
+   * their own, and an athlete only threads with their own coaches (0029).
+   * The most recent one — maybeSingle errored, and so read as "no thread",
+   * the moment an athlete had two.
+   */
+  private async threadFor(athleteId: UUID): Promise<{ id: string } | null> {
+    const { data, error } = await this.db
       .from('message_threads')
       .select('id')
       .eq('athlete_id', athleteId)
-      .maybeSingle();
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    return data?.[0] ?? null;
+  }
+
+  async listMessages(athleteId: UUID): Promise<Message[]> {
+    const thread = await this.threadFor(athleteId);
     if (!thread) return [];
     return this.rows(
       this.db.from('messages').select('*').eq('thread_id', thread.id).order('created_at'),
@@ -1337,10 +1350,14 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   async sendMessage(msg: Omit<Message, 'id' | 'createdAt' | 'readAt'>): Promise<Message> {
+    // the thread between these two people, opened if it has to be: the
+    // callers pass "thread-<athlete>", the demo's id, which is not a uuid —
+    // so every message failed against Postgres
+    const threadId = await this.threadBetween(msg.senderId, msg.recipientId);
     const { data, error } = await this.db
       .from('messages')
       .insert({
-        thread_id: msg.threadId,
+        thread_id: threadId,
         sender_id: msg.senderId,
         recipient_id: msg.recipientId,
         body: msg.body,
@@ -1349,23 +1366,49 @@ export class SupabaseRepo implements IronMilesRepo {
       .select('*')
       .single();
     if (error) throw new Error(error.message);
-    await this.db.from('message_threads').update({ updated_at: new Date().toISOString() }).eq('id', msg.threadId);
     return this.toMessage(data);
   }
 
+  private async threadBetween(a: UUID | null, b: UUID): Promise<string> {
+    if (!a) throw new Error('A message needs a sender.');
+    const find = async () => {
+      const { data, error } = await this.db
+        .from('message_threads')
+        .select('id')
+        .or(`and(athlete_id.eq.${a},coach_id.eq.${b}),and(athlete_id.eq.${b},coach_id.eq.${a})`)
+        .limit(1);
+      if (error) throw new Error(error.message);
+      return data?.[0]?.id as string | undefined;
+    };
+    const existing = await find();
+    if (existing) return existing;
+    // Opened only between an athlete and their coach (0029's policy decides
+    // which way round is allowed): the sender as coach, or as athlete. A
+    // member cannot read the other's profile to ask, so try each.
+    let opened = false;
+    for (const row of [{ athlete_id: b, coach_id: a }, { athlete_id: a, coach_id: b }]) {
+      const { error } = await this.db.from('message_threads').upsert(row, { onConflict: 'athlete_id,coach_id', ignoreDuplicates: true });
+      if (!error) {
+        opened = true;
+        break;
+      }
+    }
+    if (!opened) throw new Error('Messages are between an athlete and their coach.');
+    const made = await find();
+    if (!made) throw new Error('Could not open the conversation.');
+    return made;
+  }
+
   async markMessagesRead(athleteId: UUID, readerId: UUID) {
-    const { data: thread } = await this.db
-      .from('message_threads')
-      .select('id')
-      .eq('athlete_id', athleteId)
-      .maybeSingle();
+    const thread = await this.threadFor(athleteId);
     if (!thread) return;
-    await this.db
+    const { error } = await this.db
       .from('messages')
       .update({ read_at: new Date().toISOString() })
       .eq('thread_id', thread.id)
       .eq('recipient_id', readerId)
       .is('read_at', null);
+    if (error) throw new Error(error.message);
   }
 
   listCoachNotes(athleteId: UUID, viewerRole: 'athlete' | 'coach') {
