@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
+import { parseTimeToSeconds, startOfMonth, startOfWeek, toISODate } from '@/lib/domain/dates';
 import { currentStreakWeeks } from '@/lib/domain/forge-score';
 import type {
   AcceptanceOutcome,
@@ -462,14 +462,23 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   async getCoachForAthlete(athleteId: UUID): Promise<Profile | null> {
+    // An athlete may not read their coach's profile row; im_my_coach (0029)
+    // gives them its name and picture. A coach (or admin) asking about an
+    // athlete reads the link as before — their policies allow it.
+    const { data: me } = await this.db.auth.getUser();
+    if (me.user?.id === athleteId) {
+      const { data, error } = await this.db.rpc('im_my_coach');
+      if (error) throw new Error(error.message);
+      return data ? this.toProfile(data) : null;
+    }
     const { data, error } = await this.db
       .from('coach_athlete_links')
       .select('coach_id, profiles!coach_athlete_links_coach_id_fkey(*)')
       .eq('athlete_id', athleteId)
       .eq('status', 'active')
-      .maybeSingle();
-    if (error && error.code !== 'PGRST116') throw new Error(error.message);
-    const coach = (data as any)?.profiles;
+      .limit(1);
+    if (error) throw new Error(error.message);
+    const coach = (data as any)?.[0]?.profiles;
     return coach ? this.toProfile(coach) : null;
   }
 
@@ -526,14 +535,21 @@ export class SupabaseRepo implements IronMilesRepo {
     });
 
     if (data.goal.raceDate) {
-      await this.db.from('goals').insert({
+      // one primary goal: an earlier one steps down rather than sitting beside
+      // it (two made getPrimaryGoal read as none, and the goal vanished)
+      const { error: e1 } = await this.db.from('goals').update({ is_primary: false }).eq('athlete_id', athleteId).eq('is_primary', true);
+      if (e1) throw new Error(e1.message);
+      const { error: e2 } = await this.db.from('goals').insert({
         athlete_id: athleteId,
         event_type: data.goal.eventType,
         target_date: data.goal.raceDate,
         outcome: data.goal.outcome,
+        // "sub-3:30" reached the coach as no target time at all
+        target_time_seconds: data.goal.targetTime ? parseTimeToSeconds(data.goal.targetTime) : null,
         why: data.goal.why,
         is_primary: true,
       });
+      if (e2) throw new Error(e2.message);
     }
   }
 
@@ -618,10 +634,10 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
   }
 
-  async moveScheduled(id: UUID, toDate: ISODate) {
+  async moveScheduled(id: UUID, toDate: ISODate, slot?: number) {
     const { error } = await this.db
       .from('scheduled_workouts')
-      .update({ date: toDate, status: 'rescheduled' })
+      .update({ date: toDate, status: 'rescheduled', ...(slot != null ? { slot } : {}) })
       .eq('id', id);
     if (error) throw new Error(error.message);
   }
@@ -671,10 +687,13 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
 
     if (entry.scheduledWorkoutId) {
-      await this.db
+      // checked: a refusal here (0024's guard) used to leave a log under a
+      // session still "scheduled" while the athlete was told "Logged."
+      const { error: e2 } = await this.db
         .from('scheduled_workouts')
         .update({ status: 'completed' })
         .eq('id', entry.scheduledWorkoutId);
+      if (e2) throw new Error(e2.message);
     }
     return this.toCompleted(data);
   }
@@ -1027,13 +1046,15 @@ export class SupabaseRepo implements IronMilesRepo {
     // resolve it to the row already saved for that day, or let Postgres mint one.
     let id: string | undefined = session.id;
     if (!UUID_RE.test(id)) {
-      const { data: existing, error: lookupError } = await this.db
-        .from('strength_sessions')
-        .select('id')
-        .eq('athlete_id', session.athleteId)
-        .eq('date', session.date)
-        .eq('template_id', session.templateId)
-        .maybeSingle();
+      let q = this.db.from('strength_sessions').select('id').eq('athlete_id', session.athleteId).eq('date', session.date);
+      // the prescribed session it belongs to, when there is one: that is what
+      // identifies it, whether or not it came from a library template
+      q = session.scheduledWorkoutId
+        ? q.eq('scheduled_workout_id', session.scheduledWorkoutId)
+        : session.templateId
+          ? q.eq('template_id', session.templateId)
+          : q.is('scheduled_workout_id', null);
+      const { data: existing, error: lookupError } = await q.limit(1).maybeSingle();
       if (lookupError && lookupError.code !== 'PGRST116') throw new Error(lookupError.message);
       id = existing?.id ?? undefined;
     }
@@ -1056,7 +1077,11 @@ export class SupabaseRepo implements IronMilesRepo {
     if (error) throw new Error(error.message);
 
     if (session.status === 'completed' && session.scheduledWorkoutId) {
-      await this.db.from('scheduled_workouts').update({ status: 'completed' }).eq('id', session.scheduledWorkoutId);
+      // checked: the session guard (0024) refuses completing one ahead of its
+      // day, and a silent refusal said "Session complete." over a session
+      // still scheduled
+      const { error: e2 } = await this.db.from('scheduled_workouts').update({ status: 'completed' }).eq('id', session.scheduledWorkoutId);
+      if (e2) throw new Error(e2.message);
     }
     return this.toStrengthSession(data);
   }
@@ -1681,21 +1706,10 @@ export class SupabaseRepo implements IronMilesRepo {
       return { application, athleteId: null, awaitingSignUp: false };
     }
 
-    // already registered? link now rather than waiting for a sign-up that happened
-    const { data: existing } = await this.db
-      .from('profiles')
-      .select('id')
-      .ilike('email', application.email)
-      .eq('role', 'athlete')
-      .maybeSingle();
-
-    if (existing?.id) {
-      await this.linkAthlete(coachId, existing.id);
-      await this.db
-        .from('coaching_applications')
-        .update({ joined_athlete_id: existing.id })
-        .eq('id', applicationId);
-      return { application: { ...application, joinedAthleteId: existing.id }, athleteId: existing.id, awaitingSignUp: false };
+    // im_decide_application (0029) links an applicant who already has an
+    // account; joined_athlete_id says whether it did
+    if (application.joinedAthleteId) {
+      return { application, athleteId: application.joinedAthleteId, awaitingSignUp: false };
     }
 
     return { application, athleteId: null, awaitingSignUp: true };
@@ -3150,10 +3164,24 @@ export class SupabaseRepo implements IronMilesRepo {
   }
 
   async markDigestSent(userId: UUID, localDate: ISODate): Promise<void> {
-    const { error } = await this.db
+    // An upsert of just the date created the row for a coach who had never
+    // saved settings — with the table's defaults (in-app only, no quiet
+    // hours), not the app's (email on, quiet 22–07). From the second day
+    // their email stopped. Update the row if there is one; otherwise write
+    // the defaults they were already getting, and the date.
+    const { data, error } = await this.db
       .from('notification_preferences')
-      .upsert({ user_id: userId, last_digest_local_date: localDate });
+      .update({ last_digest_local_date: localDate })
+      .eq('user_id', userId)
+      .select('user_id');
     if (error) throw new Error(error.message);
+    if (data?.length) return;
+    await this.saveNotificationPreferences({ userId, ...DEFAULT_PREFERENCES });
+    const { error: e2 } = await this.db
+      .from('notification_preferences')
+      .update({ last_digest_local_date: localDate })
+      .eq('user_id', userId);
+    if (e2) throw new Error(e2.message);
   }
 
   /** The coach's own local date of their last digest, for the once-a-day rule. */

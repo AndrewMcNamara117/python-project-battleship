@@ -435,7 +435,8 @@ export interface StrengthSession {
   id: UUID;
   athleteId: UUID;
   scheduledWorkoutId: UUID | null;
-  templateId: UUID;
+  /** The library template it came from; null for a session built from components. */
+  templateId: UUID | null;
   date: ISODate;
   status: SessionStatus;
   logs: StrengthSetLog[];

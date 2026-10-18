@@ -128,7 +128,7 @@ export const EXTERNAL_SIGNAL_LABEL: Record<SignalKind, string> = {
  * name to anyone else.
  */
 export function externalName(fullName: string | null): string {
-  if (!fullName) return 'An athlete';
+  if (!fullName?.trim()) return 'An athlete';
   const [first, ...rest] = fullName.trim().split(/\s+/);
   const last = rest[rest.length - 1];
   return last ? `${first} ${last[0].toUpperCase()}.` : first;
@@ -306,7 +306,7 @@ export function alertsFor(
       priority: lead.severity,
       athleteId: entry.athleteId,
       signalKind: lead.kind,
-      title: `${entry.fullName} — ${raised.map((s) => alertTitle(s.kind)).join(', ')}`,
+      title: `${entry.fullName?.trim() || 'An athlete'} — ${raised.map((s) => alertTitle(s.kind)).join(', ')}`,
       // the athlete's own words, unedited and undiagnosed
       body: raised.map((s) => s.detail).join(' '),
       href: lead.href,

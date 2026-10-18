@@ -36,6 +36,13 @@ export function ApplyForm() {
       }}
       className="space-y-8"
     >
+      {/* for bots: hidden from people and from assistive tech; a filled one is ignored */}
+      <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label>
+          Website
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
       <fieldset className="space-y-6" disabled={pending}>
         <legend className="im-micro mb-6 w-full border-b border-line pb-3">You</legend>
         <div className="grid gap-6 sm:grid-cols-2">

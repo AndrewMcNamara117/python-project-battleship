@@ -42,6 +42,11 @@ export async function logWorkout(formData: FormData): Promise<Result> {
   if (!scheduled || scheduled.athleteId !== session.userId) {
     return { ok: false, message: 'That session is not on your plan.' };
   }
+  // a session on a later day has not happened: the database refuses to mark
+  // it completed, and the log would sit under a session still "scheduled"
+  if (scheduled.date > addDays(toISODate(new Date()), 1)) {
+    return { ok: false, message: 'This session is on a later day — log it once you have done it.' };
+  }
 
   const distance = parsed.data.actualDistanceKm ?? null;
   const duration = parsed.data.actualDurationMinutes ?? null;
@@ -144,7 +149,16 @@ export async function rescheduleSession(scheduledWorkoutId: string, toDate: stri
     return { ok: false, message: 'That day already has a completed session on it.' };
   }
 
-  await repo.moveScheduled(scheduledWorkoutId, toDate);
+  // a day can hold two sessions: this one takes the next free slot there,
+  // rather than colliding with the one already on it (which used to throw)
+  const taken = new Set(existing.filter((w) => w.id !== scheduledWorkoutId).map((w) => w.slot));
+  let slot = scheduled.slot;
+  while (taken.has(slot)) slot += 1;
+  try {
+    await repo.moveScheduled(scheduledWorkoutId, toDate, slot);
+  } catch {
+    return { ok: false, message: 'That session could not be moved there. Try another day.' };
+  }
   revalidatePath('/app/calendar');
   return { ok: true, message: 'Moved.' };
 }
@@ -163,29 +177,39 @@ export async function saveStrengthProgress(
 
   // never trust a workout id from the client: without this an athlete could
   // complete somebody else's prescribed session by passing its id
+  let scheduledTemplate: string | null = null;
+  let tooEarly = false;
   if (scheduledWorkoutId) {
     const scheduled = await repo.getScheduled(scheduledWorkoutId);
     if (!scheduled || scheduled.athleteId !== session.userId) {
       return { ok: false, message: 'That session is not on your plan.' };
     }
+    // a session on a later day cannot be completed yet (the database refuses
+    // it too); the sets are kept, and it is finished on the day
+    tooEarly = complete && scheduled.date > addDays(toISODate(new Date()), 1);
+    // the template is the session's, read here: the player sent the session's
+    // own id, which is no template, and every save failed in production
+    scheduledTemplate = scheduled.strengthTemplateId ?? scheduled.sourceStrengthTemplateId ?? null;
   }
+  void templateId;
 
   await repo.saveStrengthSession({
     id: `ss-${session.userId}-${date}`,
     athleteId: session.userId,
     scheduledWorkoutId,
-    templateId,
+    templateId: scheduledTemplate,
     date,
-    status: complete ? 'completed' : 'scheduled',
+    status: complete && !tooEarly ? 'completed' : 'scheduled',
     logs,
     durationMinutes,
     notes,
-    completedAt: complete ? new Date().toISOString() : null,
+    completedAt: complete && !tooEarly ? new Date().toISOString() : null,
   });
 
   revalidatePath('/app');
   revalidatePath('/app/strength');
   revalidatePath('/app/today');
+  if (tooEarly) return { ok: false, message: 'This session is on a later day. Your sets are saved — finish it on the day.' };
   return { ok: true, message: complete ? 'Session complete.' : 'Progress saved.' };
 }
 

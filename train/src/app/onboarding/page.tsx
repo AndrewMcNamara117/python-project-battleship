@@ -15,6 +15,10 @@ export default async function OnboardingPage() {
   if (!session) redirect('/login?next=/onboarding');
 
   const repo = await getRepo();
+  // done once: going back here offered "submit" again, which added a second
+  // primary goal and rewrote what the coach had since corrected
+  const profile = await repo.getProfile(session.userId);
+  if (profile?.onboardedAt) redirect('/app');
   const saved = await repo.getOnboarding(session.userId);
 
   return (

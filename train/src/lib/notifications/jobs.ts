@@ -125,15 +125,22 @@ export async function runCoachAlerts(now = new Date()): Promise<NotificationJobR
   const report = emptyReport('coach-alerts', dryRun);
 
   for (const coach of await repo.listCoachesForDigest()) {
-    const prefs = await repo.getNotificationPreferences(coach.userId);
+    // one coach's failure (a link ended between the roster read and the
+    // write, a transient error) is that coach's, not every coach after them
+    try {
+      const prefs = await repo.getNotificationPreferences(coach.userId);
 
-    // the roster is asked in the coach's own today, not the server's
-    const today = localParts(now, prefs.timezone).date;
-    const roster = await repo.listRoster(coach.userId, today);
-    report.processed += 1;
+      // the roster is asked in the coach's own today, not the server's
+      const today = localParts(now, prefs.timezone).date;
+      const roster = await repo.listRoster(coach.userId, today);
+      report.processed += 1;
 
-    for (const draft of alertsFor(roster, prefs, now)) {
-      await record(repo, draft, prefs, report);
+      for (const draft of alertsFor(roster, prefs, now)) {
+        await record(repo, draft, prefs, report);
+      }
+    } catch (e) {
+      report.failed += 1;
+      report.items.push({ userId: coach.userId, kind: 'alert', title: 'Alerts', outcome: 'failed', detail: e instanceof Error ? e.message : 'failed' });
     }
   }
 
@@ -154,6 +161,7 @@ export async function runCoachDigest(now = new Date()): Promise<NotificationJobR
   const report = emptyReport('coach-digest', dryRun);
 
   for (const coach of await repo.listCoachesForDigest()) {
+    try {
     const prefs = await repo.getNotificationPreferences(coach.userId);
     const last = await repo.lastDigestDate(coach.userId);
 
@@ -180,6 +188,11 @@ export async function runCoachDigest(now = new Date()): Promise<NotificationJobR
 
     await record(repo, draft, prefs, report);
     await repo.markDigestSent(coach.userId, local.date);
+    } catch (e) {
+      // as alerts: one coach's failure stays theirs
+      report.failed += 1;
+      report.items.push({ userId: coach.userId, kind: 'digest', title: 'Digest', outcome: 'failed', detail: e instanceof Error ? e.message : 'failed' });
+    }
   }
 
   return report;

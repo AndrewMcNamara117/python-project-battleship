@@ -45,9 +45,17 @@ const AMBER = '#ffc46b';
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-function link(href: string): string {
-  if (/^https?:\/\//.test(href)) return href;
-  return `${siteUrl.replace(/\/$/, '')}${href.startsWith('/') ? href : `/${href}`}`;
+/**
+ * Every link in an email points at this site. A full URL elsewhere — however
+ * it reached a notification — becomes the home page rather than a phishing
+ * link sent from the platform's own address.
+ */
+export function link(href: string): string {
+  const base = siteUrl.replace(/\/$/, '');
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')) {
+    return href === base || href.startsWith(`${base}/`) ? href : `${base}/`;
+  }
+  return `${base}${href.startsWith('/') ? href : `/${href}`}`;
 }
 
 /** Emails are assembled as strings, so anything variable is escaped. */
@@ -98,12 +106,16 @@ function shell(title: string, inner: string, footNote: string): string {
 </body></html>`;
 }
 
-const FOOT_ALERT =
-  'Sent because you coach this athlete. Change what Iron Miles tells you, and when, ' +
-  'in your notification settings.';
-const FOOT_DIGEST =
-  'Sent because you coach these athletes. Change what Iron Miles tells you, and when, ' +
-  'in your notification settings.';
+// Every email says how to change or stop it, with the link to do so — an
+// email that is on by default and cannot be turned off from itself is the
+// kind mail providers (and the law) treat as spam.
+const SETTINGS = '/coach/notifications';
+const settingsLink = () =>
+  `<a href="${esc(link(SETTINGS))}" style="color:${MINT};">notification settings</a>`;
+const FOOT_ALERT = () =>
+  `Sent because you coach this athlete. Change what Iron Miles tells you, and when, or turn email off, in your ${settingsLink()}.`;
+const FOOT_DIGEST = () =>
+  `Sent because you coach these athletes. Change what Iron Miles tells you, and when, or turn email off, in your ${settingsLink()}.`;
 
 function button(href: string, label: string): string {
   return `<a href="${esc(link(href))}"
@@ -147,7 +159,7 @@ function alertEmail(payload: { athleteName: string; signals: string[] }, href: s
     para(`${who} submitted a check-in and Iron Miles raised this:`),
     `<ul style="margin:0 0 18px;padding-left:18px;">${list}</ul>`,
     para('What they wrote is in Iron Miles, where it stays behind your login.', INK_3),
-    `<div style="margin-top:6px;">${button(href, `Open ${who.split(' ')[0]}`)}</div>`,
+    `<div style="margin-top:6px;">${button(href, payload.athleteName?.trim() ? `Open ${who.split(' ')[0]}` : 'Open their page')}</div>`,
   ].join('');
 
   const text = [
@@ -164,10 +176,10 @@ function alertEmail(payload: { athleteName: string; signals: string[] }, href: s
     ``,
     `--`,
     `Sent because you coach this athlete. Change what Iron Miles tells you,`,
-    `and when, in your notification settings.`,
+    `and when, or turn email off: ${link(SETTINGS)}`,
   ].join('\n');
 
-  return { subject, html: shell(subject, inner, FOOT_ALERT), text };
+  return { subject, html: shell(subject, inner, FOOT_ALERT()), text };
 }
 
 /* ============================================================
@@ -175,7 +187,9 @@ function alertEmail(payload: { athleteName: string; signals: string[] }, href: s
  * ========================================================== */
 
 function digestEmail(digest: Digest, coachName: string | null, href: string): RenderedEmail {
-  const needing = digest.items.length;
+  // the roster's count, not the named items': a digest of six athletes waiting
+  // on a programme (a group, not items) said "nothing needs you" above them
+  const needing = digest.needingAttention;
   const subject = needing === 0
     ? 'Iron Miles — today\'s picture'
     : `Iron Miles — ${needing} ${needing === 1 ? 'athlete needs' : 'athletes need'} attention`;
@@ -269,10 +283,10 @@ function digestEmail(digest: Digest, coachName: string | null, href: string): Re
     ``,
     `--`,
     `Sent because you coach these athletes. Change what Iron Miles tells you,`,
-    `and when, in your notification settings.`,
+    `and when, or turn email off: ${link(SETTINGS)}`,
   ].join('\n');
 
-  return { subject, html: shell(subject, inner, FOOT_DIGEST), text };
+  return { subject, html: shell(subject, inner, FOOT_DIGEST()), text };
 }
 
 /* ============================================================ */

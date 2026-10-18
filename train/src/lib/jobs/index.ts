@@ -46,17 +46,22 @@ async function deliver(report: JobReport): Promise<JobReport> {
   if (!hasSupabase || !report.notifications.length) return report;
 
   const db = createAdminSupabase();
-  const { error } = await db.from('notifications').insert(
-    report.notifications.map((n) => ({
+  const day = report.ranAt.slice(0, 10);
+  // Once per athlete, per job, per day: a cron retry or a manual re-run used
+  // to send everyone a second reminder. The (user, dedupe_key) index refuses
+  // the repeat; one row at a time, so one repeat does not sink the batch.
+  for (const n of report.notifications) {
+    const { error } = await db.from('notifications').insert({
       user_id: n.userId,
       kind: n.kind,
       title: n.title,
       body: n.body,
       href: n.href,
-    })),
-  );
-  // a failed write is a failed job — reported, not counted as sent
-  if (error) throw new Error(`Could not write notifications: ${error.message}`);
+      dedupe_key: `${report.job}:${n.userId}:${day}`,
+    });
+    // a failed write is a failed job — reported, not counted as sent
+    if (error && error.code !== '23505') throw new Error(`Could not write notifications: ${error.message}`);
+  }
   return { ...report, dryRun: false };
 }
 
@@ -216,7 +221,7 @@ export async function runJob(job: JobName): Promise<JobReport | NotificationJobR
         report.notifications.push({
           userId: athleteId,
           kind: 'race_countdown',
-          title: days === 0 ? 'Race day' : `${days} days to go`,
+          title: days === 0 ? 'Race day' : days === 1 ? '1 day to go' : `${days} days to go`,
           body:
             days === 0
               ? `${race?.name ?? 'Race day'}. The work is done. Trust it.`

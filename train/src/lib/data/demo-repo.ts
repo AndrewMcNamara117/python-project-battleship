@@ -413,11 +413,19 @@ export class DemoRepo implements IronMilesRepo {
     return clone(workout);
   }
 
-  async moveScheduled(id: UUID, toDate: ISODate): Promise<void> {
-    const w = dataset().scheduled.find((x) => x.id === id);
+  async moveScheduled(id: UUID, toDate: ISODate, slot?: number): Promise<void> {
+    const d = dataset();
+    const w = d.scheduled.find((x) => x.id === id);
     if (!w) return;
+    const to = slot ?? w.slot;
+    // as unique (athlete, date, slot) in Postgres: two sessions cannot share a slot
+    if (d.scheduled.some((x) => x.id !== id && x.athleteId === w.athleteId && x.date === toDate && x.slot === to)) {
+      throw new Error('duplicate key value violates unique constraint');
+    }
     w.date = toDate;
-    if (w.status === 'scheduled') w.status = 'rescheduled';
+    w.slot = to;
+    // as Postgres: a moved session is a rescheduled one, whatever it was
+    w.status = 'rescheduled';
   }
 
   async deleteScheduled(id: UUID): Promise<void> {

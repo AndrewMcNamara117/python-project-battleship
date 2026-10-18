@@ -39,6 +39,8 @@ export async function completeOnboarding(data: OnboardingData): Promise<{ ok: bo
   }
 
   const repo = await getRepo();
+  const profile = await repo.getProfile(session.userId);
+  if (profile?.onboardedAt) redirect('/app'); // already done; nothing to overwrite
   await repo.completeOnboarding(session.userId, data);
   redirect('/app');
 }

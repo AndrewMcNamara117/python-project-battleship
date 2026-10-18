@@ -169,7 +169,15 @@ export async function decideApplication(
   const session = await requireCoach();
   const repo = await getRepo();
 
-  const outcome = await repo.decideApplication(applicationId, session.userId, decision, note);
+  let outcome;
+  try {
+    outcome = await repo.decideApplication(applicationId, session.userId, decision, note);
+  } catch (e) {
+    // the database says why (a second application from one address, an
+    // applicant already on another roster) — show that, not an error page
+    const why = e instanceof Error ? e.message : '';
+    return { ok: false, message: /already/i.test(why) ? why : 'That decision could not be saved. Try again.' };
+  }
 
   revalidatePath('/coach/applications');
   revalidatePath('/coach');

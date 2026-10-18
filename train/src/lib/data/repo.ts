@@ -190,7 +190,8 @@ export interface IronMilesRepo {
   listScheduled(athleteId: UUID, from: ISODate, to: ISODate): Promise<ScheduledWorkout[]>;
   getScheduled(id: UUID): Promise<ScheduledWorkout | null>;
   saveScheduled(workout: ScheduledWorkout): Promise<ScheduledWorkout>;
-  moveScheduled(id: UUID, toDate: ISODate): Promise<void>;
+  /** Move a session; `slot` places it on a day that already has one (the slot must be free). */
+  moveScheduled(id: UUID, toDate: ISODate, slot?: number): Promise<void>;
   /** The athlete's own path: status only, so nothing else the coach set is rewritten. */
   setScheduledStatus(id: UUID, status: 'missed' | 'skipped' | 'scheduled'): Promise<void>;
   deleteScheduled(id: UUID): Promise<void>;

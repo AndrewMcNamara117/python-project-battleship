@@ -98,7 +98,10 @@ describe('the digest email', () => {
 
   it('says nothing needs them when nothing does, rather than an empty list', () => {
     const quiet = sampleDigest();
-    (quiet.payload as { digest: { items: unknown[]; groups: unknown[] } }).digest.items = [];
+    const d = (quiet.payload as { digest: { items: unknown[]; groups: unknown[]; needingAttention: number } }).digest;
+    d.items = [];
+    d.groups = [];
+    d.needingAttention = 0;
     const email = renderEmail(quiet, 'Ronan')!;
     assert.match(email.text, /Nothing needs you this morning/);
     assert.match(email.subject, /today's picture/i);
@@ -129,3 +132,33 @@ describe('both emails', () => {
     assert.match(email.html, /notification settings/);
   });
 });
+
+describe('the digest counts what the roster counts', () => {
+  it('six athletes waiting on a programme are not "nothing needs you"', () => {
+    const grouped = sampleDigest();
+    const d = (grouped.payload as { digest: { items: unknown[]; needingAttention: number } }).digest;
+    d.items = [];
+    d.needingAttention = 6;
+    const email = renderEmail(grouped, 'Ronan')!;
+    assert.doesNotMatch(email.text, /Nothing needs you/);
+    assert.match(email.text, /6 of \d+ athletes need something/);
+  });
+
+  it('and every email says how to turn it off, with the link', () => {
+    for (const email of [renderEmail(sampleAlert(), 'Ronan')!, renderEmail(sampleDigest(), 'Ronan')!]) {
+      assert.match(email.text, /turn email off: https?:\/\/[^\s]+\/coach\/notifications/);
+      assert.match(email.html, /href="https?:\/\/[^"]+\/coach\/notifications"/);
+    }
+  });
+});
+
+describe('links in an email stay on this site', () => {
+  it('a full URL elsewhere becomes the home page', async () => {
+    const { link } = await import('./render.ts');
+    assert.ok(!link('https://evil.example/login').includes('evil'));
+    assert.ok(!link('//evil.example').includes('evil'));
+    assert.ok(!link('javascript:alert(1)').includes('javascript'));
+    assert.match(link('/coach'), /\/coach$/);
+  });
+});
+
