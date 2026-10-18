@@ -136,6 +136,8 @@ export default async function TodayPage() {
                             actualDurationMinutes: entry.actualDurationMinutes,
                             rpe: entry.rpe,
                             athleteNotes: entry.athleteNotes,
+                            soreness: entry.soreness,
+                            sessionRating: entry.sessionRating,
                           }
                         : null;
                     })()}

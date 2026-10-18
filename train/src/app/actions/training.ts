@@ -100,6 +100,10 @@ export async function markSessionStatus(
   if (!scheduled || scheduled.athleteId !== session.userId) {
     return { ok: false, message: 'That session is not on your plan.' };
   }
+  // a stale tab's "did not happen" must not overwrite a session since logged
+  if (scheduled.status === 'completed') {
+    return { ok: false, message: 'You have logged this session, so it stays completed. Remove the log to change it.' };
+  }
   // status only: a full-row write would send back every field the coach set,
   // and the database refuses an athlete's write that touches those
   await repo.setScheduledStatus(scheduled.id, status);
@@ -206,24 +210,35 @@ export async function submitCheckIn(formData: FormData): Promise<Result> {
     trainingDifficulty: d.trainingDifficulty,
   };
 
-  const weekEnd = addDays(d.weekStart, 6);
+  // the week the date falls in, and one that has begun: the client sends
+  // weekStart, and a Tuesday made a second check-in for the same week
+  const today = toISODate(new Date());
+  const weekStart = startOfWeek(d.weekStart);
+  if (weekStart > startOfWeek(today)) {
+    return { ok: false, message: 'A check-in is for a week that has begun.' };
+  }
+  const weekEnd = addDays(weekStart, 6);
   const [weekSessions, history] = await Promise.all([
-    repo.listScheduled(session.userId, d.weekStart, weekEnd),
-    repo.listCheckIns(session.userId, 4),
+    repo.listScheduled(session.userId, weekStart, weekEnd),
+    repo.listCheckIns(session.userId, 5),
   ]);
 
-  const prescribed = weekSessions.filter(countsForAdherence);
+  // sessions due so far — a Thursday check-in is not three misses short
+  // because Friday to Sunday have not happened yet
+  const prescribed = weekSessions.filter((w) => countsForAdherence(w) && w.date <= today);
   const triage = triageCheckIn({
     scores,
     freeText: [d.wentWell, d.feltDifficult, d.painOrNiggles, d.affectingTraining, d.confidenceNextWeek, d.forCoach],
     sessionsCompleted: prescribed.filter((w) => w.status === 'completed').length,
     sessionsPrescribed: prescribed.length,
-    history: history.map((c) => ({ scores: c.scores })),
+    // earlier weeks only: resubmitting a week compared it against itself,
+    // and a sharp rise from last week vanished
+    history: history.filter((c) => c.weekStart < weekStart).slice(0, 4).map((c) => ({ scores: c.scores })),
   });
 
   await repo.submitCheckIn({
     athleteId: session.userId,
-    weekStart: d.weekStart,
+    weekStart,
     scores,
     wentWell: d.wentWell,
     feltDifficult: d.feltDifficult,

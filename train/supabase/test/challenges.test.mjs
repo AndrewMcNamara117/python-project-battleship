@@ -168,13 +168,15 @@ describe('what a client writes cannot inflate progress', () => {
     const weekly = rows[0].id;
     await t.asUser(who, 'insert into challenge_participants (challenge_id, athlete_id) values ($1, $2)', [weekly, who]);
     const monday = `date_trunc('week', current_date)::date - 14`;
-    for (const day of [`${monday}`, `${monday} + 1`, `${monday} + 2`, `date_trunc('week', current_date)::date + 14`]) {
-      await t.asUser(
-        who,
-        `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty) values ($1, ${day}, 5,7,4,3,8,7,6)`,
-        [who],
-      );
+    const insert = (day) =>
+      `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty) values ($1, ${day}, 5,7,4,3,8,7,6)`;
+    await t.asUser(who, insert(monday), [who]);
+    // a Tuesday of the same week, or a week ahead, is refused outright (0029)
+    for (const day of [`${monday} + 1`, `${monday} + 2`, `date_trunc('week', current_date)::date + 14`]) {
+      assert.ok(await t.expectRefused(who, insert(day), [who]), day);
     }
+    // and an older row of that shape, from before the rule, still counts once
+    await t.asService(insert(`${monday} + 3`), [who]);
     assert.equal(Number((await t.asUser(who, 'select im_challenge_progress($1, $2) as p', [weekly, who])).rows[0].p), 1);
     assert.equal(Number((await t.asUser(who, 'select viewer_progress from im_challenge_summary($1)', [weekly])).rows[0].viewer_progress), 1);
   });

@@ -113,8 +113,15 @@ export async function updateScheduledWorkout(workout: ScheduledWorkout): Promise
   if (existing && existing.athleteId !== workout.athleteId) {
     return { ok: false, message: 'That session belongs to a different athlete.' };
   }
+  // The editor hides Edit on a completed session, but the action trusted the
+  // browser: a tab opened before the athlete logged it saved its stale copy,
+  // status and all, and put a logged session back to "scheduled".
+  if (existing?.status === 'completed') {
+    return { ok: false, message: 'The athlete has logged this session since you opened it, so it is locked.' };
+  }
 
-  await repo.saveScheduled(workout);
+  // the prescription is the coach's; the status is what happened, and is not
+  await repo.saveScheduled({ ...workout, status: existing?.status ?? workout.status });
 
   revalidatePath(`/coach/athletes/${workout.athleteId}`);
   // the athlete's own views, so the edit is visible without waiting for a cache miss

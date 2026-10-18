@@ -112,3 +112,59 @@ describe('messages', () => {
     assert.ok(new Date(after) > new Date(before));
   });
 });
+
+describe('the export', () => {
+  it('includes onboarding answers and shared notes, never private ones', async () => {
+    await t.asService(`insert into athlete_onboarding (athlete_id, data) values ($1, '{"injuries":"left knee"}') on conflict (athlete_id) do update set data = excluded.data`, [athlete]);
+    await t.asService(`insert into coach_notes (athlete_id, coach_id, body, visibility) values ($1, $2, 'shared one', 'shared'), ($1, $2, 'private one', 'private')`, [athlete, coach]);
+    const { rows } = await t.asUser(athlete, 'select im_export_athlete_data($1) as x', [athlete]);
+    const x = rows[0].x;
+    assert.equal(x.onboarding.data.injuries, 'left knee');
+    assert.deepEqual(x.shared_coach_notes.map((n) => n.body), ['shared one']);
+    for (const key of ['notifications', 'subscriptions', 'payments', 'integrations', 'community_posts', 'event_attendance']) assert.ok(Array.isArray(x[key]), key);
+  });
+});
+
+describe('check-ins', () => {
+  const monday = `date_trunc('week', current_date)::date - 7`;
+  const submit = (who, fatigue = 5) =>
+    t.asUser(
+      who,
+      `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty, pain_or_niggles)
+       values ($1, ${monday}, $2, 7, 4, 3, 8, 7, 6, 'Nothing to report.')
+       on conflict (athlete_id, week_start) do update set fatigue = excluded.fatigue, pain_or_niggles = excluded.pain_or_niggles`,
+      [who, fatigue],
+    );
+
+  it('answered again after the coach replied, it is unread and unanswered again', async () => {
+    await submit(athlete);
+    await t.asService(
+      `update checkins set acknowledged_at = now(), acknowledged_by = $2, responded_at = now(), reviewed_by_coach_at = now(), coach_response = 'Great week'
+       where athlete_id = $1`,
+      [athlete, coach],
+    );
+    await t.asUser(
+      athlete,
+      `update checkins set pain_or_niggles = 'Sharp pain, swollen ankle', soreness = 9 where athlete_id = $1 and week_start = ${monday}`,
+      [athlete],
+    );
+    const { rows } = await t.asService(`select acknowledged_at, responded_at, reviewed_by_coach_at, coach_response from checkins where athlete_id = $1 and week_start = ${monday}`, [athlete]);
+    assert.equal(rows[0].acknowledged_at, null);
+    assert.equal(rows[0].responded_at, null);
+    assert.equal(rows[0].reviewed_by_coach_at, null);
+    assert.equal(rows[0].coach_response, 'Great week', 'what the coach said stays on record');
+  });
+
+  it('a coach marking it read does not reopen it', async () => {
+    await t.asUser(coach, `update checkins set acknowledged_at = now(), acknowledged_by = $2 where athlete_id = $1 and week_start = ${monday}`, [athlete, coach]);
+    const { rows } = await t.asService(`select acknowledged_at from checkins where athlete_id = $1 and week_start = ${monday}`, [athlete]);
+    assert.ok(rows[0].acknowledged_at);
+  });
+
+  it('is for a week named by its Monday, that has begun', async () => {
+    const insert = (day) =>
+      `insert into checkins (athlete_id, week_start, fatigue, sleep, soreness, stress, motivation, confidence, training_difficulty) values ($1, ${day}, 5,7,4,3,8,7,6)`;
+    assert.match((await t.expectRefused(athlete, insert(`${monday} + 1`), [athlete])) ?? '', /Monday/);
+    assert.match((await t.expectRefused(athlete, insert(`date_trunc('week', current_date)::date + 21`), [athlete])) ?? '', /begun/);
+  });
+});

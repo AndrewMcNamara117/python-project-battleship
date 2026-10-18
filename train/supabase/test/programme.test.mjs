@@ -194,6 +194,18 @@ describe('duplication', () => {
     assert.equal(leak[0].n, 0, 'no session may belong to the wrong athlete');
   });
 
+  it('copying onto a week with a completed session leaves that session as it was done (0029)', async () => {
+    const target = MON(1);
+    // the copy above put sessions in MON(1); one of them is now done
+    const { rows: [done] } = await t.asService(
+      `select id, name, date, slot from scheduled_workouts where program_week_id = (select id from program_weeks where program_id = $1 and start_date = $2) order by slot limit 1`,
+      [program, target]);
+    await t.asService(`update scheduled_workouts set status = 'completed', name = 'What was run' where id = $1`, [done.id]);
+    await t.asUser(coach, `select im_duplicate_week($1,$2::date)`, [week1, target]);
+    const { rows: [after] } = await t.asService(`select name, status from scheduled_workouts where id = $1`, [done.id]);
+    assert.deepEqual([after.name, after.status], ['What was run', 'completed']);
+  });
+
   it('refuses to duplicate for an athlete the caller does not coach', async () => {
     const refused = await t.expectRefused(otherCoach, `select im_duplicate_week($1,$2::date)`, [week1, MON(6)]);
     assert.ok(refused, 'an unrelated coach must be refused');

@@ -868,6 +868,9 @@ export class DemoRepo implements IronMilesRepo {
       submittedAt: new Date().toISOString(),
     };
     const i = d.checkins.findIndex((c) => c.athleteId === checkIn.athleteId && c.weekStart === checkIn.weekStart);
+    // as 0029: answered again, it is unread and unanswered again — but what
+    // the coach said stays on record
+    if (i >= 0) row.coachResponse = d.checkins[i].coachResponse ?? row.coachResponse;
     if (i >= 0) d.checkins[i] = row;
     else d.checkins.push(row);
 
@@ -1600,8 +1603,13 @@ export class DemoRepo implements IronMilesRepo {
         createdAt: new Date().toISOString(),
       };
       const clash = d.scheduled.findIndex((x) => x.athleteId === copy.athleteId && x.date === date && x.slot === copy.slot);
-      if (clash >= 0) d.scheduled[clash] = copy;
-      else d.scheduled.push(copy);
+      if (clash >= 0) {
+        // as 0029: a completed session keeps what was done; any other is
+        // updated in place, keeping its id (and so its log and history)
+        if (d.scheduled[clash].status === 'completed') continue;
+        copy.id = d.scheduled[clash].id;
+        d.scheduled[clash] = copy;
+      } else d.scheduled.push(copy);
 
       this.components = this.components.filter((c) => c.scheduledWorkoutId !== copy.id);
       this.components.push(

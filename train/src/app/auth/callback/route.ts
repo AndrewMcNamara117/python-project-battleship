@@ -10,6 +10,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next') ?? '/app';
+  // a path on this site only: "//evil.com" or "https://evil.com" would
+  // resolve off-site and turn a sign-in link into a redirect anywhere
+  const safeNext = next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : '/app';
 
   if (!hasSupabase || !code) {
     return NextResponse.redirect(new URL('/login', url.origin));
@@ -36,5 +39,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  return NextResponse.redirect(new URL(safeNext, url.origin));
 }

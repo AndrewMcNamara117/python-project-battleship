@@ -149,3 +149,18 @@ describe('triageCheckIn — adherence', () => {
     assert.equal(new Set(r.reasons).size, r.reasons.length);
   });
 });
+
+describe('pain, in the words runners use', () => {
+  for (const said of ['a few niggles', 'knee is painful', 'it hurts on the stairs', 'calf aching after the long run', 'strained my hamstring', 'shin splints again', 'some pains in the foot']) {
+    it(`"${said}" is noticed`, () => {
+      const r = triageCheckIn({ scores: healthy, freeText: [said], ...fullWeek });
+      assert.notEqual(r.level, 'none', said);
+    });
+  }
+  for (const said of ['Nothing to report.', 'Achieved every session', 'Felt great']) {
+    it(`"${said}" is not`, () => {
+      const r = triageCheckIn({ scores: healthy, freeText: [said], ...fullWeek });
+      assert.equal(r.level, 'none', said);
+    });
+  }
+});

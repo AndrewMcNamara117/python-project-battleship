@@ -23,13 +23,17 @@ export function LogSessionForm({
     actualDurationMinutes: number | null;
     rpe: number | null;
     athleteNotes: string | null;
+    soreness?: number | null;
+    sessionRating?: number | null;
   } | null;
 }) {
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
   const [rpe, setRpe] = useState(logged?.rpe ?? workout.rpeTarget ?? 5);
-  const [soreness, setSoreness] = useState(3);
-  const [rating, setRating] = useState(4);
+  // null until the athlete says otherwise: sending a default 3 and 4 on every
+  // save overwrote what they had logged, and invented answers on a first log
+  const [soreness, setSoreness] = useState<number | null>(logged?.soreness ?? null);
+  const [rating, setRating] = useState<number | null>(logged?.sessionRating ?? null);
   const [expanded, setExpanded] = useState(false);
 
   const done = workout.status === 'completed';
@@ -40,8 +44,8 @@ export function LogSessionForm({
       noValidate
       action={(fd) => {
         fd.set('rpe', String(rpe));
-        fd.set('soreness', String(soreness));
-        fd.set('sessionRating', String(rating));
+        if (soreness != null) fd.set('soreness', String(soreness));
+        if (rating != null) fd.set('sessionRating', String(rating));
         start(async () => setResult(await logWorkout(fd)));
       }}
       className="space-y-7"
@@ -126,7 +130,7 @@ export function LogSessionForm({
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-ink-secondary">Soreness after</p>
             <div className="mt-3">
               <ScaleInput
-                value={soreness}
+                value={soreness ?? 3}
                 onChange={setSoreness}
                 lowLabel="None"
                 highLabel="Severe"

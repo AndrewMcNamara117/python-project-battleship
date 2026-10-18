@@ -1452,7 +1452,15 @@ export class SupabaseRepo implements IronMilesRepo {
 
   getSubscription(athleteId: UUID) {
     return this.one(
-      this.db.from('subscriptions').select('*').eq('athlete_id', athleteId).maybeSingle(),
+      // the latest: an athlete who resubscribes has a row per Stripe
+      // subscription, and maybeSingle read two rows as none
+      this.db
+        .from('subscriptions')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       (r: any): Subscription => ({
         id: r.id,
         athleteId: r.athlete_id,

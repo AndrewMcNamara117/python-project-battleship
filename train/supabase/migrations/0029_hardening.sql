@@ -120,3 +120,206 @@ drop trigger if exists messages_guard on messages;
 create trigger messages_guard
   before insert or update on messages
   for each row execute function im_guard_message();
+
+-- ---------- 4. the GDPR export, complete ----------
+-- The export left out what an athlete is most entitled to see: the health
+-- and background answers they gave at onboarding, the notes their coach
+-- shared with them, their billing records, connections, notifications and
+-- community posts. (Private coach notes stay out: they are the coach's.)
+create or replace function im_export_athlete_data(target uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if not (target = auth.uid() or im_is_admin()) then
+    raise exception 'not permitted';
+  end if;
+  return jsonb_build_object(
+    'profile',                (select to_jsonb(p) from profiles p where p.id = target),
+    'onboarding',             (select to_jsonb(o) from athlete_onboarding o where o.athlete_id = target),
+    'goals',                  (select coalesce(jsonb_agg(to_jsonb(g)), '[]'::jsonb) from goals g where g.athlete_id = target),
+    'scheduled_workouts',     (select coalesce(jsonb_agg(to_jsonb(s)), '[]'::jsonb) from scheduled_workouts s where s.athlete_id = target),
+    'completed_workouts',     (select coalesce(jsonb_agg(to_jsonb(c)), '[]'::jsonb) from completed_workouts c where c.athlete_id = target),
+    'activities',             (select coalesce(jsonb_agg(to_jsonb(a)), '[]'::jsonb) from activities a where a.athlete_id = target),
+    'segment_efforts',        (select coalesce(jsonb_agg(to_jsonb(e)), '[]'::jsonb) from segment_efforts e where e.athlete_id = target),
+    'activity_comments',      (select coalesce(jsonb_agg(to_jsonb(c)), '[]'::jsonb) from activity_comments c where c.author_id = target),
+    'activity_kudos',         (select coalesce(jsonb_agg(to_jsonb(k)), '[]'::jsonb) from activity_kudos k where k.athlete_id = target),
+    'challenge_participants', (select coalesce(jsonb_agg(to_jsonb(p)), '[]'::jsonb) from challenge_participants p where p.athlete_id = target),
+    'strength_sessions',      (select coalesce(jsonb_agg(to_jsonb(s)), '[]'::jsonb) from strength_sessions s where s.athlete_id = target),
+    'checkins',               (select coalesce(jsonb_agg(to_jsonb(k)), '[]'::jsonb) from checkins k where k.athlete_id = target),
+    'shared_coach_notes',     (select coalesce(jsonb_agg(to_jsonb(n)), '[]'::jsonb) from coach_notes n where n.athlete_id = target and n.visibility = 'shared'),
+    'forge_score_events',     (select coalesce(jsonb_agg(to_jsonb(f)), '[]'::jsonb) from forge_score_events f where f.athlete_id = target),
+    'achievements',           (select coalesce(jsonb_agg(to_jsonb(a)), '[]'::jsonb) from achievements a where a.athlete_id = target),
+    'messages',               (select coalesce(jsonb_agg(to_jsonb(m)), '[]'::jsonb) from messages m where m.recipient_id = target or m.sender_id = target),
+    'notifications',          (select coalesce(jsonb_agg(to_jsonb(n)), '[]'::jsonb) from notifications n where n.user_id = target),
+    'event_attendance',       (select coalesce(jsonb_agg(to_jsonb(e)), '[]'::jsonb) from event_attendance e where e.athlete_id = target),
+    'community_posts',        (select coalesce(jsonb_agg(to_jsonb(c)), '[]'::jsonb) from community_posts c where c.author_id = target),
+    'subscriptions',          (select coalesce(jsonb_agg(to_jsonb(s) - 'stripe_customer_id'), '[]'::jsonb) from subscriptions s where s.athlete_id = target),
+    'payments',               (select coalesce(jsonb_agg(to_jsonb(p)), '[]'::jsonb) from payments p where p.athlete_id = target),
+    'integrations',           (select coalesce(jsonb_agg(to_jsonb(i)), '[]'::jsonb) from integrations i where i.athlete_id = target),
+    'exported_at',            to_jsonb(now())
+  );
+end $$;
+
+-- ---------- 5. a check-in answered again is unread again ----------
+-- The athlete's form upserts their week, so a second submission updates the
+-- row — and kept the coach's "read" and "replied" from the first. A week
+-- resubmitted as "sharp pain, swollen ankle" after the coach's "great week"
+-- was then off the unread queue and never flagged. When the athlete changes
+-- their answers, the coach's marks go; the coach's earlier reply stays, as a
+-- record of what was said. (Named to run after t_checkin_coach_fields, so the
+-- guard has already refused any attempt to write these fields by hand.)
+create or replace function im_reopen_resubmitted_checkin() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  ignore text[] := array['id', 'submitted_at', 'attention_level', 'attention_reasons', 'reviewed_by_coach_at',
+                         'coach_response', 'acknowledged_at', 'acknowledged_by', 'responded_at'];
+begin
+  if auth.uid() is distinct from new.athlete_id then return new; end if;
+  if (to_jsonb(new) - ignore) is distinct from (to_jsonb(old) - ignore) then
+    new.acknowledged_at := null;
+    new.acknowledged_by := null;
+    new.responded_at := null;
+    new.reviewed_by_coach_at := null;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists u_checkin_reopen on checkins;
+create trigger u_checkin_reopen
+  before update on checkins
+  for each row execute function im_reopen_resubmitted_checkin();
+
+-- ---------- 6. a check-in is for a week that has begun, named by its Monday ----------
+-- week_start is the client's to send, and only (athlete, week_start) was
+-- unique: a Tuesday and a Monday made two check-ins for one week, and a week
+-- in 2027 became the "latest", hiding the real one. Existing rows are
+-- left alone (a check constraint would fail the migration on any old
+-- Tuesday); new and changed ones are held to it.
+create or replace function im_guard_checkin_week() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return new; end if;
+  if extract(isodow from new.week_start) <> 1 then
+    raise exception 'A check-in is for a week, named by its Monday.';
+  end if;
+  if new.week_start > current_date + 1 then
+    raise exception 'A check-in is for a week that has begun.';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists checkins_week_guard on checkins;
+create trigger checkins_week_guard
+  before insert or update of week_start on checkins
+  for each row execute function im_guard_checkin_week();
+
+-- ---------- 7. copying a week never rewrites what was done ----------
+-- im_duplicate_week (0005) upserted onto the target week's slots, so copying
+-- week 3 onto the current Monday on a Wednesday rewrote Monday's and
+-- Tuesday's completed sessions — same status, a different prescription than
+-- the one logged. Locked slots (im_adaptation_blocker, 0011) are skipped.
+create or replace function im_duplicate_week(
+  p_source_week  uuid,
+  p_target_start date,
+  p_target_block uuid default null
+) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  src      program_weeks;
+  v_block  uuid;
+  v_week   uuid;
+  v_index  smallint;
+  v_no     smallint;
+  s        record;
+  v_new    uuid;
+begin
+  select * into src from program_weeks where id = p_source_week;
+  if src is null then raise exception 'source week not found'; end if;
+  if not (im_is_coach_of(src.athlete_id) or im_is_admin()) then
+    raise exception 'not authorised for this athlete';
+  end if;
+  if extract(isodow from p_target_start) <> 1 then
+    raise exception 'a training week starts on a Monday';
+  end if;
+
+  v_block := coalesce(p_target_block, src.block_id);
+
+  select w.id into v_week from program_weeks w
+   where w.program_id = src.program_id and w.start_date = p_target_start;
+
+  if v_week is null then
+    select coalesce(max(week_index), -1) + 1 into v_index from program_weeks where block_id = v_block;
+    select coalesce(max(program_week_no), 0) + 1 into v_no from program_weeks where program_id = src.program_id;
+
+    insert into program_weeks (
+      block_id, program_id, athlete_id, week_index, program_week_no, start_date,
+      target_volume_km, focus, notes, is_recovery_week
+    )
+    values (
+      v_block, src.program_id, src.athlete_id, v_index, v_no, p_target_start,
+      src.target_volume_km, src.focus, src.notes, src.is_recovery_week
+    )
+    returning id into v_week;
+  end if;
+
+  -- copy each session, preserving its weekday offset within the week
+  for s in
+    select * from scheduled_workouts
+     where program_week_id = p_source_week
+     order by date, slot
+  loop
+    v_new := null;
+    insert into scheduled_workouts (
+      program_id, program_week_id, athlete_id, date, slot, status, name, type, basis, intensity,
+      distance_km, duration_minutes, pace_min_sec_km, pace_max_sec_km, hr_zone, rpe_target,
+      warm_up, main_set, cool_down, notes, coach_note, strength_template_id,
+      source_workout_template_id, source_strength_template_id, prescribed_by
+    )
+    values (
+      s.program_id, v_week, s.athlete_id,
+      p_target_start + (s.date - src.start_date), s.slot,
+      -- a copy is a plan again, whatever happened to the original
+      'scheduled',
+      s.name, s.type, s.basis, s.intensity,
+      s.distance_km, s.duration_minutes, s.pace_min_sec_km, s.pace_max_sec_km, s.hr_zone, s.rpe_target,
+      s.warm_up, s.main_set, s.cool_down, s.notes, s.coach_note, s.strength_template_id,
+      s.source_workout_template_id, s.source_strength_template_id, auth.uid()
+    )
+    on conflict (athlete_id, date, slot) do update
+      set name = excluded.name, type = excluded.type, basis = excluded.basis,
+          intensity = excluded.intensity, distance_km = excluded.distance_km,
+          duration_minutes = excluded.duration_minutes,
+          pace_min_sec_km = excluded.pace_min_sec_km, pace_max_sec_km = excluded.pace_max_sec_km,
+          hr_zone = excluded.hr_zone, rpe_target = excluded.rpe_target,
+          warm_up = excluded.warm_up, main_set = excluded.main_set, cool_down = excluded.cool_down,
+          notes = excluded.notes, coach_note = excluded.coach_note,
+          strength_template_id = excluded.strength_template_id,
+          program_week_id = excluded.program_week_id
+      -- a session already done, or otherwise locked, keeps what it was: the
+      -- update used to rewrite a completed session's prescription under its log
+      where im_adaptation_blocker(scheduled_workouts) is null
+    returning id into v_new;
+
+    -- the slot was locked: leave it, and its components, alone
+    if v_new is null then
+      continue;
+    end if;
+
+    -- and its components
+    delete from session_components where scheduled_workout_id = v_new;
+    insert into session_components (
+      scheduled_workout_id, athlete_id, position, kind, label, notes, repeats, rpe_target,
+      distance_km, duration_seconds, pace_min_sec_km, pace_max_sec_km, hr_zone,
+      recovery_seconds, recovery_description,
+      strength_exercise_id, sets, reps, load_prescription, tempo, rest_seconds
+    )
+    select
+      v_new, c.athlete_id, c.position, c.kind, c.label, c.notes, c.repeats, c.rpe_target,
+      c.distance_km, c.duration_seconds, c.pace_min_sec_km, c.pace_max_sec_km, c.hr_zone,
+      c.recovery_seconds, c.recovery_description,
+      c.strength_exercise_id, c.sets, c.reps, c.load_prescription, c.tempo, c.rest_seconds
+    from session_components c
+    where c.scheduled_workout_id = s.id;
+  end loop;
+
+  return v_week;
+end $$;

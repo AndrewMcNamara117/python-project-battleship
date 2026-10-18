@@ -32,7 +32,10 @@ const URGENT_PATTERNS: { re: RegExp; reason: string }[] = [
   { re: /\bstress fracture\b|\bfractur/i, reason: 'Possible bone injury mentioned' },
 ];
 
-const PAIN_PATTERNS = /\bpain\b|\bniggle\b|\bsore(ness)?\b|\bstrain\b|\btight(ness)?\b|\binjur/i;
+// the words runners use: "a few niggles", "knee is painful", "hurts", "aching",
+// "strained", "shin splints" all slipped past the singular forms
+const PAIN_PATTERNS =
+  /\bpain(s|ful)?\b|\bniggl(e|es|y)\b|\bsore(ness)?\b|\bstrain(s|ed)?\b|\btight(ness)?\b|\binjur|\bhurt(s|ing)?\b|\bach(e|es|ing|y)\b|\bshin splints?\b/i;
 
 export interface TriageInput {
   scores: CheckInScores;

@@ -37,23 +37,28 @@ export default async function ProgrammesPage({
   const templates = await repo.listProgramTemplates(query);
 
   // real weeks per athlete, so the week cloner offers a week rather than a date
-  const weeksByAthlete: Record<string, { id: string; label: string }[]> = {};
-  for (const a of ctx.athletes) {
-    const program = await repo.getProgram(a.profile.id);
-    if (!program) {
-      weeksByAthlete[a.profile.id] = [];
-      continue;
-    }
-    const blocks = await repo.listBlocks(program.id);
-    weeksByAthlete[a.profile.id] = blocks.flatMap((b) =>
-      b.weeks.map((w) => ({
-        id: w.id,
-        label: `Week ${w.programWeekNo} · ${b.name} · ${formatDayMonth(w.startDate)}${
-          w.isRecoveryWeek ? ' · step-back' : ''
-        }`,
-      })),
-    );
-  }
+  // in parallel: one athlete after another was two round trips each, in
+  // series — a second and more of waiting with a full roster
+  const weeksByAthlete: Record<string, { id: string; label: string }[]> = Object.fromEntries(
+    await Promise.all(
+      ctx.athletes.map(async (a) => {
+        const program = await repo.getProgram(a.profile.id);
+        if (!program) return [a.profile.id, []] as const;
+        const blocks = await repo.listBlocks(program.id);
+        return [
+          a.profile.id,
+          blocks.flatMap((b) =>
+            b.weeks.map((w) => ({
+              id: w.id,
+              label: `Week ${w.programWeekNo} · ${b.name} · ${formatDayMonth(w.startDate)}${
+                w.isRecoveryWeek ? ' · step-back' : ''
+              }`,
+            })),
+          ),
+        ] as const;
+      }),
+    ),
+  );
 
   return (
     <AppPage>

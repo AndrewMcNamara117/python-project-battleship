@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { requireSession } from '@/lib/auth';
 import { getRepo } from '@/lib/data';
+import { hasSupabase } from '@/lib/env';
+import { getStripe, stripeConfigured } from '@/lib/stripe/server';
+import { createAdminSupabase, createServerSupabase } from '@/lib/supabase/server';
 import type { Units } from '@/lib/domain/types';
 
 export interface Result {
@@ -55,7 +58,33 @@ export async function deleteMyAccount(confirmation: string): Promise<Result> {
   if (confirmation.trim().toLowerCase() !== session.email.toLowerCase()) {
     return { ok: false, message: 'Type your email address exactly to confirm.' };
   }
+  if (!hasSupabase) {
+    const repo = await getRepo();
+    await repo.deleteAthleteData(session.userId);
+    return { ok: true, message: 'Your data has been deleted.' };
+  }
+
+  // A user cannot delete their own profile row (no policy allows it), so the
+  // old path matched nothing, raised nothing, and told the athlete their data
+  // was gone. Deletion is the server's: stop any billing first, so nobody is
+  // charged for an account that no longer exists, then delete the sign-in —
+  // which cascades through profiles to every row they own (0002).
   const repo = await getRepo();
-  await repo.deleteAthleteData(session.userId);
-  return { ok: true, message: 'Your data has been deleted.' };
+  const subscription = await repo.getSubscription(session.userId);
+  if (subscription?.stripeSubscriptionId && stripeConfigured() && subscription.status !== 'canceled') {
+    try {
+      await getStripe().subscriptions.cancel(subscription.stripeSubscriptionId);
+    } catch {
+      return { ok: false, message: 'Your subscription could not be cancelled, so nothing was deleted. Try again, or contact your coach.' };
+    }
+  }
+  const admin = createAdminSupabase();
+  const { error } = await admin.auth.admin.deleteUser(session.userId);
+  if (error) return { ok: false, message: 'Your account could not be deleted. Nothing was removed — try again.' };
+  const { data: left } = await admin.from('profiles').select('id').eq('id', session.userId).maybeSingle();
+  if (left) return { ok: false, message: 'Your account could not be deleted. Nothing was removed — try again.' };
+
+  const supabase = await createServerSupabase();
+  await supabase.auth.signOut();
+  return { ok: true, message: 'Your account and all its data have been deleted.' };
 }
