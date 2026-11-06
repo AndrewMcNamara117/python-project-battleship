@@ -76,7 +76,12 @@ nav.links a:hover,nav.links a.active{color:var(--white)}
 .navtoggle{display:none;background:none;border:1px solid var(--line-2);color:var(--white);
   width:42px;height:38px;border-radius:2px;font-size:18px;cursor:pointer}
 
-@media(max-width:760px){
+/* mid-width screens: tighten the desktop nav so every link fits */
+@media(min-width:901px) and (max-width:1120px){
+  nav.links{gap:16px}
+  nav.links a{font-size:11px;letter-spacing:.1em}
+}
+@media(max-width:900px){
   nav.links{
     position:fixed;inset:60px 0 auto 0;flex-direction:column;gap:0;
     background:var(--iron-2);border-bottom:1px solid var(--line);
@@ -267,7 +272,7 @@ footer{border-top:1px solid var(--line);padding:54px 0 40px;background:var(--iro
 /* ---- header CTA button ---- */
 nav.links a.nav-cta{background:var(--green);color:#04130a;padding:9px 16px;border-radius:2px}
 nav.links a.nav-cta:hover,nav.links a.nav-cta.active{background:#5fffa8;color:#04130a}
-@media(max-width:760px){nav.links a.nav-cta{margin:12px 24px 16px;text-align:center;padding:14px;border-top:none}}
+@media(max-width:900px){nav.links a.nav-cta{margin:12px 24px 16px;text-align:center;padding:14px;border-top:none}}
 
 /* ---- skip link ---- */
 .skip{position:fixed;top:-100px;left:16px;z-index:200;background:var(--green);color:#04130a;
