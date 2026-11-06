@@ -14,6 +14,7 @@ Immersive marketing site for the Iron Miles endurance community (Limerick, Irela
 | `services.html` | All services — run club, coaching, PT, race prep, strength for runners |
 | `reviews/index.html` | Shoe & gear reviews hub — `/reviews/` |
 | `reviews/<slug>/index.html` | Individual product review — e.g. `/reviews/nike-zoom-fly-6/` |
+| `forge-stories/index.html` | Forge Stories: community films and stories in people's own words — `/forge-stories/` |
 | `privacy.html` / `terms.html` / `waiver.html` | Legal templates (solicitor review required before publishing) |
 
 ## Tech

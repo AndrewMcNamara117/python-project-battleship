@@ -7,6 +7,7 @@ on:
       - "*.html"
       - "assets/**"
       - "reviews/**"
+      - "forge-stories/**"
       - "CNAME"
       - "sitemap.xml"
       - "robots.txt"
